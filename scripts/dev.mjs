@@ -359,6 +359,9 @@ function generateClientIfStale(env) {
     cwd: root,
     env,
     stdio: "inherit",
+    // Local Windows patch: CreateProcess only appends .exe, so a bare "pnpm"
+    // never resolves to pnpm.cmd without a shell.
+    shell: process.platform === "win32",
   });
 }
 
@@ -397,7 +400,12 @@ const migrationLock = new Client({ connectionString: shared.migrationUrl });
 await migrationLock.connect();
 try {
   await migrationLock.query("SELECT pg_advisory_lock(hashtext('rakazo dev migrate'))");
-  execFileSync("pnpm", ["db:migrate"], { cwd: root, env, stdio: "inherit" });
+  execFileSync("pnpm", ["db:migrate"], {
+    cwd: root,
+    env,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
 } finally {
   await migrationLock.end();
 }
@@ -406,7 +414,7 @@ if (ports) log(`Open http://127.0.0.1:${ports.web}`);
 const turbo = spawn(
   "pnpm",
   ["exec", "turbo", "dev", "--env-mode=loose", ...SERVICES.map((name) => `--filter=${name}`)],
-  { cwd: root, env, stdio: "inherit" },
+  { cwd: root, env, stdio: "inherit", shell: process.platform === "win32" },
 );
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => turbo.kill(signal));
 turbo.on("exit", (code, signal) => {

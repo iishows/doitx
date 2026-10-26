@@ -22,7 +22,9 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-describe("computer home ownership", () => {
+// Windows reports synthetic `uid 0`/`gid 0` and directory modes without execute
+// bits, so every case here would either fail or pass vacuously. CI runs Linux.
+describe.skipIf(process.platform === "win32")("computer home ownership", () => {
   it("rejects a missing home instead of creating it as root", async () => {
     const parent = await mkdtemp(path.join(tmpdir(), "rakazo-home-missing-"));
     roots.push(parent);
