@@ -54,13 +54,20 @@ function writabilityError(target: string, root: string, uid: number, gid: number
   );
 }
 
-/** Pathname walk for non-Linux hosts without /proc/self/fd containment. */
+/**
+ * Pathname walk for non-Linux hosts without /proc/self/fd containment.
+ *
+ * `checkOwnership` is false where the platform cannot answer the POSIX question at all:
+ * Windows reports a synthetic `uid`/`gid` 0 and modes with no execute bits, so demanding
+ * writable bits there would refuse every home. Existence and shape checks still run.
+ */
 async function assertWritableEntry(
   target: string,
   root: string,
   uid: number,
   gid: number,
   isRoot = false,
+  checkOwnership = true,
 ): Promise<void> {
   let stat: Stats;
   try {
@@ -80,17 +87,19 @@ async function assertWritableEntry(
     throw new Error(`computer home ${root} must be a directory`);
   }
 
-  const usable = stat.isDirectory()
-    ? hasPermissions(stat, uid, gid, 0b111)
-    : regularFileIsUsable(stat, uid, gid);
-  if (!usable) {
-    throw writabilityError(target, root, uid, gid);
+  if (checkOwnership) {
+    const usable = stat.isDirectory()
+      ? hasPermissions(stat, uid, gid, 0b111)
+      : regularFileIsUsable(stat, uid, gid);
+    if (!usable) {
+      throw writabilityError(target, root, uid, gid);
+    }
   }
   if (!stat.isDirectory()) return;
 
   const directory = await opendir(target);
   for await (const entry of directory) {
-    await assertWritableEntry(path.join(target, entry.name), root, uid, gid);
+    await assertWritableEntry(path.join(target, entry.name), root, uid, gid, false, checkOwnership);
   }
 }
 
@@ -192,7 +201,7 @@ export async function assertComputerHomeWritable(
     await assertWritableLinux(root, uid, gid);
     return;
   }
-  await assertWritableEntry(root, root, uid, gid, true);
+  await assertWritableEntry(root, root, uid, gid, true, process.platform !== "win32");
 }
 
 /** Exported for regression coverage of the moved-directory escape check. */

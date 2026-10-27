@@ -189,3 +189,36 @@ describe.skipIf(process.platform === "win32")("computer home ownership", () => {
     },
   );
 });
+
+// Windows exposes no POSIX ownership, so the walk skips mode checks but must still
+// validate existence and shape. Regression guard: a plain home allocated by the host
+// used to be refused here because its synthetic uid/gid never matched the sandbox pair.
+describe.skipIf(process.platform !== "win32")("computer home ownership on Windows", () => {
+  it("accepts a home the host allocated, including nested files", async () => {
+    const home = await mkdtemp(path.join(tmpdir(), "rakazo-home-win-"));
+    roots.push(home);
+    await mkdir(path.join(home, "repo", ".git", "objects", "ab"), { recursive: true });
+    await writeFile(path.join(home, "repo", ".git", "objects", "ab", "cdef"), "blob");
+    await writeFile(path.join(home, "profile.json"), "{}");
+
+    await expect(assertComputerHomeWritable(home, 0, 0)).resolves.toBeUndefined();
+  });
+
+  it("still rejects a missing home instead of creating it as root", async () => {
+    const parent = await mkdtemp(path.join(tmpdir(), "rakazo-home-win-missing-"));
+    roots.push(parent);
+
+    await expect(
+      assertComputerHomeWritable(path.join(parent, "missing"), 0, 0),
+    ).rejects.toThrow(/does not exist/);
+  });
+
+  it("still rejects a regular file as the home root", async () => {
+    const parent = await mkdtemp(path.join(tmpdir(), "rakazo-home-win-file-"));
+    roots.push(parent);
+    const home = path.join(parent, "home");
+    await writeFile(home, "{}");
+
+    await expect(assertComputerHomeWritable(home, 0, 0)).rejects.toThrow(/must be a directory/);
+  });
+});
