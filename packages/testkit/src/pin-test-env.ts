@@ -28,6 +28,10 @@ if (!process.env.VERIFY_PROVIDERS) {
   process.env.RAKAZO_LIVE_MODEL_CATALOG = "off";
   process.env.AGENT_RUNTIME = "scripted";
   process.env.SANDBOX_PROVIDER = "fake";
+  // The dev shell exports RAKAZO_COMPUTER_IMAGE* for Compose, which would
+  // otherwise decide the image the supervisor specs assert on.
+  delete process.env.RAKAZO_COMPUTER_IMAGE;
+  delete process.env.RAKAZO_COMPUTER_IMAGE_TAG;
   process.env.CLOUD_AGENT_PROVIDER = "emulator";
   process.env.MEDIA_GENERATION_PROVIDER = "disabled";
   delete process.env.MEDIA_GENERATION_API_KEY;

@@ -305,12 +305,14 @@ export function computerHomeStorage(
   dataDir: string,
   info: Docker.ContainerInspectInfo | undefined,
 ): { homePath: string; homeVolume?: { name: string; subpath: string } } {
-  const relative = path.relative(dataDir, serviceHomePath);
+  // Container-internal paths are POSIX whatever the supervisor host is, so they
+  // must not go through the host-flavoured `path` on Windows.
+  const relative = path.posix.relative(dataDir, serviceHomePath);
   if (
     !relative ||
     relative === ".." ||
-    relative.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relative)
+    relative.startsWith("../") ||
+    path.posix.isAbsolute(relative)
   ) {
     throw new Error("computer home must be inside the data directory");
   }
@@ -319,7 +321,9 @@ export function computerHomeStorage(
     if (!mount.Name) throw new Error("computer data volume has no name");
     return { homePath: serviceHomePath, homeVolume: { name: mount.Name, subpath: relative } };
   }
-  return { homePath: mount?.Source ? path.join(mount.Source, relative) : serviceHomePath };
+  return {
+    homePath: mount?.Source ? path.posix.join(mount.Source, relative) : serviceHomePath,
+  };
 }
 
 export function assertVolumeSubpathSupport(apiVersion: string) {
