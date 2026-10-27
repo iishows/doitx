@@ -15,6 +15,7 @@ import {
   acquireComputerExecutionLease,
   acquireDedicatedScreenLeaseFence,
   ComputerBusyError,
+  cancelParkedComputerRun,
   computerSupportsUpdate,
   holdComputerExecutionLeaseForTakeover,
   provisionComputer,
@@ -1783,7 +1784,13 @@ describe("computer execution leases", () => {
       computer: {
         findUniqueOrThrow: vi.fn().mockResolvedValue({ scope: "team", state: "running" }),
       },
-      computerExecutionLease: { create, updateMany, updateManyAndReturn },
+      run: { findUnique: vi.fn().mockResolvedValue(null) },
+      computerExecutionLease: {
+        create,
+        updateMany,
+        updateManyAndReturn,
+        findUnique: vi.fn().mockResolvedValue(null),
+      },
     } as unknown as PrismaClient;
     const lease = {
       computerId: "computer-1",
@@ -1897,6 +1904,7 @@ describe("computer execution leases", () => {
       },
       run: {
         findMany: vi.fn().mockResolvedValue([{ id: "run-1", taskId: "task-1" }]),
+        findUnique: vi.fn().mockResolvedValue(null),
         updateMany: vi.fn(),
       },
       attempt: { updateMany: vi.fn() },
@@ -1914,6 +1922,7 @@ describe("computer execution leases", () => {
           lease.fence += data.fence.increment;
           return [{ fence: lease.fence }];
         }),
+        findUnique: vi.fn().mockResolvedValue(null),
         create,
       },
       computer: {
@@ -2136,6 +2145,142 @@ describe("computer execution leases", () => {
     },
   );
 
+  it("reclaims a lease held by a run parked on the user", async () => {
+    // The takeover hold parks a lease for a full day. Recovering the computer is the owner
+    // saying they are done waiting, so that lease must be reclaimable now, not in 24 hours.
+    const prisma = leasePrisma({
+      scope: "team",
+      heldLease: { runId: "run-parked" },
+      heldRunStatus: "waiting_takeover",
+      reclaim: true,
+      fence: 3,
+    });
+
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-recovered",
+        botId: "bot-1",
+      }),
+    ).resolves.toMatchObject({ runId: "run-recovered", fence: 3 });
+    expect(prisma.updateMany).toHaveBeenCalledWith({
+      where: { computerId: "computer-1", botId: "bot-1", runId: "run-parked" },
+      data: { expiresAt: new Date(0) },
+    });
+  });
+
+  it("reclaims a lease whose run no longer exists", async () => {
+    const prisma = leasePrisma({
+      scope: "team",
+      heldLease: { runId: "run-deleted" },
+      heldRunStatus: null,
+      reclaim: true,
+    });
+
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-2",
+        botId: "bot-1",
+      }),
+    ).resolves.toMatchObject({ runId: "run-2" });
+    expect(prisma.updateMany).toHaveBeenCalledWith({
+      where: { computerId: "computer-1", botId: "bot-1", runId: "run-deleted" },
+      data: { expiresAt: new Date(0) },
+    });
+  });
+
+  it("keeps refusing while the lease's run is still working", async () => {
+    const prisma = leasePrisma({
+      scope: "team",
+      heldLease: { runId: "run-live" },
+      heldRunStatus: "running",
+      uniqueConflict: true,
+    });
+
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-2",
+        botId: "bot-1",
+      }),
+    ).rejects.toBeInstanceOf(ComputerBusyError);
+    expect(prisma.updateMany).not.toHaveBeenCalledWith({
+      where: { computerId: "computer-1", botId: "bot-1", runId: "run-live" },
+      data: { expiresAt: new Date(0) },
+    });
+  });
+
+  it("cancels a parked run so the owner can recover the computer", async () => {
+    // expireStuckRun re-reads the run inside the transaction and settles nothing without a row,
+    // so this asserts the selection reaches the transaction rather than the settlement itself.
+    const $queryRaw = vi.fn().mockResolvedValue([]);
+    const txClient = { $queryRaw, run: { findUnique: vi.fn().mockResolvedValue(null) } };
+    const $transaction = vi.fn(async (work: (tx: unknown) => unknown) => work(txClient));
+    const prisma = {
+      computerExecutionLease: {
+        findFirst: vi.fn().mockResolvedValue({ runId: "run-parked" }),
+      },
+      run: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "run-parked",
+          status: "waiting_takeover",
+          updatedAt: new Date(),
+          threadId: "thread-1",
+        }),
+      },
+      $transaction,
+    } as unknown as PrismaClient;
+
+    const result = await cancelParkedComputerRun(
+      { prisma, jobs: { enqueue: vi.fn() } as unknown as JobPublisher },
+      { computerId: "computer-1" },
+    );
+
+    expect(result).toEqual({ cancelledRunId: null });
+    expect($transaction).toHaveBeenCalledOnce();
+    expect($queryRaw).toHaveBeenCalled();
+  });
+
+  it("leaves a working run alone when recovering", async () => {
+    const $transaction = vi.fn();
+    const prisma = {
+      computerExecutionLease: {
+        findFirst: vi.fn().mockResolvedValue({ runId: "run-live" }),
+      },
+      run: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "run-live",
+          status: "running",
+          updatedAt: new Date(),
+          threadId: "thread-1",
+        }),
+      },
+      $transaction,
+    } as unknown as PrismaClient;
+
+    const result = await cancelParkedComputerRun(
+      { prisma, jobs: { enqueue: vi.fn() } as unknown as JobPublisher },
+      { computerId: "computer-1" },
+    );
+
+    expect(result).toEqual({ cancelledRunId: null });
+    expect($transaction).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when the computer holds no lease", async () => {
+    const prisma = {
+      computerExecutionLease: { findFirst: vi.fn().mockResolvedValue(null) },
+    } as unknown as PrismaClient;
+
+    await expect(
+      cancelParkedComputerRun(
+        { prisma, jobs: { enqueue: vi.fn() } as unknown as JobPublisher },
+        { computerId: "computer-1" },
+      ),
+    ).resolves.toEqual({ cancelledRunId: null });
+  });
+
   it("acquires a team lease on a stale suspending computer", async () => {
     const prisma = leasePrisma({ scope: "team" });
     prisma.findUniqueOrThrow.mockResolvedValue({
@@ -2206,6 +2351,10 @@ function leasePrisma(options: {
   reclaim?: boolean;
   fence?: number;
   uniqueConflict?: boolean;
+  /** The lease row acquire inspects before reclaiming a parked run's hold. */
+  heldLease?: { runId: string } | null;
+  /** Status of the run behind that lease; null means the run is gone. */
+  heldRunStatus?: string | null;
 }) {
   const updateMany = vi.fn().mockResolvedValue({ count: 1 });
   const deleteMany = vi.fn().mockResolvedValue({ count: 1 });
@@ -2222,16 +2371,24 @@ function leasePrisma(options: {
     scope: options.scope,
     state: "running",
   });
+  const leaseFindUnique = vi.fn().mockResolvedValue(options.heldLease ?? null);
+  const runFindUnique = vi
+    .fn()
+    .mockResolvedValue(options.heldRunStatus ? { status: options.heldRunStatus } : null);
   return {
     client: {
       computer: {
         findUniqueOrThrow,
+      },
+      run: {
+        findUnique: runFindUnique,
       },
       computerExecutionLease: {
         updateManyAndReturn,
         create,
         updateMany,
         deleteMany,
+        findUnique: leaseFindUnique,
       },
     } as unknown as PrismaClient,
     updateMany,
@@ -2239,6 +2396,8 @@ function leasePrisma(options: {
     create,
     deleteMany,
     findUniqueOrThrow,
+    leaseFindUnique,
+    runFindUnique,
   };
 }
 

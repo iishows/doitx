@@ -6,16 +6,24 @@ import type {
   JobPublisher,
   SandboxProvider,
 } from "@rakazo/adapter-kit";
-import { computerControlExpireJobKey } from "@rakazo/adapter-kit";
+import { computerControlExpireJobKey, runContinueJob } from "@rakazo/adapter-kit";
 import type { ComputerUpdate } from "@rakazo/contracts";
-import { ACTIVE_RUN_STATUSES, parseScreenLeaseId, screenLeaseId } from "@rakazo/core";
+import {
+  ACTIVE_RUN_STATUSES,
+  parseScreenLeaseId,
+  screenLeaseId,
+  WAITING_ON_USER_RUN_STATUSES,
+  WORKING_RUN_STATUSES,
+} from "@rakazo/core";
 import {
   expireComputerExecutionLeases,
+  expireStuckRun,
   type PrismaClient,
   parseComputerMode,
   recordComputerRunEnd,
   recordComputerRunStart,
   type ThreadEvents,
+  withTransactionRetry,
 } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import {
@@ -618,6 +626,90 @@ export async function acquireDedicatedScreenLeaseFence(
   });
 }
 
+/**
+ * Drop a lease this bot is holding for a run that has stopped working and is only waiting on
+ * the user. A parked takeover keeps its lease for a full day so a slow human is not evicted
+ * mid-screen, but that lease must never outlive the wait: the owner recovering the computer,
+ * or the device suspending and taking the parked run with it, both leave a lease that would
+ * otherwise block every later run on the same bot until it expires.
+ *
+ * Only the computer's own parked runs are released. A run that is still working keeps its
+ * lease, so "Computer is busy" stays correct while another bot is genuinely using the device.
+ */
+async function releaseLeaseHeldByParkedRun(
+  prisma: PrismaClient,
+  computerId: string,
+  botId: string,
+): Promise<void> {
+  const lease = await prisma.computerExecutionLease.findUnique({
+    where: { computerId_botId: { computerId, botId } },
+    select: { runId: true },
+  });
+  if (!lease) return;
+  const run = await prisma.run.findUnique({
+    where: { id: lease.runId },
+    select: { status: true },
+  });
+  // A missing run is an orphan: nothing can resume it, so the lease is only a tombstone now.
+  if (run && (WORKING_RUN_STATUSES as readonly string[]).includes(run.status)) return;
+  await expireComputerExecutionLeases(prisma, { computerId, botId, runId: lease.runId });
+}
+
+/** A run status that parks on the user: its card is the state, and it holds no compute. */
+type ParkedRunStatus = (typeof WAITING_ON_USER_RUN_STATUSES)[number];
+
+function isParkedRunStatus(status: string): status is ParkedRunStatus {
+  return (WAITING_ON_USER_RUN_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * Cancel a run parked on this computer waiting for the user, releasing its hold on the device.
+ *
+ * Recovering or resetting the computer is the owner saying they are done with whatever the
+ * screen was waiting for, so the parked run is cancelled rather than left holding a lease for
+ * the rest of its takeover window. Reuses the stuck-work expiry so the run, its attempts, the
+ * thread's waiting state and any continuation are all settled the same way an abandoned
+ * takeover is. A run that is still working is left alone.
+ */
+export async function cancelParkedComputerRun(
+  deps: {
+    prisma: PrismaClient;
+    jobs: JobPublisher;
+    events?: Pick<ThreadEvents, "notify">;
+    now?: Date;
+  },
+  input: { computerId: string },
+): Promise<{ cancelledRunId: string | null }> {
+  const lease = await deps.prisma.computerExecutionLease.findFirst({
+    where: { computerId: input.computerId },
+    select: { runId: true },
+  });
+  if (!lease) return { cancelledRunId: null };
+  const run = await deps.prisma.run.findUnique({
+    where: { id: lease.runId },
+    select: { id: true, status: true, updatedAt: true, threadId: true },
+  });
+  if (!run || !isParkedRunStatus(run.status)) return { cancelledRunId: null };
+  const status: ParkedRunStatus = run.status;
+  const runId = run.id;
+  const { threadId, updatedAt } = run;
+  const expired = await withTransactionRetry(() =>
+    deps.prisma.$transaction((tx) =>
+      expireStuckRun(tx, { runId, threadId, status, updatedAt, now: deps.now ?? new Date() }),
+    ),
+  );
+  if (!expired) return { cancelledRunId: null };
+  await deps.events?.notify(run.threadId, expired.seq).catch((error) => {
+    getLogger().error("parked run cancel notification", error);
+  });
+  if (expired.continuationRunId) {
+    await deps.jobs.enqueue(runContinueJob(expired.continuationRunId)).catch((error) => {
+      getLogger().error("parked run cancel continuation", error);
+    });
+  }
+  return { cancelledRunId: run.id };
+}
+
 export async function acquireComputerExecutionLease(
   prisma: PrismaClient,
   input: {
@@ -632,6 +724,8 @@ export async function acquireComputerExecutionLease(
     throw new ComputerBusyError();
   if (computer.scope !== "team") return null;
   if (isLiveSuspending(computer)) throw new ComputerBusyError();
+  // A lease held for a run that is no longer working is reclaimable now, not in a day.
+  await releaseLeaseHeldByParkedRun(prisma, input.computerId, input.botId);
   const now = new Date();
   const expiresAt = new Date(now.getTime() + EXECUTION_LEASE_MS);
   const [reclaimed] = await prisma.computerExecutionLease.updateManyAndReturn({

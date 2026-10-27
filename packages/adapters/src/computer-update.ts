@@ -12,6 +12,7 @@ import {
 import { scheduleComputerSleep } from "./computer-idle.js";
 import {
   ComputerBusyError,
+  cancelParkedComputerRun,
   computerSupportsUpdate,
   replaceComputer,
 } from "./computer-lifecycle.js";
@@ -19,7 +20,7 @@ import {
 type Deps = Parameters<typeof replaceComputer>[0];
 type QueueDeps = Pick<Deps, "prisma" | "jobs"> &
   Partial<Pick<Deps, "sandbox">> & {
-    events?: Pick<ThreadEvents, "append">;
+    events?: Pick<ThreadEvents, "append" | "notify">;
   };
 const STALE_MS = 10 * 60_000;
 // reserving: claimed, provider release not started. revoking: call not returned.
@@ -55,6 +56,14 @@ export async function queueComputerUpdate(
   botId: string,
   action: "update" | "recover" = "update",
 ) {
+  // Recovering or updating is the owner saying they are done with whatever the screen waited
+  // for. A run parked on a takeover holds its lease for a full day and still counts as active,
+  // so cancel it first: otherwise the claim below loses to that hold and the action fails as
+  // "Computer is busy" until the takeover window runs out.
+  await cancelParkedComputerRun(
+    { prisma: deps.prisma, jobs: deps.jobs, events: deps.events },
+    { computerId },
+  );
   const prepared = await deps.prisma.$transaction(async (tx) => {
     // Mode switches lock this same row before marking a bot as switching.
     // The following statement then observes their committed reservation.

@@ -7,6 +7,7 @@ import {
   acquireComputerExecutionLease,
   applyTeachingDesktopInput,
   ComputerBusyError,
+  cancelParkedComputerRun,
   checkpointAndRecordComputerWorkspace,
   clearInactiveUserComputerControl,
   computerSupportsTerminal,
@@ -925,6 +926,13 @@ async function runComputerReplace(
     });
   }
   const manualRunId = `${mode}:${randomUUID()}`;
+  // Recovering is the owner saying they are done with whatever the screen waited for. A run
+  // parked on a takeover holds its lease for a full day, so cancel it first: otherwise the
+  // recovery collides with that hold and fails as "Computer is busy" until it expires.
+  await cancelParkedComputerRun(
+    { prisma: deps.prisma, jobs: deps.jobs, events: deps.events },
+    { computerId: bot.computer.id },
+  );
   let lease: ComputerExecutionLease | null;
   try {
     lease = await acquireComputerExecutionLease(deps.prisma, {

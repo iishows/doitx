@@ -59,6 +59,8 @@ function fixture(status = "queued") {
     computer,
     bot: { findFirst: vi.fn(async () => ({ userId: "user" })) },
     computerUpdate,
+    computerExecutionLease: { findFirst: vi.fn(async () => null) },
+    run: { findUnique: vi.fn(async () => null) },
     $transaction: vi.fn(async (fn) => fn(prisma)),
   };
   const jobs = { enqueue: vi.fn(async () => {}) };
@@ -716,6 +718,7 @@ function takeoverQueue(
     computerUpdate,
     run,
     bot: { findFirst: vi.fn(async () => ({ thread: { id: "thread-1" } })) },
+    computerExecutionLease: { findFirst: vi.fn(async () => null) },
   };
   const jobs = { enqueue: vi.fn(async () => {}), cancel: vi.fn(async () => {}) };
   const setScreenControl = vi.fn(async () => {});

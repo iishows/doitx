@@ -13,7 +13,7 @@ import {
 } from "@rakazo/adapter-kit";
 import { ACTIVE_RUN_STATUSES } from "@rakazo/core";
 import type { PrismaClient, ThreadEvents } from "@rakazo/db";
-import { recordComputerRunEnd } from "@rakazo/db";
+import { expireComputerExecutionLeases, recordComputerRunEnd } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import { expireComputerControl, hasActiveComputerControl } from "./computer-control.js";
 import { toComputerRef } from "./computer-lifecycle.js";
@@ -523,6 +523,10 @@ export async function sleepComputerIfIdle(
     getLogger().warn("computer.suspend_superseded", { "computer.id": computerId });
     return;
   }
+  // The device is down, so any takeover that was holding a lease for a parked run is moot.
+  // Expire those holds here: a lease parked for a full day must not outlive the screen it
+  // was waiting on, or the next run for that bot reads a busy computer with nobody there.
+  await expireComputerExecutionLeases(deps.prisma, { computerId });
   await recordComputerRunEnd(deps.prisma, computer, limitReached ? "active_limit" : "idle");
   getLogger().info("computer.suspended", {
     "computer.id": computerId,

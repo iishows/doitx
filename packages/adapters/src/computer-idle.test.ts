@@ -438,6 +438,20 @@ describe("sandbox idle", () => {
     );
   });
 
+  it("drops parked execution leases when the device suspends", async () => {
+    // A takeover parked a lease for a full day. Once the screen is gone that hold is stale:
+    // left live, the next run for this bot would read a busy computer with nobody on it.
+    const harness = idleHarness();
+
+    await sleepComputerIfIdle(harness.deps, harness.computer.id);
+
+    expect(harness.computer.state).toBe("suspended");
+    expect(harness.prisma.computerExecutionLease.updateMany).toHaveBeenCalledWith({
+      where: { computerId: harness.computer.id },
+      data: { expiresAt: new Date(0) },
+    });
+  });
+
   it("still suspends when the usage write fails", async () => {
     const sink = createTestSink();
     installLogger(createLogger({ service: "test", level: "debug", sinks: [sink] }));
@@ -1229,6 +1243,7 @@ function idleHarness(
     },
     agentHome: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     computerRun: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    computerExecutionLease: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     bot: {
       findMany: vi.fn().mockResolvedValue([{ id: "bot", thread: { id: "thread" } }]),
     },
