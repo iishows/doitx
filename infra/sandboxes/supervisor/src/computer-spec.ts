@@ -305,24 +305,27 @@ export function computerHomeStorage(
   dataDir: string,
   info: Docker.ContainerInspectInfo | undefined,
 ): { homePath: string; homeVolume?: { name: string; subpath: string } } {
-  // Container-internal paths are POSIX whatever the supervisor host is, so they
-  // must not go through the host-flavoured `path` on Windows.
-  const relative = path.posix.relative(dataDir, serviceHomePath);
+  // Both arguments are host paths, so containment must be checked in the host's
+  // flavour. path.posix reads a Windows separator as a filename character and
+  // would call a home under dataDir an escape.
+  const relative = path.relative(dataDir, serviceHomePath);
   if (
     !relative ||
     relative === ".." ||
-    relative.startsWith("../") ||
-    path.posix.isAbsolute(relative)
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
   ) {
     throw new Error("computer home must be inside the data directory");
   }
+  // Docker resolves a volume subpath inside Linux, so that one stays POSIX.
+  const subpath = relative.split(path.sep).join("/");
   const mount = info?.Mounts.find((entry) => entry.Destination === dataDir);
   if (mount?.Type === "volume") {
     if (!mount.Name) throw new Error("computer data volume has no name");
-    return { homePath: serviceHomePath, homeVolume: { name: mount.Name, subpath: relative } };
+    return { homePath: serviceHomePath, homeVolume: { name: mount.Name, subpath } };
   }
   return {
-    homePath: mount?.Source ? path.posix.join(mount.Source, relative) : serviceHomePath,
+    homePath: mount?.Source ? path.posix.join(mount.Source, subpath) : serviceHomePath,
   };
 }
 

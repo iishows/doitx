@@ -1896,6 +1896,35 @@ describe("computer home storage", () => {
       ),
     ).toThrow(/no name/);
   });
+  it.skipIf(process.platform !== "win32")(
+    "accepts a Windows home under the data directory and still names its subpath in POSIX",
+    () => {
+      // The supervisor resolves its home paths on the host, so on Windows dataDir
+      // and the home are both backslash paths. A POSIX relative() call reads the
+      // separators as filename characters and rejects a home that is plainly
+      // inside dataDir, which failed every recovery on such a host.
+      const dataDir = "C:\\rakazo\\data";
+      const home = "C:\\rakazo\\data\\homes\\bot";
+      expect(computerHomeStorage(home, dataDir, undefined)).toEqual({ homePath: home });
+      expect(
+        computerHomeStorage(
+          home,
+          dataDir,
+          runtime({
+            Type: "volume",
+            Name: "example_appdata",
+            Source: "C:\\rakazo\\docker\\volumes\\example_appdata\\_data",
+            Destination: dataDir,
+          }),
+        ),
+      ).toEqual({
+        homePath: home,
+        homeVolume: { name: "example_appdata", subpath: "homes/bot" },
+      });
+      for (const escape of ["C:\\rakazo\\data", "C:\\other", "C:\\rakazo\\data\\..\\other"])
+        expect(() => computerHomeStorage(escape, dataDir, undefined)).toThrow();
+    },
+  );
   it("derives the network owner from where computer homes live, without exposing it", () => {
     const volume = (name: string) =>
       runtime({

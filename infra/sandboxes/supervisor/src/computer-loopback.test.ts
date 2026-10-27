@@ -364,7 +364,10 @@ describe("provisioning network rollback", () => {
             {
               Type: "volume",
               Name: "example_appdata",
-              Destination: process.env.DATA_DIR,
+              // The supervisor resolves both dataDir and home to host paths, so
+              // this Destination has to be resolved the same way or the mount
+              // never matches and the subpath assertion below is skipped.
+              Destination: path.resolve(process.env.DATA_DIR!),
               Source: "/var/lib/docker/volumes/example_appdata/_data",
             },
           ],
