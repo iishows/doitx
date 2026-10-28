@@ -12,15 +12,22 @@ import { declaredVisionModelIds, inputModalities } from "./model-modalities.js";
  *
  * Pi's built-in catalog only ships hosted providers, so a model running on the
  * operator's own machine has no catalog entry to select. This registers one
- * from environment configuration. The server is keyless: `resolve` returns a
- * placeholder because OpenAI-compatible local servers ignore the header, but
- * Models treats a provider with no resolvable auth as unconfigured and hides
- * its models.
+ * from environment configuration.
+ *
+ * Most local servers (Ollama, LM Studio, llama.cpp, MLX) are keyless and ignore
+ * the Authorization header, so `resolve` falls back to a placeholder. Models
+ * treats a provider with no resolvable auth as unconfigured and hides its
+ * models, so a value still has to be returned. Set
+ * `RAKAZO_LOCAL_MODELS_API_KEY` when the endpoint does check it, such as a
+ * gateway or reverse proxy in front of the model server.
  */
 export const LOCAL_PROVIDER_ID = "local";
 
 /** Model ids the local server serves with vision, declared by the operator. */
 export const LOCAL_VISION_MODELS_ENV = "RAKAZO_LOCAL_VISION_MODELS";
+
+/** Bearer token for endpoints that authenticate, such as a gateway in front. */
+export const LOCAL_API_KEY_ENV = "RAKAZO_LOCAL_MODELS_API_KEY";
 
 export function localVisionModelIds(): ReadonlySet<string> {
   return declaredVisionModelIds(LOCAL_VISION_MODELS_ENV);
@@ -69,6 +76,16 @@ function localModelIds(): string[] {
     .filter((id) => id.length > 0);
 }
 
+/**
+ * The bearer token for the local endpoint.
+ *
+ * Keyless servers ignore this header, so the placeholder keeps them working.
+ * An endpoint that does check it gets the operator's real token instead.
+ */
+function localApiKey(): string {
+  return process.env[LOCAL_API_KEY_ENV]?.trim() || "local";
+}
+
 function localModel(id: string): Model<"openai-completions"> {
   return {
     id,
@@ -98,7 +115,7 @@ export function localProvider(): Provider | undefined {
       apiKey: {
         name: "Local model server",
         resolve: async () => ({
-          auth: { apiKey: "local", baseUrl: localBaseUrl() },
+          auth: { apiKey: localApiKey(), baseUrl: localBaseUrl() },
           source: "local model server",
         }),
       },

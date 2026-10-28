@@ -659,9 +659,20 @@ RAKAZO_LOCAL_MAX_TOKENS=4096
 RAKAZO_LOCAL_VISION_MODELS=qwen3-vl
 ```
 
+Add `RAKAZO_LOCAL_MODELS_API_KEY` when the endpoint checks the `Authorization` header, such as a
+gateway or reverse proxy in front of the model server. Ollama, LM Studio, llama.cpp, and MLX are
+keyless and ignore it, so leaving it blank keeps the placeholder key they expect. Without it a
+server that does authenticate answers `401`.
+
+`RAKAZO_LOCAL_MODELS_URL` only has to be an absolute HTTP(S) URL, so a gateway on a public
+hostname works here too. Unlike a connection saved in the UI, this environment setting is not
+subject to `RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC` or `MCP_ALLOW_PRIVATE_ENDPOINT`; treat the value as
+trusted operator configuration.
+
 The loopback default is suitable when running Doitx from a source checkout. From containers,
 prefer a stable LAN RFC1918 address (not Compose service DNS alone). On Docker Desktop,
-`host.docker.internal` also works.
+`host.docker.internal` also works. Inside a container `localhost` is the container itself, so a
+server on the host is reachable only through `host.docker.internal` or the host's LAN address.
 On Docker Desktop, a bot computer shell can often reach services bound to host `127.0.0.1`
 through that same hostname. Do not run sensitive unauthenticated services on loopback while
 bots run, or firewall / block that path. Linux does not get `host.docker.internal` the same

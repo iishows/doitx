@@ -10,6 +10,7 @@ import {
 const ENV_KEYS = [
   "RAKAZO_LOCAL_MODELS",
   "RAKAZO_LOCAL_MODELS_URL",
+  "RAKAZO_LOCAL_MODELS_API_KEY",
   "RAKAZO_LOCAL_CONTEXT_WINDOW",
   "RAKAZO_LOCAL_MAX_TOKENS",
 ] as const;
@@ -114,4 +115,35 @@ describe("local model provider", () => {
     const withLocal = registerLocalProvider(builtinModels());
     expect(withLocal.getModel(LOCAL_PROVIDER_ID, "qwen3:4b")).toBeDefined();
   });
+
+  it("falls back to a placeholder key so keyless servers keep working", async () => {
+    setModels("qwen3:4b");
+    delete process.env.RAKAZO_LOCAL_MODELS_API_KEY;
+    const auth = await resolveAuth(localProvider());
+    expect(auth.apiKey).toBe("local");
+  });
+
+  it("sends the configured key when the endpoint authenticates", async () => {
+    setModels("qwen3:4b");
+    process.env.RAKAZO_LOCAL_MODELS_API_KEY = "sk-example-gateway-token";
+    const auth = await resolveAuth(localProvider());
+    expect(auth.apiKey).toBe("sk-example-gateway-token");
+    expect(auth.baseUrl).toBe("http://127.0.0.1:11434/v1");
+  });
+
+  it("treats a blank key as keyless rather than sending an empty bearer", async () => {
+    setModels("qwen3:4b");
+    process.env.RAKAZO_LOCAL_MODELS_API_KEY = "   ";
+    const auth = await resolveAuth(localProvider());
+    expect(auth.apiKey).toBe("local");
+  });
 });
+
+/** The resolved auth the provider hands to the HTTP layer. */
+async function resolveAuth(provider: ReturnType<typeof localProvider>) {
+  const resolver = provider?.auth?.apiKey;
+  if (!resolver?.resolve) throw new Error("local provider exposes no apiKey resolver");
+  const resolved = await resolver.resolve({} as never);
+  if (!resolved) throw new Error("local provider resolved no auth");
+  return resolved.auth as { apiKey: string; baseUrl: string };
+}
