@@ -5,7 +5,6 @@ import type {
   OAuthAuth,
   OAuthCredential,
 } from "@earendil-works/pi-ai";
-import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import type {
   ModelCredentialFailedState,
   ModelCredentialRetireReason,
@@ -36,6 +35,12 @@ export const COPILOT_OAUTH_PROVIDER = "github-copilot";
 export const XAI_OAUTH_PROVIDER = "xai";
 export const ANTHROPIC_OAUTH_PROVIDER = "anthropic";
 
+/**
+ * Providers whose subscription sign-in the app offers. Every entry came from the
+ * vendor catalog the app no longer ships, so a deployment offers none: users
+ * connect a model with an API key instead. The sign-in machinery below stays for
+ * deployments that register their own provider.
+ */
 export const SUBSCRIPTION_SIGN_IN_PROVIDERS: Record<
   string,
   {
@@ -44,34 +49,7 @@ export const SUBSCRIPTION_SIGN_IN_PROVIDERS: Record<
     hint: string;
     billing: string;
   }
-> = {
-  [CHATGPT_OAUTH_PROVIDER]: {
-    mode: "device-code",
-    loginLabel: "Sign in with ChatGPT",
-    hint: "ChatGPT Plus/Pro",
-    billing:
-      "Sign in with ChatGPT Plus or Pro. Uses your OpenAI subscription. Doitx does not pay.",
-  },
-  [COPILOT_OAUTH_PROVIDER]: {
-    mode: "device-code",
-    loginLabel: "Sign in with GitHub Copilot",
-    hint: "Copilot",
-    billing: "Sign in with GitHub Copilot. Uses your Copilot subscription. Doitx does not pay.",
-  },
-  [XAI_OAUTH_PROVIDER]: {
-    mode: "device-code",
-    loginLabel: "Sign in with SuperGrok or X Premium",
-    hint: "SuperGrok / key",
-    billing: "Sign in with SuperGrok or X Premium, or paste an xAI API key. Doitx does not pay.",
-  },
-  [ANTHROPIC_OAUTH_PROVIDER]: {
-    mode: "auth-url",
-    loginLabel: "Sign in with Claude",
-    hint: "Claude Pro/Max / key",
-    // Button + "Or paste an API key" already explain the choices; no extra paragraph.
-    billing: "",
-  },
-};
+> = {};
 
 const MIN_OAUTH_VALIDITY_MS = 5 * 60 * 1000;
 const SIGN_IN_START_WAIT_MS = 30_000;
@@ -636,17 +614,20 @@ export function codexComputeResidency(accessToken: string | undefined): string |
   return claim;
 }
 
-export function loadProviderOAuth(providerId: string): OAuthAuth | undefined {
-  // pi 1.3 adds ChatGPT OAuth to OpenAI; keep subscription sign-in on Codex.
-  if (providerId === "openai") return undefined;
-  return providerCatalog().getProvider(canonicalPiProviderId(providerId))?.auth.oauth;
+/**
+ * Subscription sign-in lived on the upstream vendor catalog. Rakazo ships no
+ * vendor catalog any more, so no managed provider offers OAuth sign-in out of
+ * the box. A deployment that runs its own sign-in registers the handlers here;
+ * the refresh/retire machinery below is provider-agnostic and is reused as-is.
+ */
+const providerOAuthHandlers = new Map<string, OAuthAuth>();
+
+export function registerProviderOAuth(providerId: string, oauth: OAuthAuth): void {
+  providerOAuthHandlers.set(canonicalPiProviderId(providerId), oauth);
 }
 
-let cachedProviderCatalog: ReturnType<typeof builtinModels> | undefined;
-
-function providerCatalog() {
-  cachedProviderCatalog ??= builtinModels();
-  return cachedProviderCatalog;
+export function loadProviderOAuth(providerId: string): OAuthAuth | undefined {
+  return providerOAuthHandlers.get(canonicalPiProviderId(providerId));
 }
 
 type ResolveModelOpts = {
@@ -899,11 +880,14 @@ export class PiOAuthLogins {
 
   async begin(input: BeginInput): Promise<PiOAuthBegin> {
     // The pasted code can reach another API process (a deploy replaces this one), which
-    // then needs this verifier to exchange it.
+    // then needs this verifier to exchange it. Only the built-in flow knows which of the
+    // shipped providers hands a code back; an injected flow supplies its own.
+    const handoffMode =
+      this.loginFn === defaultLogin
+        ? SUBSCRIPTION_SIGN_IN_PROVIDERS[input.provider]?.mode
+        : "auth-url";
     const verifier =
-      this.handoff && SUBSCRIPTION_SIGN_IN_PROVIDERS[input.provider]?.mode === "auth-url"
-        ? randomBytes(32).toString("base64url")
-        : undefined;
+      this.handoff && handoffMode === "auth-url" ? randomBytes(32).toString("base64url") : undefined;
     const started = await this.start(input, randomUUID(), verifier);
     if (verifier && started.mode === "auth-url") {
       await this.handOff(started.loginId, input, verifier);
@@ -916,9 +900,11 @@ export class PiOAuthLogins {
     loginId: string,
     verifier: string | undefined,
   ): Promise<PiOAuthBegin> {
-    if (!SUBSCRIPTION_SIGN_IN_PROVIDERS[input.provider]) {
+    // Only the built-in flow consults the shipped offer list; a deployment that
+    // injects its own login function declares what it supports.
+    if (this.loginFn === defaultLogin && !SUBSCRIPTION_SIGN_IN_PROVIDERS[input.provider]) {
       throw new Error(
-        "In-app subscription sign-in is only available for ChatGPT Plus/Pro, Claude Pro/Max, GitHub Copilot, and SuperGrok.",
+        "Signing in to a model subscription is not available in this deployment. Connect a model with an API key instead.",
       );
     }
     if (input.signal?.aborted) {
@@ -1437,7 +1423,10 @@ function defaultLogin(
       ...(verifier ? { createVerifier: () => verifier } : {}),
     })(interaction);
   }
-  return builtinModels().login(providerId, type, interaction);
+  // Every other subscription login came from the vendor catalog the app no longer ships.
+  return Promise.reject(
+    new Error(`${providerId} does not offer sign-in. Connect a model with an API key instead.`),
+  );
 }
 
 function deferred<T>() {

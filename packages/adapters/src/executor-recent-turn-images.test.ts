@@ -1,8 +1,16 @@
 import type { AgentRunRequest } from "@rakazo/adapter-kit";
 import type { MessageBlock } from "@rakazo/contracts";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as ComputerLifecycleModule from "./computer-lifecycle.js";
 import { createRunExecutor } from "./executor.js";
+
+// The deployment's models come from the local endpoint now; declare the fixture
+// ids so the vision gate and the text-only case both resolve. A case below calls
+// unstubAllEnvs, so this is re-applied per test rather than once at import time.
+beforeEach(() => {
+  vi.stubEnv("RAKAZO_LOCAL_MODELS", "openai/gpt-4o,deepseek/deepseek-v4-flash-0731");
+  vi.stubEnv("RAKAZO_LOCAL_VISION_MODELS", "openai/gpt-4o");
+});
 
 const lifecycleMocks = vi.hoisted(() => ({
   renewComputerExecutionLease: vi.fn(async () => true),
@@ -206,7 +214,7 @@ async function runWithModel(
 
     deploymentSettings: {
       findUnique: vi.fn(async () => ({
-        defaultModelProvider: "openrouter",
+        defaultModelProvider: "local",
         defaultModelId: modelId,
       })),
     },
@@ -342,7 +350,7 @@ describe("recent turn images follow model vision", () => {
   });
 
   it("does not recover a backup's missing secret with a deployment key", async () => {
-    const backup = { provider: "openrouter", modelId: "openai/gpt-4o" };
+    const backup = { provider: "openai-compatible", modelId: "openai/gpt-4o" };
     const { prisma, request } = await runWithModel(TEXT_ONLY_MODEL, backup);
     expect(request.model.apiKey).toBe("fake-deployment-key");
     const resolve = request.resolveFallbackModel;
@@ -377,7 +385,7 @@ describe("recent turn images follow model vision", () => {
       expect(prisma.secret.findFirst).toHaveBeenCalledExactlyOnceWith({
         where: { id: "missing-secret", userId: "user-1", spaceId: null },
       });
-      await expect(resolve("openai", "gpt-4o")).rejects.toThrow("Backup model is not selected");
+      await expect(resolve("local", "gpt-4o")).rejects.toThrow("Backup model is not selected");
       expect(prisma.secret.findFirst).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllEnvs();
@@ -386,7 +394,7 @@ describe("recent turn images follow model vision", () => {
 
   it("resolves a backup pinned to a connection on that connection only", async () => {
     const backup = {
-      provider: "openrouter",
+      provider: "local",
       modelId: "openai/gpt-4o",
       credentialId: "work-credential",
     };
@@ -426,7 +434,7 @@ describe("recent turn images follow model vision", () => {
   });
 
   it("persists the switched model against the current run lease", async () => {
-    const backup = { provider: "openrouter", modelId: "openai/gpt-4o" };
+    const backup = { provider: "openai-compatible", modelId: "openai/gpt-4o" };
     const { prisma, request, run } = await runWithModel(TEXT_ONLY_MODEL, backup);
 
     expect(request?.model.id).toBe(TEXT_ONLY_MODEL);

@@ -173,7 +173,7 @@ async function runRoutine(
     userModelCredential: { findFirst: vi.fn(async () => null) },
     deploymentSettings: {
       findUnique: vi.fn(async () => ({
-        defaultModelProvider: "openrouter",
+        defaultModelProvider: "local",
         defaultModelId: "deepseek/deepseek-v4-flash-0731",
       })),
     },

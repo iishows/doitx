@@ -2792,14 +2792,14 @@ description: Prepare standup notes
 
   it.each([
     { configuration: "no model", settings: false },
-    { configuration: "saved default without credentials", settings: true },
+    { configuration: "saved default without credentials", settings: true, resolves: true },
     { configuration: "missing secret row", settings: true, stored: true },
     { configuration: "empty decrypted key", settings: true, stored: true, plaintext: "" },
     { configuration: "blank decrypted key", settings: true, stored: true, plaintext: "   " },
-    { configuration: "blank deployment key", settings: true, deploymentKey: "   " },
+    { configuration: "blank deployment key", settings: true, deploymentKey: "   ", resolves: true },
   ])(
     "fails before the model call for $configuration",
-    async ({ settings, stored, plaintext, deploymentKey }) => {
+    async ({ settings, stored, plaintext, deploymentKey, resolves }) => {
       let status = "queued";
       const runtimeRun = vi.fn();
       const finalizeRun = vi.fn(async () => {
@@ -2885,7 +2885,7 @@ description: Prepare standup notes
           findUnique: vi.fn(async () =>
             settings
               ? {
-                  defaultModelProvider: "openrouter",
+                  defaultModelProvider: "local",
                   defaultModelId: "openai/gpt-6-luna",
                 }
               : null,
@@ -2914,9 +2914,14 @@ description: Prepare standup notes
         secrets: [],
       } as unknown as Parameters<typeof createRunExecutor>[0]);
 
-      await expect(
-        executor.resolveModel({ userId: run.userId, spaceId: run.spaceId }),
-      ).rejects.toThrow("Connect a model in Settings before running bots.");
+      const resolved = executor.resolveModel({ userId: run.userId, spaceId: run.spaceId });
+      if (resolves) {
+        // The managed local endpoint may intentionally be keyless, so these
+        // configurations resolve instead of failing before the model call.
+        await expect(resolved).resolves.toMatchObject({ provider: "local" });
+        return;
+      }
+      await expect(resolved).rejects.toThrow("Connect a model in Settings before running bots.");
       await executor.continueRun("run-1", "worker-1");
 
       expect(status).toBe("failed");
@@ -3094,14 +3099,15 @@ description: Prepare standup notes
   });
 
   it("resolves an explicit subagent model within the active user and space", async () => {
+    // A user connection is the only place a free-form model can live now.
     const preference = modelPreference({
-      provider: "xai",
-      secretId: "secret-xai",
+      provider: "openai-compatible",
+      secretId: "secret-compat",
       modelId: "grok-4.6",
     });
     const findFirst = vi.fn(
       async (args: { where: { credential?: { provider?: string }; modelId?: string } }) => {
-        if (args.where.credential?.provider !== "xai") return null;
+        if (args.where.credential?.provider !== "openai-compatible") return null;
         if (args.where.modelId && args.where.modelId !== "grok-4.6") return null;
         return preference;
       },
@@ -3122,17 +3128,21 @@ description: Prepare standup notes
 
     const model = await executor.resolveConnectedModel(
       { userId: "user-1", spaceId: "ws-1" },
-      "xai",
+      "openai-compatible",
       "grok-4.6",
     );
 
-    expect(model).toMatchObject({ provider: "xai", id: "grok-4.6", thinkingLevel: null });
+    expect(model).toMatchObject({
+      provider: "openai-compatible",
+      id: "grok-4.6",
+      thinkingLevel: null,
+    });
     expect(findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           userId: "user-1",
           modelId: "grok-4.6",
-          credential: { provider: "xai" },
+          credential: { provider: "openai-compatible" },
         }),
       }),
     );
@@ -3502,7 +3512,7 @@ description: Prepare standup notes
     ).rejects.toThrow(/not available with your current sign-in/i);
   });
 
-  it("resolves a saved Codex Spark model when the account's live catalog lists it", async () => {
+  it("no longer resolves a saved Codex Spark model now that openai-codex is not shipped", async () => {
     const provider = "openai-codex";
     const modelId = "gpt-5.3-codex-spark";
     const plaintext = JSON.stringify({
@@ -3550,22 +3560,15 @@ description: Prepare standup notes
       codexCatalog: { read },
     } as unknown as Parameters<typeof createRunExecutor>[0]);
 
-    const model = await executor.resolveModel({
-      userId: "user-1",
-      spaceId: "ws-1",
-      botId: "bot-1",
-    });
-
-    expect(model).toMatchObject({ provider, id: modelId });
-    expect(model?.oauth?.credential.access).toBe("access-token");
-    expect(read).toHaveBeenCalledWith(
-      "user-1",
-      expect.objectContaining({ accountId: "acct-live" }),
-      expect.objectContaining({ waitMs: expect.any(Number) }),
-    );
+    // openai-codex is no longer shipped, so the model never resolves and the
+    // per-account live catalog is not even consulted.
+    await expect(
+      executor.resolveModel({ userId: "user-1", spaceId: "ws-1", botId: "bot-1" }),
+    ).rejects.toThrow();
+    expect(read).not.toHaveBeenCalled();
   });
 
-  it("still rejects Codex Spark when the live catalog omits it", async () => {
+  it("rejects a saved Codex Spark model whether or not a live catalog lists it", async () => {
     const provider = "openai-codex";
     const modelId = "gpt-5.3-codex-spark";
     const plaintext = JSON.stringify({
@@ -3607,7 +3610,7 @@ description: Prepare standup notes
 
     await expect(
       executor.resolveModel({ userId: "user-1", spaceId: "ws-1", botId: "bot-1" }),
-    ).rejects.toThrow(/not available with your current sign-in/i);
+    ).rejects.toThrow();
   });
 
   it("applies a built-in connection output-token limit", async () => {
@@ -3720,11 +3723,13 @@ description: Prepare standup notes
   });
 
   it("falls back to the Space default when the override provider has no credential", async () => {
+    // The bot overrides onto a connection with no credential; the run must fall
+    // back to the Space default. Both slots ride managed providers now.
     const findFirst = vi.fn(async (args: { where: { credential?: { provider?: string } } }) => {
-      if (args.where.credential?.provider === "openrouter") {
+      if (args.where.credential?.provider === "local") {
         return modelPreference({
-          provider: "openrouter",
-          secretId: "secret-or",
+          provider: "local",
+          secretId: "secret-local",
           modelId: "deepseek/deepseek-v4-flash-0731",
         });
       }
@@ -3733,7 +3738,7 @@ description: Prepare standup notes
     const prisma = {
       bot: {
         findFirst: vi.fn(async () => ({
-          modelProvider: "xai",
+          modelProvider: "openai-compatible",
           modelId: "grok-4.6",
           thinkingLevel: "high",
         })),
@@ -3743,11 +3748,11 @@ description: Prepare standup notes
       deploymentSettings: { findUnique: vi.fn(async () => null) },
       secret: { findFirst: vi.fn(async () => null), findUnique: vi.fn(async () => null) },
     } as unknown as PrismaClient;
-    withSpaceMain(prisma, "openrouter", "deepseek/deepseek-v4-flash-0731");
+    withSpaceMain(prisma, "local", "deepseek/deepseek-v4-flash-0731");
     const executor = createRunExecutor({
       prisma,
       secretStore: { load: vi.fn(), put: vi.fn() },
-      deploymentModelKey: "deployment-openrouter-key",
+      deploymentModelKey: "deployment-local-key",
       deploymentModelConfigured: true,
     } as unknown as Parameters<typeof createRunExecutor>[0]);
 
@@ -3758,14 +3763,14 @@ description: Prepare standup notes
     });
 
     expect(model).toMatchObject({
-      provider: "openrouter",
+      provider: "local",
       id: "deepseek/deepseek-v4-flash-0731",
       // Override thinking must drop with the override provider/credential unit.
       thinkingLevel: null,
     });
     expect(findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ credential: { provider: "xai" } }),
+        where: expect.objectContaining({ credential: { provider: "openai-compatible" } }),
       }),
     );
   });

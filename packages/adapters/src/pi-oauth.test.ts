@@ -22,6 +22,7 @@ import {
   resolveModelAuth,
   secretValuesToRedact,
   serializeModelSecret,
+  SUBSCRIPTION_SIGN_IN_PROVIDERS,
   terminalOAuthRefreshErrorMarker,
   XAI_OAUTH_PROVIDER,
 } from "./pi-oauth.js";
@@ -1198,17 +1199,21 @@ describe("kickModelCredentialRefresh", () => {
 });
 
 describe("PiOAuthLogins", () => {
-  it("keeps ChatGPT OAuth on Codex rather than plain OpenAI", () => {
+  it("offers no subscription sign-in now that no shipped provider supports OAuth", () => {
     expect(loadProviderOAuth("openai")).toBeUndefined();
-    expect(loadProviderOAuth(CHATGPT_OAUTH_PROVIDER)?.isSubscription).toBe(true);
+    expect(loadProviderOAuth(CHATGPT_OAUTH_PROVIDER)).toBeUndefined();
+    expect(Object.keys(SUBSCRIPTION_SIGN_IN_PROVIDERS)).toEqual([]);
   });
 
-  it.each(["openrouter", "openai"])("rejects subscription sign-in for %s", async (provider) => {
-    const logins = new PiOAuthLogins();
-    await expect(logins.begin({ userId: "u", spaceId: "w", provider })).rejects.toThrow(
-      /ChatGPT Plus\/Pro, Claude Pro\/Max, GitHub Copilot, and SuperGrok/,
-    );
-  });
+  it.each(["openrouter", "openai", CHATGPT_OAUTH_PROVIDER, "anthropic"])(
+    "rejects subscription sign-in for %s",
+    async (provider) => {
+      const logins = new PiOAuthLogins();
+      await expect(logins.begin({ userId: "u", spaceId: "w", provider })).rejects.toThrow(
+        /not available in this deployment/,
+      );
+    },
+  );
 
   it("runs the anthropic auth-url flow via submitted code", async () => {
     const logins = new PiOAuthLogins(async (_provider, _type, interaction) => {

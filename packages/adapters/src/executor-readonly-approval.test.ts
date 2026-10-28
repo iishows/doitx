@@ -343,7 +343,7 @@ function fixture({
     modelCreditEntry: { findUnique: vi.fn(async () => null) },
     deploymentSettings: {
       findUnique: vi.fn(async () => ({
-        defaultModelProvider: "openrouter",
+        defaultModelProvider: "local",
         defaultModelId: "fixture-model",
       })),
     },

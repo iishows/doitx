@@ -23,11 +23,13 @@ describe("resolveDeploymentModel", () => {
 
   it("pairs the deployment model key with the provider it belongs to", () => {
     const both = { OPENROUTER_API_KEY: "or-key", ANTHROPIC_API_KEY: "sk-ant-key" };
+    // No explicit provider: the deployment runs on the managed local endpoint, which
+    // takes its key from RAKAZO_LOCAL_MODELS_API_KEY rather than another vendor's.
     expect(resolveDeploymentModel(both)).toEqual({
-      provider: "openrouter",
+      provider: "local",
       model: "openai/gpt-6-luna",
-      key: "or-key",
-      configured: true,
+      key: undefined,
+      configured: false,
       hostCredentials: false,
     });
     // The whole point: switching the provider switches the key with it.

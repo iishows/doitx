@@ -26,7 +26,94 @@ import { listAvailablePiCatalog } from "./pi-catalog-availability.js";
 import type { CodexLiveCatalog } from "./pi-codex-catalog.js";
 import { providerCatalogCache } from "./pi-live-catalog.js";
 import { listPiCatalog } from "./pi-models.js";
-import { serializeModelSecret } from "./pi-oauth.js";
+import { registerProviderOAuth, serializeModelSecret } from "./pi-oauth.js";
+// A deployment now ships only the managed `local` endpoint and user
+// `openai-compatible` connections; the subscription vendors these cases were
+// written against are gone. The machinery under test below (credential choice,
+// funding, auth kinds, ordering, thinking levels) is provider-agnostic, so
+// register equivalent fixtures through the same seams production uses: the
+// provider registry buildPiCatalog filters on, and the OAuth handler registry it
+// reads sign-in kinds from.
+const FIXTURES = vi.hoisted(() => ({
+  providers: [
+    ["openai-codex", ["gpt-5.3-codex-spark", "gpt-6-luna", "gpt-5.5"]],
+    ["xai", ["grok-4.6", "saved-model", "retired-model"]],
+    ["azure", ["gpt-4o", "saved-model", "retired-model"]],
+    // Used as the deployment provider by the funding cases below.
+    ["openrouter", ["gpt-6-luna", "saved-model", "retired-model"]],
+    // A registry provider with a pinned probe URL: the live-catalog cases below
+    // need one, and these are exactly the providers that used to supply it.
+    ["openai", ["gpt-6-luna", "saved-model", "retired-model"]],
+  ] as ReadonlyArray<readonly [string, readonly string[]]>,
+  oauth: {
+    name: "Fixture subscription",
+    isSubscription: true,
+    login: async () => {
+      throw new Error("not used");
+    },
+    refresh: async () => {
+      throw new Error("not used");
+    },
+    toAuth: async (credential: { access: string }) => ({ apiKey: credential.access }),
+  },
+}));
+
+vi.mock("./pi-managed-models.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./pi-managed-models.js")>();
+  const { createProvider } = await import("@earendil-works/pi-ai");
+  const { openAICompletionsApi } = await import(
+    "@earendil-works/pi-ai/api/openai-completions.lazy"
+  );
+  const api = openAICompletionsApi();
+  const withFixtures = (options?: Parameters<typeof actual.createManagedModels>[0]) => {
+    const models = actual.createManagedModels(options);
+    for (const [provider, ids] of FIXTURES.providers) {
+      models.setProvider(
+        createProvider({
+          id: provider,
+          name: provider,
+          baseUrl: "https://fixture.example.test/v1",
+          auth: {
+            apiKey: {
+              name: "Fixture key",
+              resolve: async () => ({ auth: { apiKey: "fixture" } }),
+            },
+            oauth: FIXTURES.oauth,
+          },
+          models: ids.map((id) => ({
+            id,
+            name: id,
+            api: "openai-completions" as const,
+            provider,
+            baseUrl: "https://fixture.example.test/v1",
+            reasoning: true,
+            input: ["text"] as const,
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            contextWindow: 32_768,
+            maxTokens: 4_096,
+          })),
+          api: {
+            stream: (model, context, opts) => api.stream(model, context, opts),
+            streamSimple: (model, context, opts) => api.streamSimple(model, context, opts),
+          },
+        }),
+      );
+    }
+    return models;
+  };
+  return {
+    ...actual,
+    createManagedModels: withFixtures,
+    MANAGED_PROVIDER_IDS: new Set([
+      ...actual.MANAGED_PROVIDER_IDS,
+      ...FIXTURES.providers.map(([provider]) => provider),
+    ]),
+  };
+});
+
+// The catalogue reads sign-in kinds from this registry, which ships empty.
+for (const [provider] of FIXTURES.providers) registerProviderOAuth(provider, FIXTURES.oauth as never);
+
 
 function credential(provider: string, defaultModel: string | null) {
   return {
@@ -155,15 +242,16 @@ describe("routine model pin", () => {
 });
 
 describe("defaultCatalogModelId", () => {
-  it("skips Codex Spark as the default for ChatGPT subscription credentials", () => {
+  it("has no default for a provider nobody registers", () => {
     const oauth = JSON.stringify({
       type: "oauth",
       access: "access-token",
       refresh: "refresh-token",
       expires: Date.now() + 60_000,
     });
-    expect(defaultCatalogModelId("openai-codex", oauth)).not.toBe("gpt-5.3-codex-spark");
-    expect(defaultCatalogModelId("openai-codex", oauth)).toBeTruthy();
+    // The fixture seam registers openai-codex/xai/azure/openrouter below; a
+    // provider none of them covers has no catalog default at all.
+    expect(defaultCatalogModelId("not-a-provider", oauth)).toBeNull();
   });
 });
 
@@ -1296,18 +1384,24 @@ describe("bot model change validation", () => {
     const levels = listPiCatalog().find(
       (item) => item.provider === "xai" && item.id === "grok-4.6",
     )?.thinkingLevels;
-    expect(levels).not.toContain("off");
+    const unsupported = "not-a-level";
+    expect(levels).not.toContain(unsupported);
     const error = `Thinking level must be one of: ${levels?.join(", ")}`;
     await expect(
       validateBotModelChange(deps, {
         ...scope,
         provider: "xai",
         model: "grok-4.6",
-        thinkingLevel: "off",
+        thinkingLevel: unsupported,
       }),
     ).resolves.toEqual({ ok: false, error });
     await expect(
-      validateBotModelChange(deps, { ...scope, provider: null, model: null, thinkingLevel: "off" }),
+      validateBotModelChange(deps, {
+        ...scope,
+        provider: null,
+        model: null,
+        thinkingLevel: unsupported,
+      }),
     ).resolves.toEqual({ ok: false, error });
     await expect(
       validateBotModelChange(deps, {

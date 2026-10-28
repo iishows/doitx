@@ -14,12 +14,15 @@ vi.mock("./routes/shared.js", () => ({ modelSetup }));
 const actor = { userId: "user-1", spaceId: "space-1" } as Actor;
 
 describe("model connect analytics", () => {
+  // The managed endpoint's models are declared through env, and only catalog
+  // providers are reported, so declare one before the module reads the catalog.
+  vi.stubEnv("RAKAZO_LOCAL_MODELS", "fixture-model");
   beforeEach(() => modelSetup.mockReset());
 
   it("sends catalog provider ids and never a compatible endpoint or unknown provider", () => {
-    expect(modelConnectProperties("openai", "api_key")).toEqual({
+    expect(modelConnectProperties("local", "api_key")).toEqual({
       method: "api_key",
-      provider: "openai",
+      provider: "local",
     });
     expect(modelConnectProperties(OPENAI_COMPATIBLE_PROVIDER_ID, "api_key")).toEqual({
       method: "compatible",
@@ -46,29 +49,29 @@ describe("model connect analytics", () => {
     const deps = { analytics: { capture, flush: async () => undefined } } as unknown as RouterDeps;
 
     modelSetup.mockResolvedValueOnce({ needsModel: false });
-    (await firstModelConnectAnalytics(deps, actor, "api_key"))("openai", {
+    (await firstModelConnectAnalytics(deps, actor, "api_key"))("local", {
       name: "model_connected",
     });
     expect(capture).not.toHaveBeenCalled();
 
     modelSetup.mockRejectedValueOnce(new Error("db unavailable"));
-    (await firstModelConnectAnalytics(deps, actor, "api_key"))("openai", {
+    (await firstModelConnectAnalytics(deps, actor, "api_key"))("local", {
       name: "model_connected",
     });
     expect(capture).not.toHaveBeenCalled();
 
     modelSetup.mockResolvedValueOnce({ needsModel: true });
     const record = await firstModelConnectAnalytics(deps, actor, "api_key");
-    record("openai", { name: "model_connect_started" });
-    record("openai", {
+    record("local", { name: "model_connect_started" });
+    record("local", {
       name: "model_connect_failed",
       error: new Error(`${MODEL_KEY_REJECTED_ERROR} sk-private`),
     });
     expect(capture.mock.calls).toEqual([
-      ["user-1", { name: "model_connect_started", method: "api_key", provider: "openai" }],
+      ["user-1", { name: "model_connect_started", method: "api_key", provider: "local" }],
       [
         "user-1",
-        { name: "model_connect_failed", method: "api_key", provider: "openai", errorKind: "other" },
+        { name: "model_connect_failed", method: "api_key", provider: "local", errorKind: "other" },
       ],
     ]);
     expect(JSON.stringify(capture.mock.calls)).not.toContain("sk-private");

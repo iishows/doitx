@@ -146,7 +146,7 @@ describe("Pi outgoing provider prefixes", () => {
     }
   }, 30_000);
 
-  it("reserves input room in an unknown OpenRouter model's actual completion request", async () => {
+  it("reserves input room in an unknown OpenAI-compatible model's actual completion request", async () => {
     const requests: Array<{ max_completion_tokens?: number; messages?: unknown[] }> = [];
     const authorizationHeaders: Array<string | undefined> = [];
     const server = createServer((request, response) => {
@@ -168,18 +168,19 @@ describe("Pi outgoing provider prefixes", () => {
     const originalFetch = globalThis.fetch;
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
-      expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
       const localUrl = `http://127.0.0.1:${address.port}/v1/chat/completions`;
       return originalFetch(new Request(localUrl, input instanceof Request ? input : init));
     });
     try {
       expect(
         resolveRuntimeModel({
-          provider: "openrouter",
+          provider: "openai-compatible",
           id: "synthetic-unlisted-model",
+          baseUrl: `http://127.0.0.1:${address.port}/v1`,
+          allowPrivateEndpoint: true,
           contextWindow: 4096,
         }).model,
-      ).toMatchObject({ contextWindow: 4096, maxTokens: 2048 });
+      ).toMatchObject({ contextWindow: 4096, maxTokens: 4_096 });
       for (const [index, configured] of [
         { contextWindow: 16_384 },
         { contextWindow: 4096 },
@@ -197,8 +198,10 @@ describe("Pi outgoing provider prefixes", () => {
             tools: [],
             contextStrategy: "retrieval",
             model: {
-              provider: "openrouter",
+              provider: "openai-compatible",
               id: "synthetic-unlisted-model",
+              baseUrl: `http://127.0.0.1:${address.port}/v1`,
+              allowPrivateEndpoint: true,
               ...configured,
               apiKey: "fake-fixture-key",
             },

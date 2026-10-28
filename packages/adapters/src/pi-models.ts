@@ -1,14 +1,15 @@
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
-import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import type { ModelOAuthSignInMode, ThinkingLevel } from "@rakazo/contracts";
-import { canonicalPiProviderId, MODEL_KEY_REJECTED_ERROR } from "@rakazo/contracts";
-import { LOCAL_PROVIDER_ID, registerLocalProvider } from "./pi-local-provider.js";
-import { applyPiModelCompatibility } from "./pi-model-compat.js";
+import {
+  canonicalPiProviderId,
+  LOCAL_PROVIDER_ID,
+  MODEL_KEY_REJECTED_ERROR,
+} from "@rakazo/contracts";
+import { createManagedModels, MANAGED_PROVIDER_IDS } from "./pi-managed-models.js";
 import { loadProviderOAuth, SUBSCRIPTION_SIGN_IN_PROVIDERS } from "./pi-oauth.js";
 import {
   OPENAI_COMPATIBLE_PROVIDER_ID,
   probeOpenAiCompatibleModels,
-  registerOpenAiCompatibleCatalog,
 } from "./pi-openai-compatible-provider.js";
 import { MODEL_CONNECT_TIMEOUT_MS } from "./pi-runtime-limits.js";
 
@@ -200,11 +201,12 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
 function buildPiCatalog(): PiCatalogEntry[] {
   catalogProbeBaseUrls.clear();
   catalogBaseUrls.clear();
-  const models = registerOpenAiCompatibleCatalog(
-    registerLocalProvider(applyPiModelCompatibility(builtinModels())),
-  );
+  const models = createManagedModels();
   const entries: PiCatalogEntry[] = [];
   for (const provider of models.getProviders()) {
+    // Defence in depth: the managed catalog only registers local and
+    // openai-compatible, but never let an unlisted provider reach the UI.
+    if (!MANAGED_PROVIDER_IDS.has(provider.id)) continue;
     const providerName = PROVIDER_DISPLAY_NAMES[provider.id] ?? provider.name;
     const apiKey = Boolean(provider.auth.apiKey);
     const oauthAuth = loadProviderOAuth(provider.id);

@@ -383,7 +383,7 @@ describe("prepareFleetRequest set_child_bot_model", () => {
       },
       summary: {
         title: "Change the model of Scout?",
-        lines: ["From: claude-old (Anthropic)", "To: my-model (custom)"],
+        lines: ["From: claude-old (anthropic)", "To: my-model (custom)"],
       },
     });
   });
@@ -419,7 +419,7 @@ describe("prepareFleetRequest set_child_bot_model", () => {
     expect(prepared).toMatchObject({
       ok: true,
       summary: {
-        lines: ["From: unknown-model (Anthropic)", "To: unknown-model (custom)"],
+        lines: ["From: unknown-model (anthropic)", "To: unknown-model (custom)"],
       },
     });
   });
@@ -451,7 +451,7 @@ describe("prepareFleetRequest set_child_bot_model", () => {
     expect(prepared).toMatchObject({
       ok: true,
       canonical: { botId: "bot-scout", provider: null, model: null },
-      summary: { lines: ["From: claude-old (Anthropic)", "To: Default model"] },
+      summary: { lines: ["From: claude-old (anthropic)", "To: Default model"] },
     });
   });
 
@@ -468,7 +468,7 @@ describe("prepareFleetRequest set_child_bot_model", () => {
     expect(prepared).toMatchObject({
       ok: true,
       summary: {
-        lines: ["From: claude-old (Anthropic)", "To: Default model", "Thinking: Default"],
+        lines: ["From: claude-old (anthropic)", "To: Default model", "Thinking: Default"],
       },
     });
   });

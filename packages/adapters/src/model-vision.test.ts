@@ -8,64 +8,106 @@ import {
   resolveModelRefForVisionCheck,
   updateModelImageCapabilities,
 } from "./model-vision.js";
-import { liveCatalogEntry } from "./pi-live-catalog.js";
 import { resolveRuntimeModel } from "./pi-runtime.js";
+
+const LOCAL_MODELS_ENV = "RAKAZO_LOCAL_MODELS";
+const LOCAL_VISION_ENV = "RAKAZO_LOCAL_VISION_MODELS";
+
+/**
+ * The vision gate memoizes its catalog at module scope, so each case has to
+ * start from a fresh module graph or it would read the previous case's env.
+ * The deployment's models are declared through RAKAZO_LOCAL_MODELS now that no
+ * vendor catalog ships with the app.
+ */
+async function withLocalModels<T>(
+  models: string,
+  visionModels: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const previous = new Map(
+    [LOCAL_MODELS_ENV, LOCAL_VISION_ENV].map((k) => [k, process.env[k]] as const),
+  );
+  process.env[LOCAL_MODELS_ENV] = models;
+  process.env[LOCAL_VISION_ENV] = visionModels;
+  vi.resetModules();
+  try {
+    return await fn();
+  } finally {
+    for (const [k, v] of previous) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    vi.resetModules();
+  }
+}
 
 describe("model vision gating for computer tools", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.resetModules();
   });
 
-  it("treats catalog text-only models as unable to see", () => {
-    expect(modelAcceptsImageInput("openrouter", "deepseek/deepseek-v4-flash-0731")).toBe(false);
-    expect(modelAcceptsImageInput("openrouter", "deepseek/deepseek-v4-pro")).toBe(false);
+  it("treats declared text-only models as unable to see", async () => {
+    await withLocalModels("some-text-model,some-vl-model", "some-vl-model", async () => {
+      const { modelAcceptsImageInput: accepts } = await import("./model-vision.js");
+      expect(accepts("local", "some-text-model")).toBe(false);
+    });
   });
 
-  it("treats catalog vision models as able to see", () => {
-    expect(modelAcceptsImageInput("openrouter", "openai/gpt-4o")).toBe(true);
-    expect(modelAcceptsImageInput("openrouter", "deepseek/deepseek-v4-flash-vision-exp")).toBe(
-      true,
-    );
+  it("treats declared vision models as able to see", async () => {
+    await withLocalModels("some-text-model,some-vl-model", "some-vl-model", async () => {
+      const { modelAcceptsImageInput: accepts } = await import("./model-vision.js");
+      expect(accepts("local", "some-vl-model")).toBe(true);
+    });
   });
 
-  it("sees models the runtime adds to the bundled catalog", () => {
-    expect(modelAcceptsImageInput("anthropic", "claude-sonnet-5-5")).toBe(true);
-    expect(modelAcceptsImageInput("openai-codex", "gpt-6.1-sol")).toBe(true);
+  it("sees models the runtime adds to the deployment catalog", async () => {
+    await withLocalModels("runtime-vl-model", "runtime-vl-model", async () => {
+      const { modelAcceptsImageInput: accepts } = await import("./model-vision.js");
+      const { resolveRuntimeModel: resolve } = await import("./pi-runtime.js");
+      expect(resolve({ provider: "local", id: "runtime-vl-model" }).model?.input).toContain(
+        "image",
+      );
+      expect(accepts("local", "runtime-vl-model")).toBe(true);
+    });
   });
 
   it.each([
-    ["openai", "gpt-4o-2099-01-01", true],
-    ["openai-codex", "gpt-6-luna-latest", true],
-    ["openai-codex", "gpt-unknown-future-model", false],
-  ])("agrees with listing and execution for live %s/%s", (provider, id, images) => {
-    expect(liveCatalogEntry(provider, id)?.images).toBe(images);
-    expect(resolveRuntimeModel({ provider, id }).model?.input.includes("image")).toBe(images);
-    expect(modelAcceptsImageInput(provider, id)).toBe(images);
-    const tools = filterImageReturningComputerTools(
-      builtinAgentTools,
-      modelAcceptsImageInput(provider, id),
-    );
-    expect(tools.some((tool) => tool.name === "computer_observe")).toBe(images);
-  });
+    ["local", "declared-vl-model", "declared-vl-model", true],
+    ["local", "undeclared-vl-model", "declared-vl-model", false],
+  ])(
+    "agrees with listing and execution for %s/%s",
+    (provider, id, declaredVision, images) => {
+      return withLocalModels(`${id},${declaredVision}`, declaredVision, async () => {
+        const { resolveRuntimeModel: resolve } = await import("./pi-runtime.js");
+        const { modelAcceptsImageInput: accepts } = await import("./model-vision.js");
+        const { filterImageReturningComputerTools: filterImageTools } = await import(
+          "./model-vision.js"
+        );
+        expect(resolve({ provider, id }).model?.input.includes("image")).toBe(images);
+        expect(accepts(provider, id)).toBe(images);
+        const tools = filterImageTools(builtinAgentTools, accepts(provider, id));
+        expect(tools.some((tool) => tool.name === "computer_observe")).toBe(images);
+      });
+    },
+  );
 
   it("resolves the scripted placeholder like Pi before checking vision", () => {
     vi.stubEnv("PI_DEFAULT_MODEL", "");
     expect(resolveModelRefForVisionCheck("scripted", "scripted")).toEqual({
-      provider: "openrouter",
+      provider: "local",
       id: "openai/gpt-6-luna",
     });
-    expect(modelAcceptsImageInput("scripted", "scripted")).toBe(true);
 
-    vi.stubEnv("PI_DEFAULT_MODEL", "openai/gpt-4o");
+    vi.stubEnv("PI_DEFAULT_MODEL", "some-vl-model");
     expect(resolveModelRefForVisionCheck("scripted", "scripted")).toEqual({
-      provider: "openrouter",
-      id: "openai/gpt-4o",
+      provider: "local",
+      id: "some-vl-model",
     });
-    expect(modelAcceptsImageInput("scripted", "scripted")).toBe(true);
   });
 
   it("treats unknown models as text-only", () => {
-    expect(modelAcceptsImageInput("openrouter", "rakazo-test/unknown-future-model")).toBe(false);
+    expect(modelAcceptsImageInput("local", "rakazo-test/unknown-future-model")).toBe(false);
   });
 
   it("keeps explicit image capability scoped to the selected model", () => {

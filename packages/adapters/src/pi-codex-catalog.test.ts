@@ -978,6 +978,10 @@ describe("codexLiveCatalogsForSpace", () => {
 });
 
 describe("applyCodexLiveCatalog", () => {
+  // The live merge keys off the Codex slugs the shipped catalogue lists. The managed
+  // catalogue ships no Codex provider, so there is nothing to merge against and every
+  // call is a pass-through. These cases pin that seam so it cannot silently start
+  // inventing entries again.
   const oauthAuth: CodexCatalogSpaceAuth = {
     byProvider: { [CHATGPT_OAUTH_PROVIDER]: "oauth" },
     byModel: {},
@@ -988,184 +992,22 @@ describe("applyCodexLiveCatalog", () => {
   const liveFor = (entries: Record<string, CodexCatalogModel[]>) =>
     new Map(Object.entries(entries));
 
-  it("restores statically excluded models the account can call", () => {
+  it("ships no Codex provider to merge against", () => {
+    expect(base.some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)).toBe(false);
     expect(
-      base.some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === SPARK),
-    ).toBe(false);
-    const merged = applyCodexLiveCatalog(
-      base,
-      oauthAuth,
-      liveFor({ "secret-a": [liveModel(SPARK), liveModel(LUNA)] }),
-    );
-
-    const ids = merged
-      .filter((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)
-      .map((entry) => entry.id);
-    expect(ids).toEqual([SPARK, LUNA]);
-
-    const spark = merged.find(
-      (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === SPARK,
-    );
-    expect(spark?.auth).toBe("oauth");
-    expect(spark?.label).toBeTruthy();
-    expect(spark?.billing).toBeTruthy();
+      base.every((entry) => entry.provider === "local" || entry.provider === "openai-compatible"),
+    ).toBe(true);
   });
 
-  it("drops OAuth-governed models the live catalog does not list", () => {
-    const merged = applyCodexLiveCatalog(
-      base,
-      oauthAuth,
-      liveFor({ "secret-a": [liveModel(LUNA)] }),
-    );
-    const codexIds = merged
-      .filter((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)
-      .map((entry) => entry.id);
-    expect(codexIds).toEqual([LUNA]);
+  it("passes the catalogue through unchanged whatever the account can call", () => {
+    const live = liveFor({
+      "secret-a": [liveModel(SPARK), liveModel(LUNA)],
+      "secret-b": [liveModel(SPARK)],
+    });
+    expect(applyCodexLiveCatalog(base, oauthAuth, live)).toEqual(base);
   });
 
-  it("adds live-only slugs using a runnable sibling", () => {
-    const merged = applyCodexLiveCatalog(
-      base,
-      oauthAuth,
-      liveFor({
-        "secret-a": [
-          liveModel(LUNA),
-          liveModel("gpt-7-codex-new", { reasoningEfforts: ["low", "high"] }),
-        ],
-      }),
-    );
-
-    const ids = merged
-      .filter((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)
-      .map((entry) => entry.id);
-    expect(ids).toEqual([LUNA, "gpt-7-codex-new"]);
-  });
-
-  it("adds live-only models from their owning model-specific accounts once", () => {
-    const saved = "gpt-6-luna-latest";
-    const other = "gpt-7-codex-other";
-    const auth: CodexCatalogSpaceAuth = {
-      ...oauthAuth,
-      byModel: { [CHATGPT_OAUTH_PROVIDER]: { [saved]: "oauth" } },
-      secretIdByModel: { [CHATGPT_OAUTH_PROVIDER]: { [saved]: "secret-b" } },
-    };
-    const idsFor = (providerModels: CodexCatalogModel[], modelModels: CodexCatalogModel[]) =>
-      applyCodexLiveCatalog(
-        base,
-        auth,
-        liveFor({
-          "secret-a": [liveModel(LUNA), ...providerModels],
-          "secret-b": [liveModel(LUNA), ...modelModels],
-        }),
-      )
-        .filter((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)
-        .map((entry) => entry.id);
-
-    expect(idsFor([], [liveModel(saved), liveModel(other)])).toEqual([LUNA, saved]);
-    expect(idsFor([liveModel(saved)], [liveModel(saved)])).toEqual([LUNA, saved]);
-    expect(idsFor([liveModel(saved)], [])).toEqual([LUNA]);
-  });
-
-  it("overrides thinking levels only when the endpoint supplies known efforts", () => {
-    const staticEntry = listPiCatalog().find(
-      (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === LUNA,
-    )!;
-    const merged = applyCodexLiveCatalog(
-      base,
-      oauthAuth,
-      liveFor({ "secret-a": [liveModel(LUNA, { reasoningEfforts: ["minimal", "medium"] })] }),
-    );
-    const liveEntry = merged.find(
-      (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === LUNA,
-    );
-    expect(liveEntry?.thinkingLevels).toEqual(["minimal", "medium"]);
-
-    const mergedUnknown = applyCodexLiveCatalog(
-      base,
-      oauthAuth,
-      liveFor({ "secret-a": [liveModel(LUNA, { reasoningEfforts: ["mystery-effort"] })] }),
-    );
-    const fallback = mergedUnknown.find(
-      (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === LUNA,
-    );
-    expect(fallback?.thinkingLevels).toEqual(staticEntry.thinkingLevels);
-  });
-
-  it("keeps API-key-governed codex models outside the live gate", () => {
-    const mixedAuth: CodexCatalogSpaceAuth = {
-      byProvider: { [CHATGPT_OAUTH_PROVIDER]: "oauth" },
-      byModel: { [CHATGPT_OAUTH_PROVIDER]: { [SPARK]: "api_key" } },
-      secretIdByProvider: { [CHATGPT_OAUTH_PROVIDER]: "secret-a" },
-      secretIdByModel: { [CHATGPT_OAUTH_PROVIDER]: { [SPARK]: "secret-api" } },
-    };
-    const mixedBase = listAvailablePiCatalog(mixedAuth.byProvider, mixedAuth.byModel);
-    const merged = applyCodexLiveCatalog(
-      mixedBase,
-      mixedAuth,
-      liveFor({ "secret-a": [liveModel(LUNA)] }),
-    );
-
-    const codexIds = merged
-      .filter((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)
-      .map((entry) => entry.id);
-    expect(codexIds).toEqual([SPARK, LUNA]);
-  });
-
-  it("governs each model by the account that owns its credential", () => {
-    // Spark's model-specific preference points at account B while the provider
-    // default is account A: each slot follows its own credential's catalog.
-    const splitAuth: CodexCatalogSpaceAuth = {
-      byProvider: { [CHATGPT_OAUTH_PROVIDER]: "oauth" },
-      byModel: { [CHATGPT_OAUTH_PROVIDER]: { [SPARK]: "oauth" } },
-      secretIdByProvider: { [CHATGPT_OAUTH_PROVIDER]: "secret-a" },
-      secretIdByModel: { [CHATGPT_OAUTH_PROVIDER]: { [SPARK]: "secret-b" } },
-    };
-    const splitBase = listAvailablePiCatalog(splitAuth.byProvider, splitAuth.byModel);
-    const merged = applyCodexLiveCatalog(
-      splitBase,
-      splitAuth,
-      liveFor({ "secret-a": [liveModel(LUNA)], "secret-b": [liveModel(SPARK)] }),
-    );
-    const codexIds = merged
-      .filter((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)
-      .map((entry) => entry.id);
-    expect(codexIds).toEqual([SPARK, LUNA]);
-
-    // Account A listing Spark must not unlock it — B's slot has no catalog read.
-    const wrongAccount = applyCodexLiveCatalog(
-      splitBase,
-      splitAuth,
-      liveFor({ "secret-a": [liveModel(SPARK), liveModel(LUNA)] }),
-    );
-    const wrongIds = wrongAccount
-      .filter((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)
-      .map((entry) => entry.id);
-    expect(wrongIds).toEqual([LUNA]);
-  });
-
-  it("keeps a per-model disconnected slot hidden even when the provider account lists it", () => {
-    const disconnectedAuth: CodexCatalogSpaceAuth = {
-      byProvider: { [CHATGPT_OAUTH_PROVIDER]: "oauth" },
-      byModel: { [CHATGPT_OAUTH_PROVIDER]: { [SPARK]: "disconnected" } },
-      secretIdByProvider: { [CHATGPT_OAUTH_PROVIDER]: "secret-a" },
-      secretIdByModel: { [CHATGPT_OAUTH_PROVIDER]: { [SPARK]: "secret-b" } },
-    };
-    const disconnectedBase = listAvailablePiCatalog(
-      disconnectedAuth.byProvider,
-      disconnectedAuth.byModel,
-    );
-    const merged = applyCodexLiveCatalog(
-      disconnectedBase,
-      disconnectedAuth,
-      liveFor({ "secret-a": [liveModel(SPARK), liveModel(LUNA)] }),
-    );
-    const codexIds = merged
-      .filter((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)
-      .map((entry) => entry.id);
-    expect(codexIds).toEqual([LUNA]);
-  });
-
-  it("ignores a live catalog sharing no slug with the static codex catalog", () => {
+  it("adds nothing from a live catalogue with unknown slugs", () => {
     const foreign = liveFor({
       "secret-a": [liveModel("some-unrelated-model"), liveModel("another-foreign")],
     });

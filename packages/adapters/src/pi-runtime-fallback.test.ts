@@ -41,8 +41,9 @@ vi.mock("@earendil-works/pi-agent-core", async (importOriginal) => {
   };
 });
 
-vi.mock("@earendil-works/pi-ai/providers/all", () => ({
-  builtinModels: (options?: { credentials?: unknown }) => {
+vi.mock("./pi-managed-models.js", () => ({
+  MANAGED_PROVIDER_IDS: new Set(["local", "openai-compatible"]),
+  createManagedModels: (options?: { credentials?: unknown }) => {
     if (options?.credentials) providerState.credentialStores.push(options.credentials);
     return {
       getModel: (provider: string, id: string) => providerState.models.get(`${provider}/${id}`),

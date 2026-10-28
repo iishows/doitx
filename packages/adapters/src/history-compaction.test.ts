@@ -483,7 +483,7 @@ describe("compactHistory", () => {
     expect(request.instructions).toContain("Current date and time");
     expect(request.tools).toEqual([]);
     expect(request.model).toEqual({
-      provider: "openrouter",
+      provider: "local",
       id: "openai/gpt-6-luna",
       apiKey: "openrouter-key",
     });
@@ -570,7 +570,7 @@ describe("compactHistory", () => {
   it("compacts locally without a semantic memory provider", async () => {
     const harness = compactionHarness({
       settings: {
-        defaultModelProvider: "openrouter",
+        defaultModelProvider: "local",
         defaultModelId: "deepseek/deepseek-v4-flash-0731",
       },
       withMemoryProvider: false,
@@ -864,7 +864,7 @@ describe("compactHistory", () => {
   it("falls back to the deployment's configured default model when no deployment key is available", async () => {
     const harness = compactionHarness({
       settings: {
-        defaultModelProvider: "openrouter",
+        defaultModelProvider: "local",
         defaultModelId: "deepseek/deepseek-v4-flash-0731",
       },
     });
@@ -873,7 +873,7 @@ describe("compactHistory", () => {
 
     const [request] = harness.runtime.run.mock.calls[0]!;
     expect(request.model).toEqual({
-      provider: "openrouter",
+      provider: "local",
       id: "deepseek/deepseek-v4-flash-0731",
       apiKey: undefined,
     });
@@ -892,7 +892,7 @@ describe("compactHistory", () => {
 
     const [request] = harness.runtime.run.mock.calls[0]!;
     expect(request.model).toEqual({
-      provider: "openrouter",
+      provider: "local",
       id: "moonshotai/kimi-k2",
       apiKey: "openrouter-key",
     });

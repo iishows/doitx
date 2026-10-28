@@ -1268,6 +1268,9 @@ export const ModelBackupListSchema = modelChoiceListSchema(ModelBackupChoiceSche
 
 export const OPENAI_COMPATIBLE_PROVIDER_ID = "openai-compatible";
 
+/** The deployment-configured OpenAI-compatible endpoint, offered as one managed provider. */
+export const LOCAL_PROVIDER_ID = "local";
+
 export const MAX_ENABLED_MODEL_IDS = 500;
 
 /** An existing connection's id, null for a new one, or omitted for the provider's newest. */

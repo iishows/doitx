@@ -21,7 +21,6 @@ import {
   Type,
   validateToolArguments,
 } from "@earendil-works/pi-ai";
-import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import { AssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-stream";
 import type {
   AdapterContext,
@@ -78,12 +77,10 @@ import { affordableOpenRouterOutput } from "./openrouter-output-budget.js";
 import { PiRuntimeCredentialStore, toOAuthCredential } from "./pi-credentials.js";
 import { estimatePiImageTokens } from "./pi-image-context.js";
 import { liveModelSibling } from "./pi-live-model.js";
-import { registerLocalProvider } from "./pi-local-provider.js";
-import { applyPiModelCompatibility } from "./pi-model-compat.js";
+import { createManagedModels } from "./pi-managed-models.js";
 import { codexComputeResidency } from "./pi-oauth.js";
 import {
   OPENAI_COMPATIBLE_PROVIDER_ID,
-  registerOpenAiCompatibleCatalog,
   registerOpenAiCompatibleRuntime,
 } from "./pi-openai-compatible-provider.js";
 import {
@@ -133,9 +130,7 @@ const toolCallBudgetsByRun = new Map<string, ToolCallBudget>();
 // would run before .env is loaded and miss the local provider entirely.
 let catalogModelsCache: Models | undefined;
 function catalogModels(): Models {
-  catalogModelsCache ??= registerOpenAiCompatibleCatalog(
-    registerLocalProvider(applyPiModelCompatibility(builtinModels())),
-  );
+  catalogModelsCache ??= createManagedModels();
   return catalogModelsCache;
 }
 const MAX_PARALLEL_SUBAGENTS = 4;
@@ -1106,18 +1101,14 @@ export function modelsForRequest(
 ): Models {
   const store = credentials ?? credentialStoreForRequest(request, provider);
   if (store) {
-    return registerOpenAiCompatibleCatalog(
-      registerLocalProvider(applyPiModelCompatibility(builtinModels({ credentials: store }))),
-    );
+    return createManagedModels({ credentials: store });
   }
   if (
     provider === OPENAI_COMPATIBLE_PROVIDER_ID &&
     request.model.baseUrl &&
     request.model.id.trim()
   ) {
-    const models = registerOpenAiCompatibleCatalog(
-      registerLocalProvider(applyPiModelCompatibility(builtinModels())),
-    );
+    const models = createManagedModels();
     return registerOpenAiCompatibleRuntime(models, {
       modelId: request.model.id,
       baseUrl: request.model.baseUrl,

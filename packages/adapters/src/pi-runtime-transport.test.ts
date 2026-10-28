@@ -16,6 +16,77 @@ import {
 } from "./pi-runtime.js";
 import { DEFAULT_MODEL_STREAM_MAX_RETRIES, MODEL_STREAM_TIMEOUT_MS } from "./pi-runtime-limits.js";
 
+// The Codex provider shipped with the vendor catalogue the app no longer includes.
+// createManagedModels is the one place providers are registered, so stand up a
+// Codex provider there: the residency/refresh machinery under test is provider
+// agnostic and would otherwise have no Codex model to run against.
+vi.mock("./pi-managed-models.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./pi-managed-models.js")>();
+  const { createModels, createProvider } = await import("@earendil-works/pi-ai");
+  const { openAICodexResponsesApi } = await import(
+    "@earendil-works/pi-ai/api/openai-codex-responses.lazy"
+  );
+  const codexApi = openAICodexResponsesApi();
+  const withCodex = (options?: Parameters<typeof actual.createManagedModels>[0]) => {
+    const models = actual.createManagedModels(options);
+    models.setProvider(
+      createProvider({
+        id: "openai-codex",
+        name: "Codex",
+        baseUrl: "https://chatgpt.com/backend-api/codex",
+        auth: {
+          apiKey: { name: "Codex", resolve: async () => ({ auth: { apiKey: "fixture" } }) },
+          oauth: {
+            name: "Codex subscription",
+            isSubscription: true,
+            login: async () => {
+              throw new Error("not used");
+            },
+            refresh: async (credential, signal) => {
+              const response = await fetch("https://auth.openai.com/oauth/token", {
+                method: "POST",
+                signal,
+              });
+              const body = (await response.json()) as {
+                access_token: string;
+                refresh_token: string;
+                expires_in: number;
+              };
+              return {
+                type: "oauth",
+                access: body.access_token,
+                refresh: body.refresh_token,
+                expires: Date.now() + body.expires_in * 1000,
+              };
+            },
+            toAuth: async (credential) => ({ apiKey: credential.access }),
+          },
+        },
+        models: [
+          {
+            id: "gpt-5.5",
+            name: "gpt-5.5",
+            api: "openai-codex-responses",
+            provider: "openai-codex",
+            baseUrl: "https://chatgpt.com/backend-api/codex",
+            reasoning: true,
+            input: ["text"],
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            contextWindow: 128_000,
+            maxTokens: 8_192,
+          },
+        ],
+        api: {
+          stream: (model, context, opts) => codexApi.stream(model, context, opts),
+          streamSimple: (model, context, opts) => codexApi.streamSimple(model, context, opts),
+        },
+      }),
+    );
+    return models;
+  };
+  return { ...actual, createManagedModels: withCodex };
+});
+
 const streamDefaults = {
   timeoutMs: MODEL_STREAM_TIMEOUT_MS,
   maxRetries: DEFAULT_MODEL_STREAM_MAX_RETRIES,

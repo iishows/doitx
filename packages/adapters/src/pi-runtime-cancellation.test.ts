@@ -59,8 +59,9 @@ const fake = vi.hoisted(() => {
 });
 
 vi.mock("@earendil-works/pi-agent-core", () => ({ Agent: fake.Agent }));
-vi.mock("@earendil-works/pi-ai/providers/all", () => ({
-  builtinModels: () => ({
+vi.mock("./pi-managed-models.js", () => ({
+  MANAGED_PROVIDER_IDS: new Set(["local", "openai-compatible"]),
+  createManagedModels: () => ({
     getModel: () => ({ provider: "test", id: "fake-model" }),
     streamSimple: () => {
       throw new Error("No model requests are allowed");

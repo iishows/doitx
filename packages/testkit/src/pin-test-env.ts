@@ -32,6 +32,17 @@ if (!process.env.VERIFY_PROVIDERS) {
   // otherwise decide the image the supervisor specs assert on.
   delete process.env.RAKAZO_COMPUTER_IMAGE;
   delete process.env.RAKAZO_COMPUTER_IMAGE_TAG;
+  // A developer .env that points the local provider at a gateway would decide
+  // the endpoint, model list and vision gating the local-provider specs assert on.
+  delete process.env.RAKAZO_LOCAL_MODELS;
+  delete process.env.RAKAZO_LOCAL_MODELS_URL;
+  delete process.env.RAKAZO_LOCAL_MODELS_API_KEY;
+  delete process.env.RAKAZO_LOCAL_VISION_MODELS;
+  delete process.env.RAKAZO_LOCAL_CONTEXT_WINDOW;
+  delete process.env.RAKAZO_LOCAL_MAX_TOKENS;
+  // The public-endpoint gate is a security default; a .env that opened it would
+  // hide the refusal the model-endpoint specs assert on.
+  delete process.env.RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC;
   process.env.CLOUD_AGENT_PROVIDER = "emulator";
   process.env.MEDIA_GENERATION_PROVIDER = "disabled";
   delete process.env.MEDIA_GENERATION_API_KEY;

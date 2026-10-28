@@ -145,7 +145,8 @@ async function failRun(scenario: Scenario) {
           : scenario.personalKey
             ? [
                 {
-                  provider: "openrouter",
+                  // The user's own connection: the deployment default is local.
+                  provider: "openai-compatible",
                   modelId: "deepseek/deepseek-v4-flash-0731",
                   credentialId: "personal",
                   position: 0,
@@ -167,7 +168,7 @@ async function failRun(scenario: Scenario) {
         scenario.personalKey
           ? {
               id: "personal",
-              provider: "openrouter",
+              provider: "openai-compatible",
               secretId: "personal-secret",
               userPreferences: [],
             }
@@ -176,7 +177,7 @@ async function failRun(scenario: Scenario) {
     },
     deploymentSettings: {
       findUnique: vi.fn(async () => ({
-        defaultModelProvider: "openrouter",
+        defaultModelProvider: "local",
         defaultModelId: "deepseek/deepseek-v4-flash-0731",
       })),
     },
@@ -888,7 +889,7 @@ describe("reporting a failed run", () => {
     const events = await failedRunLog(error);
     expect(events).toEqual([
       expect.objectContaining({
-        "model.provider": "openrouter",
+        "model.provider": "local",
         "model.id": "deepseek/deepseek-v4-flash-0731",
       }),
     ]);

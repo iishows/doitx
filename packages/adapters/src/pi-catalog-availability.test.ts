@@ -8,71 +8,51 @@ import {
 import { listPiCatalog } from "./pi-models.js";
 import { CHATGPT_OAUTH_PROVIDER } from "./pi-oauth.js";
 
-describe("openai-codex catalog availability", () => {
+describe("catalog availability by sign-in kind", () => {
   const spark = "gpt-5.3-codex-spark";
 
-  it("excludes Codex Spark for ChatGPT subscription sign-in", () => {
+  it("excludes the subscription-only Codex model from the exclusion list", () => {
     expect(OPENAI_CODEX_CHATGPT_SUBSCRIPTION_EXCLUDED_MODEL_IDS.has(spark)).toBe(true);
     expect(catalogModelAvailableForAuth(CHATGPT_OAUTH_PROVIDER, spark, "oauth", "oauth")).toBe(
       false,
     );
-    const oauthCatalog = listAvailablePiCatalog({ [CHATGPT_OAUTH_PROVIDER]: "oauth" });
-    expect(
-      oauthCatalog.some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === spark),
-    ).toBe(false);
-    expect(
-      oauthCatalog.some(
-        (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === "gpt-6-luna",
-      ),
-    ).toBe(true);
   });
 
   it("lets a model-specific auth kind override the provider kind", () => {
-    const spark = "gpt-5.3-codex-spark";
-    const oauthProvider = { [CHATGPT_OAUTH_PROVIDER]: "oauth" as const };
-    expect(
-      listAvailablePiCatalog(oauthProvider).some(
-        (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === spark,
-      ),
-    ).toBe(false);
-    expect(
-      listAvailablePiCatalog(oauthProvider, {
-        [CHATGPT_OAUTH_PROVIDER]: { [spark]: "api_key" },
-      }).some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === spark),
-    ).toBe(true);
-    expect(
-      listAvailablePiCatalog(
-        { [CHATGPT_OAUTH_PROVIDER]: "api_key" },
-        { [CHATGPT_OAUTH_PROVIDER]: { [spark]: "disconnected" } },
-      ).some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === spark),
-    ).toBe(false);
-  });
-
-  it("keeps Codex Spark when the provider credential is an API key", () => {
+    // The same model is reachable once its own slot is an API key rather than the subscription.
     expect(catalogModelAvailableForAuth(CHATGPT_OAUTH_PROVIDER, spark, "api_key", "oauth")).toBe(
       true,
     );
-    const apiKeyCatalog = listAvailablePiCatalog({ [CHATGPT_OAUTH_PROVIDER]: "api_key" });
+    // "disconnected" inherits the provider's offered auth, so the subscription still excludes it.
     expect(
-      apiKeyCatalog.some(
-        (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === spark,
-      ),
-    ).toBe(true);
-  });
-
-  it("hides Spark while openai-codex is disconnected because only subscription sign-in is offered", () => {
-    const disconnected = listAvailablePiCatalog();
-    expect(
-      disconnected.some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === spark),
+      catalogModelAvailableForAuth(CHATGPT_OAUTH_PROVIDER, spark, "disconnected", "oauth"),
     ).toBe(false);
+    expect(
+      catalogModelAvailableForAuth(CHATGPT_OAUTH_PROVIDER, spark, "disconnected", "api-key"),
+    ).toBe(true);
   });
 
-  it("still lists Spark on the OpenAI API key provider", () => {
+  it("leaves every other provider's models available", () => {
+    for (const provider of ["local", "openai-compatible", "openai"]) {
+      expect(catalogModelAvailableForAuth(provider, spark, "oauth", "oauth")).toBe(true);
+      expect(catalogModelAvailableForAuth(provider, spark, "disconnected", "oauth")).toBe(true);
+    }
+  });
+
+  it("offers the whole managed catalog now that no subscription provider is shipped", () => {
     const catalog = listPiCatalog();
-    expect(catalog.some((entry) => entry.provider === "openai" && entry.id === spark)).toBe(true);
+    // Nothing is filtered: the exclusion rule only ever applied to openai-codex,
+    // which the managed catalog no longer ships.
+    expect(listAvailablePiCatalog()).toEqual(catalog);
     expect(
-      catalog.some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === spark),
-    ).toBe(true);
+      listAvailablePiCatalog(
+        { [CHATGPT_OAUTH_PROVIDER]: "oauth" },
+        { [CHATGPT_OAUTH_PROVIDER]: { [spark]: "oauth" } },
+      ),
+    ).toEqual(catalog);
+    for (const entry of catalog) {
+      expect(entry.provider === "local" || entry.provider === "openai-compatible").toBe(true);
+    }
   });
 
   it("detects oauth credentials from stored JSON", () => {

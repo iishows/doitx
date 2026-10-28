@@ -46,8 +46,9 @@ vi.mock("@earendil-works/pi-agent-core", () => ({
   },
 }));
 
-vi.mock("@earendil-works/pi-ai/providers/all", () => ({
-  builtinModels: () => ({
+vi.mock("./pi-managed-models.js", () => ({
+  MANAGED_PROVIDER_IDS: new Set(["local", "openai-compatible"]),
+  createManagedModels: () => ({
     getModel: (_provider: string, modelId: string) =>
       modelId === "secret-pi-model" ? { provider: "test", id: modelId } : undefined,
     streamSimple: () => {

@@ -16,29 +16,28 @@ function requestModel(id: string, baseUrl: string): Pick<AgentRunRequest, "model
 }
 
 describe("request model catalogs", () => {
+  // The managed endpoint's models are declared through env, and the catalog is
+  // memoized per module graph, so this file declares them up front.
+  vi.stubEnv("RAKAZO_LOCAL_MODELS", "declared-vl-model,plain-text-model");
+  vi.stubEnv("RAKAZO_LOCAL_VISION_MODELS", "declared-vl-model");
+  // The vendor catalogue is gone; what still matters is that a model the operator
+  // declares on the managed endpoint is offered, resolves, and carries the vision
+  // and effort metadata through to the runtime.
   it.each([
-    ["openrouter", "openai/gpt-5.6-luna"],
-    ["openai-codex", "gpt-6-astra"],
-    ["openai-codex", "gpt-6-luna"],
-    ["openai-codex", "gpt-6-sol"],
-    ["anthropic", "claude-fable-5-1"],
-    ["anthropic", "claude-opus-5-5"],
-  ])("offers and resolves %s/%s with vision", (provider, id) => {
-    const entry = listPiCatalog().find((model) => model.provider === provider && model.id === id);
+    ["declared-vl-model", "declared-vl-model"],
+    ["plain-text-model", "declared-vl-model"],
+  ])("offers and resolves %s/%s through the managed endpoint", (id, declaredVision) => {
+    const entry = listPiCatalog().find((model) => model.provider === "local" && model.id === id);
     expect(entry).toBeDefined();
-    const model = modelsForRequest({ model: { provider, id } }, provider).getModel(provider, id);
+    const model = modelsForRequest({ model: { provider: "local", id } }, "local").getModel(
+      "local",
+      id,
+    );
     expect(model).toBeDefined();
-    expect(model?.input).toContain("image");
-    expect(modelAcceptsImageInput(provider, id)).toBe(true);
+    const seesImages = id === declaredVision;
+    expect(model?.input.includes("image")).toBe(seesImages);
+    expect(modelAcceptsImageInput("local", id)).toBe(seesImages);
     expect(entry?.thinkingLevels).toEqual(getSupportedThinkingLevels(model!));
-    if (provider === "openai-codex") {
-      expect(entry?.signIn).toBe("device-code");
-      expect(entry?.thinkingLevels).toContain("max");
-    }
-    if (provider === "anthropic") {
-      expect(entry?.signIn).toBe("auth-url");
-      expect(entry?.thinkingLevels).toContain("max");
-    }
   });
 
   it.each([undefined, false, true])(
@@ -173,17 +172,16 @@ describe("resolveRuntimeModel", () => {
   });
 });
 
-it("resolves a saved Azure provider reference without changing its model id", () => {
+it("canonicalizes a saved Azure provider reference without changing its model id", () => {
+  // Azure was a vendor provider; the catalogue no longer ships it, so there is no
+  // model to resolve — but the stored-provider alias still canonicalizes, which is
+  // what keeps a previously saved credential addressable.
   const provider = "azure-openai-responses";
   const id = "gpt-4o";
   const resolved = resolveRuntimeModel({ provider, id, apiKey: "test-azure-key" });
   expect(resolved.provider).toBe("azure");
-  expect(resolved.model).toMatchObject({ provider: "azure", id });
+  expect(resolved.model).toBeUndefined();
   expect(resolved.apiKey).toBe("test-azure-key");
-  expect(modelsForRequest({ model: { provider, id } }, provider).getModel(provider, id)).toEqual(
-    resolved.model,
-  );
-  expect(modelAcceptsImageInput(provider, id)).toBe(true);
-  expect(isCatalogModelChoice(provider, id)).toBe(true);
-  expect(defaultCatalogModelId(provider)).toBeTruthy();
+  expect(isCatalogModelChoice(provider, id)).toBe(false);
+  expect(defaultCatalogModelId(provider)).toBeNull();
 });

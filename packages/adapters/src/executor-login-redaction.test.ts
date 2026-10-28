@@ -143,7 +143,7 @@ async function runAfterFill(
     computer: { updateMany: vi.fn(async () => ({ count: 1 })) },
     deploymentSettings: {
       findUnique: vi.fn(async () => ({
-        defaultModelProvider: "openrouter",
+        defaultModelProvider: "local",
         // Sees images, so computer_observe is offered.
         defaultModelId: "openai/gpt-4o",
       })),
@@ -213,7 +213,14 @@ async function runAfterFill(
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
+
+// The deployment's models come from the local endpoint now; declare the fixture
+// model as vision-capable so screenshot tooling stays available, as the old
+// catalogue entry for openai/gpt-4o used to.
+vi.stubEnv("RAKAZO_LOCAL_MODELS", "openai/gpt-4o");
+vi.stubEnv("RAKAZO_LOCAL_VISION_MODELS", "openai/gpt-4o");
 
 describe("saved logins in a later run", () => {
   it("hides a password filled by an earlier run from shell and file output", async () => {

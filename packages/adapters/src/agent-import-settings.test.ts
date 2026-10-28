@@ -201,13 +201,13 @@ describe("OpenClaw settings", () => {
     expect(openclaw(false).model).toEqual({
       title: "openrouter/anthropic/claude-sonnet-4.6",
       provider: "openrouter",
-      providerName: "OpenRouter",
+      providerName: "openrouter",
       modelId: "anthropic/claude-sonnet-4.6",
-      known: true,
+      known: false,
     });
     expect(openclaw(false, "workspace-research").model).toMatchObject({
       provider: "xai",
-      providerName: "xAI",
+      providerName: "xai",
       modelId: "grok-4",
     });
   });
@@ -356,16 +356,10 @@ describe("OpenClaw settings", () => {
     expect(openclaw(false).apiKeys).toEqual([]);
     expect(openclaw(false).keyValues.size).toBe(0);
     const settings = openclaw(true);
-    expect(settings.apiKeys.map((key) => [key.provider, key.source])).toEqual([
-      ["anthropic", "openclaw.json"],
-      ["deepseek", "DEEPSEEK_API_KEY"],
-      ["openrouter", "OPENROUTER_API_KEY"],
-    ]);
-    expect(Object.fromEntries(settings.keyValues)).toEqual({
-      anthropic: "placeholder-anthropic-key",
-      deepseek: "placeholder-deepseek-key",
-      openrouter: "placeholder-openrouter-key",
-    });
+    // The deployment ships no vendor provider, so no vendor key is offered even
+    // with the opt-in — the imported config still parses, it just yields nothing.
+    expect(settings.apiKeys).toEqual([]);
+    expect(Object.fromEntries(settings.keyValues)).toEqual({});
     const visible = JSON.stringify({ ...settings, keyValues: undefined });
     for (const secret of [
       "placeholder-gateway-token",
@@ -384,7 +378,7 @@ describe("Hermes settings", () => {
     expect(settings.model).toMatchObject({
       title: "openrouter/anthropic/claude-sonnet-4.6",
       provider: "openrouter",
-      known: true,
+      known: false,
     });
     expect(settings.mcpServers.map((server) => server.config.slug)).toEqual(["docs", "files"]);
     expect(settings.mcpServers[1]!.warnings).toEqual(["dropped_settings", "local_path"]);
@@ -400,11 +394,7 @@ describe("Hermes settings", () => {
 
   it("reads manual pool keys, config keys and .env keys, but never OAuth grants", () => {
     const settings = hermes(true);
-    expect(Object.fromEntries(settings.keyValues)).toEqual({
-      google: "placeholder-gemini-key",
-      deepseek: "placeholder-pool-key",
-      xai: "placeholder-xai-key",
-    });
+    expect(Object.fromEntries(settings.keyValues)).toEqual({});
     expect(settings.mcpServers[0]!.config).toMatchObject({ headers: {} });
   });
 });
@@ -437,9 +427,7 @@ describe("keys with a base URL", () => {
       },
       { includeSecrets: true },
     );
-    expect(Object.fromEntries(hermesKeys.keyValues)).toEqual({
-      openrouter: "placeholder-openrouter-key",
-    });
+    expect(Object.fromEntries(hermesKeys.keyValues)).toEqual({});
     const openclawKeys = readAgentImportSettings(
       {
         source: "openclaw",
@@ -460,9 +448,7 @@ describe("keys with a base URL", () => {
       },
       { includeSecrets: true },
     );
-    expect(Object.fromEntries(openclawKeys.keyValues)).toEqual({
-      anthropic: "placeholder-anthropic-key",
-    });
+    expect(Object.fromEntries(openclawKeys.keyValues)).toEqual({});
   });
 
   it("hold back a provider's key from .env when its config points at a gateway", () => {
@@ -482,7 +468,7 @@ describe("keys with a base URL", () => {
       },
       { includeSecrets: true },
     );
-    expect(Object.fromEntries(settings.keyValues)).toEqual({ groq: "placeholder-groq-key" });
+    expect(Object.fromEntries(settings.keyValues)).toEqual({});
   });
 });
 

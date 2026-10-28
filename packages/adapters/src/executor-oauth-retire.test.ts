@@ -1,11 +1,13 @@
 import type { PrismaClient } from "@rakazo/db";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createRunExecutor } from "./executor.js";
 import { modelCredentialAuthKindsForSpace } from "./model-selection.js";
-import { serializeModelSecret } from "./pi-oauth.js";
+import { registerProviderOAuth, serializeModelSecret } from "./pi-oauth.js";
 
 const SCOPE = { userId: "user-1", spaceId: "ws-1" };
-const PROVIDER = "openai-codex";
+const PROVIDER = "local";
+// The managed catalogue only serves ids the operator declares.
+vi.stubEnv("RAKAZO_LOCAL_MODELS", "gpt-6-luna");
 const MODEL_ID = "gpt-6-luna";
 
 const stamp = new Date("2026-08-30T00:00:00.000Z");
@@ -155,6 +157,41 @@ function oauthExecutor(
 }
 
 describe("OAuth credential retirement on terminal refresh rejection", () => {
+  // Subscription handlers came from the vendor catalogue the app no longer ships.
+  // The retirement machinery is provider-agnostic, so register one here: its refresh
+  // posts to the same token-endpoint shape the shipped Codex handler used, which is
+  // what the terminal-marker detection reads.
+  beforeAll(() => {
+    registerProviderOAuth(PROVIDER, {
+      name: "Fixture subscription",
+      isSubscription: true,
+      login: async () => {
+        throw new Error("not used");
+      },
+      refresh: async (credential) => {
+        const response = await fetch("https://auth.example.test/oauth/token", {
+          method: "POST",
+          body: new URLSearchParams({ grant_type: "refresh_token" }),
+        });
+        if (!response.ok) {
+          // pi embeds the endpoint status and body, which is what the markers read.
+          throw new Error(`failed (${response.status}): ${await response.text()}`);
+        }
+        const body = (await response.json()) as {
+          access_token: string;
+          refresh_token: string;
+          expires_in: number;
+        };
+        return {
+          type: "oauth",
+          access: body.access_token,
+          refresh: body.refresh_token,
+          expires: Date.now() + body.expires_in * 1000,
+        };
+      },
+      toAuth: async (credential) => ({ apiKey: credential.access }),
+    });
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -206,7 +243,7 @@ describe("OAuth credential retirement on terminal refresh rejection", () => {
       { load: vi.fn(async () => expiredOAuthPlaintext()) },
       SCOPE,
     );
-    expect(auth.byProvider[PROVIDER]).toBe("oauth");
+    expect(auth.byModel[PROVIDER]?.[MODEL_ID]).toBe("oauth");
   });
 
   it("keeps the credential when a 5xx response quotes a terminal marker", async () => {
@@ -258,6 +295,6 @@ describe("OAuth credential retirement on terminal refresh rejection", () => {
       { load: vi.fn(async () => rotatedOAuthPlaintext()) },
       SCOPE,
     );
-    expect(auth.byProvider[PROVIDER]).toBe("oauth");
+    expect(auth.byModel[PROVIDER]?.[MODEL_ID]).toBe("oauth");
   });
 });

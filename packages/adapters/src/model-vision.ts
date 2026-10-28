@@ -1,14 +1,9 @@
 import type { Models } from "@earendil-works/pi-ai";
-import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import { canonicalPiProviderId } from "@rakazo/contracts";
-import { DEFAULT_OPENROUTER_MODEL_ID } from "./deployment-model.js";
+import { resolveDeploymentModel } from "./deployment-model.js";
 import { liveModelSibling } from "./pi-live-model.js";
-import { registerLocalProvider } from "./pi-local-provider.js";
-import { applyPiModelCompatibility } from "./pi-model-compat.js";
-import {
-  OPENAI_COMPATIBLE_PROVIDER_ID,
-  registerOpenAiCompatibleCatalog,
-} from "./pi-openai-compatible-provider.js";
+import { createManagedModels } from "./pi-managed-models.js";
+import { OPENAI_COMPATIBLE_PROVIDER_ID } from "./pi-openai-compatible-provider.js";
 
 /** Computer tools whose results include screenshots for the model. */
 export const IMAGE_RETURNING_COMPUTER_TOOLS = new Set([
@@ -54,9 +49,7 @@ let catalogModelsCache: Models | undefined;
 
 function catalogModels(): Models {
   // Same catalog the runtime calls, including configured compatible providers.
-  catalogModelsCache ??= registerOpenAiCompatibleCatalog(
-    registerLocalProvider(applyPiModelCompatibility(builtinModels())),
-  );
+  catalogModelsCache ??= createManagedModels();
   return catalogModelsCache;
 }
 
@@ -71,10 +64,8 @@ export function resolveModelRefForVisionCheck(
   const normalizedProvider = canonicalPiProviderId(provider.trim());
   const normalizedId = modelId.trim();
   if (normalizedProvider === "scripted" || normalizedId === "scripted") {
-    return {
-      provider: "openrouter",
-      id: process.env.PI_DEFAULT_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL_ID,
-    };
+    const deployment = resolveDeploymentModel();
+    return { provider: deployment.provider, id: deployment.model };
   }
   return { provider: normalizedProvider, id: normalizedId };
 }

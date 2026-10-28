@@ -1,8 +1,16 @@
 import { getEnvApiKey } from "@earendil-works/pi-ai/compat";
 import type { ModelUsageLookup } from "@rakazo/adapter-kit";
+import { LOCAL_PROVIDER_ID } from "@rakazo/contracts";
 import { OpenRouterUsageLookup } from "./openrouter-usage.js";
+import { LOCAL_API_KEY_ENV, LOCAL_MODELS_ENV } from "./pi-local-provider.js";
 
 export const DEFAULT_OPENROUTER_MODEL_ID = "openai/gpt-6-luna";
+
+/** First id configured on the deployment endpoint, else a keyless-runtime placeholder. */
+function deploymentLocalModel(env: NodeJS.ProcessEnv): string {
+  const configured = env[LOCAL_MODELS_ENV]?.split(",")[0]?.trim();
+  return configured || DEFAULT_OPENROUTER_MODEL_ID;
+}
 
 /**
  * What Pi reports for a provider that authenticates from the host instead of a key: an AWS
@@ -32,17 +40,19 @@ export function hostCredentialSource(provider: string): string {
  * Vendor env names and model ids live here, in the adapter layer, not in core.
  */
 export function resolveDeploymentModel(env: NodeJS.ProcessEnv = process.env) {
-  const provider = env.PI_DEFAULT_PROVIDER?.trim() || "openrouter";
+  const provider = env.PI_DEFAULT_PROVIDER?.trim() || LOCAL_PROVIDER_ID;
   // A row per provider that ships a deployment key. A third one adds a row here, not a
   // branch at each call site — and an unknown provider gets no key rather than another
   // vendor's, which a ternary on one provider would not give.
   const keys: Record<string, string | undefined> = {
     openrouter: env.OPENROUTER_API_KEY,
     anthropic: env.ANTHROPIC_API_KEY,
+    [LOCAL_PROVIDER_ID]: env[LOCAL_API_KEY_ENV],
   };
   const models: Record<string, string> = {
     openrouter: DEFAULT_OPENROUTER_MODEL_ID,
     anthropic: "claude-sonnet-5",
+    [LOCAL_PROVIDER_ID]: deploymentLocalModel(env),
   };
   const explicitModel = env.PI_DEFAULT_MODEL?.trim();
   const key = keys[provider];
@@ -54,7 +64,7 @@ export function resolveDeploymentModel(env: NodeJS.ProcessEnv = process.env) {
     (provider === "amazon-bedrock" || getEnvApiKey(provider) === HOST_CREDENTIALS);
   return {
     provider,
-    model: explicitModel || models[provider] || models.openrouter!,
+    model: explicitModel || models[provider] || models[LOCAL_PROVIDER_ID]!,
     key,
     configured: Boolean(key) || hostCredentials,
     hostCredentials,

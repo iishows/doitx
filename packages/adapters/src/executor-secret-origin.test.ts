@@ -139,7 +139,7 @@ async function requestSecretWith(origin: string) {
       computer: { updateMany: async () => ({ count: 1 }) },
       deploymentSettings: {
         findUnique: async () => ({
-          defaultModelProvider: "openrouter",
+          defaultModelProvider: "local",
           defaultModelId: "openai/gpt-4o",
         }),
       },

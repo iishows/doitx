@@ -16,8 +16,9 @@ vi.mock("@rakazo/core", async (importOriginal) => ({
   abortableDelay: providerState.delay,
 }));
 
-vi.mock("@earendil-works/pi-ai/providers/all", () => ({
-  builtinModels: () => ({
+vi.mock("./pi-managed-models.js", () => ({
+  MANAGED_PROVIDER_IDS: new Set(["local", "openai-compatible"]),
+  createManagedModels: () => ({
     getModel: (provider: string, id: string) => providerState.models.get(`${provider}/${id}`),
     streamSimple: (...args: unknown[]) => providerState.stream(...args),
   }),

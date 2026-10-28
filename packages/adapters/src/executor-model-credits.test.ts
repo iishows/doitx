@@ -5,29 +5,31 @@ import { listPiCatalog } from "./pi-models.js";
 describe("funding selects credentials without deleting saved connections", () => {
   describe.each([false, true])("with stored-secret requirement=%s", (requireStoredSecret) => {
     it.each([
-      { billingEnabled: true, mode: "credits", provider: "openrouter", hosted: true },
+      { billingEnabled: true, mode: "credits", provider: "local", hosted: true },
       {
         billingEnabled: true,
         mode: "credits",
-        provider: "openrouter",
+        provider: "local",
         hosted: true,
         personal: false,
       },
       {
         billingEnabled: true,
         mode: "byok",
-        provider: "openrouter",
+        provider: "local",
         hosted: false,
         personal: false,
         rejected: true,
       },
-      { billingEnabled: true, mode: "byok", provider: "openrouter", hosted: false },
-      { billingEnabled: false, mode: "credits", provider: "openrouter", hosted: false },
-      { billingEnabled: true, mode: "credits", provider: "openai", hosted: false },
+      { billingEnabled: true, mode: "byok", provider: "local", hosted: false },
+      { billingEnabled: false, mode: "credits", provider: "local", hosted: false },
+      { billingEnabled: true, mode: "credits", provider: "openai-compatible", hosted: false },
     ])(
       "$mode funding for $provider with billing=$billingEnabled",
       async ({ billingEnabled, mode, provider, hosted, personal = true, rejected = false }) => {
-        vi.stubEnv("PI_DEFAULT_PROVIDER", "openrouter");
+        vi.stubEnv("PI_DEFAULT_PROVIDER", "local");
+        vi.stubEnv("RAKAZO_LOCAL_MODELS", "fixture-model");
+        vi.stubEnv("RAKAZO_LOCAL_MODELS_API_KEY", "fixture-deployment-key");
         vi.stubEnv("OPENROUTER_API_KEY", "fixture-deployment-key");
         try {
           const model = listPiCatalog().find((entry) => entry.provider === provider)!;

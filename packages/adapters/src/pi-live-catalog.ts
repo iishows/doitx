@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import type { SecretStore } from "@rakazo/adapter-kit";
 import { canonicalPiProviderId } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import type { ModelCredentialAuthKind } from "./pi-catalog-availability.js";
 import { LiveCatalogCache, liveModelCatalogEnabled } from "./pi-live-cache.js";
+import { createManagedModels } from "./pi-managed-models.js";
 import { isChatModelId, liveModelSibling } from "./pi-live-model.js";
 import type { PiCatalogEntry } from "./pi-models.js";
 import {
@@ -60,7 +60,7 @@ export function trustedProviderModels(provider: string, ids: readonly string[]):
   );
 }
 
-const siblingModels = builtinModels();
+const siblingModels = createManagedModels();
 
 export function liveCatalogEntry(provider: string, id: string): PiCatalogEntry | undefined {
   provider = canonicalPiProviderId(provider);

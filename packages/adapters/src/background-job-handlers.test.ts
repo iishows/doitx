@@ -194,7 +194,7 @@ describe("createBackgroundJobHandlers", () => {
     await expect(
       executor.resolveModel({ userId: "user-1", spaceId: "workspace-1" }),
     ).resolves.toEqual({
-      provider: "openrouter",
+      provider: "local",
       id: "openai/gpt-6-luna",
       apiKey: "deployment-key",
       baseUrl: undefined,

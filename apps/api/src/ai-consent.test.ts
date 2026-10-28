@@ -48,12 +48,12 @@ describe("consent grants", () => {
     vi.mocked(deps.prisma.userModelPreference.findMany).mockResolvedValue([
       {
         modelId: "helper-model",
-        credential: { provider: "anthropic", secretId: "test-secret" },
+        credential: { provider: "openai-compatible", secretId: "test-secret" },
       },
     ] as never);
     const status = await aiConsentStatus(deps, actor, { botId: "bot", uses: ["model"] });
     expect(status.recipients.map((recipient) => recipient.name)).toEqual(
-      expect.arrayContaining(["Anthropic", "Cursor"]),
+      expect.arrayContaining(["OpenAI-compatible", "Cursor"]),
     );
     expect(deps.prisma.userVoicePreference.findMany).not.toHaveBeenCalled();
     expect(deps.prisma.bot.findMany).toHaveBeenCalledWith(
@@ -87,7 +87,7 @@ describe("consent grants", () => {
       {
         role: "main",
         position: 1,
-        provider: "anthropic",
+        provider: "openai-compatible",
         modelId: "claude-backup",
         thinkingLevel: null,
       },
@@ -96,7 +96,7 @@ describe("consent grants", () => {
       {
         id: "backup-credential",
         userId: actor.userId,
-        provider: "anthropic",
+        provider: "openai-compatible",
         label: "fixture",
         secretId: "backup-secret",
         createdAt: new Date(0),
@@ -109,7 +109,7 @@ describe("consent grants", () => {
     expect(status.recipients).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: "Anthropic",
+          name: "OpenAI-compatible",
           detail: "claude-backup",
           use: "model",
           allowed: false,

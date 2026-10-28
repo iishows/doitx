@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { modelAcceptsImageInput } from "./model-vision.js";
 import {
   catalogModelLabel,
   catalogProviderProbeBaseUrl,
@@ -12,32 +11,22 @@ import { probeOpenAiCompatibleModels } from "./pi-openai-compatible-provider.js"
 import { MODEL_CONNECT_TIMEOUT_MS } from "./pi-runtime-limits.js";
 
 describe("catalog provider authentication", () => {
-  it("checks authentication before listing a public OpenRouter catalog", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async () =>
-      Response.json({ data: [{ id: "fixture-model" }] }),
-    );
+  it("refuses to probe a provider outside the managed catalog", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
     await expect(
       probeCatalogProviderModels({ provider: "openrouter", apiKey: " fixture-key " }, fetchImpl),
-    ).resolves.toEqual(["fixture-model"]);
-    expect(fetchImpl.mock.calls.map(([url]) => String(url))).toEqual([
-      "https://openrouter.ai/api/v1/key",
-      "https://openrouter.ai/api/v1/models",
-    ]);
-    expect(fetchImpl.mock.calls[0]?.[1]).toMatchObject({
-      headers: { Authorization: "Bearer fixture-key" },
-      redirect: "error",
-      signal: expect.any(AbortSignal),
-    });
+    ).rejects.toThrow("This provider cannot be tested without saving.");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it.each([401, 403])(
-    "refuses rejected credentials (%i) before reading the catalog",
+    "refuses rejected credentials (%i) without trusting the catalog",
     async (status) => {
       const fetchImpl = vi.fn<typeof fetch>(
         async () => new Response("private upstream details", { status }),
       );
       await expect(
-        probeCatalogProviderModels({ provider: "openrouter", apiKey: "fixture-key" }, fetchImpl),
+        verifyCatalogProviderApiKey({ provider: "openrouter", apiKey: "fixture-key" }, fetchImpl),
       ).rejects.toThrow("API key was rejected by the provider.");
       expect(fetchImpl).toHaveBeenCalledOnce();
     },
@@ -204,62 +193,21 @@ describe("catalog provider authentication", () => {
 });
 
 describe("Pi model catalog", () => {
-  it("recommends one Luna or Haiku model per supported provider", () => {
-    expect(
-      listPiCatalog()
-        .filter((entry) => entry.recommended)
-        .map(({ provider, id }) => ({ provider, id })),
-    ).toEqual(
-      expect.arrayContaining([
-        { provider: "openai-codex", id: "gpt-6-luna" },
-        { provider: "openai", id: "gpt-6-luna" },
-        { provider: "openrouter", id: "openai/gpt-6-luna" },
-        { provider: "anthropic", id: "claude-haiku-5-5" },
-      ]),
-    );
-    for (const provider of ["openai-codex", "openai", "openrouter", "anthropic"]) {
-      expect(
-        listPiCatalog().filter((entry) => entry.provider === provider && entry.recommended),
-      ).toHaveLength(1);
-    }
+  it("recommends no hosted provider now that only managed providers remain", () => {
+    expect(listPiCatalog().filter((entry) => entry.recommended)).toEqual([]);
   });
 
-  it("preserves provider names and sign-in options from before pi 1.3", () => {
+  it("exposes only the managed local and OpenAI-compatible providers", () => {
     const catalog = listPiCatalog();
-    const codex = catalog.filter((entry) => entry.provider === "openai-codex");
-    expect(codex.length).toBeGreaterThan(0);
-    for (const entry of codex) {
-      expect(entry).toMatchObject({
-        providerName: "OpenAI Codex",
-        auth: "oauth",
-        oauthLabel: "Sign in with ChatGPT",
-        subscription: true,
-        signIn: "device-code",
-      });
+    const providers = new Set(catalog.map((entry) => entry.provider));
+    expect(
+      [...providers].every((provider) => provider === "local" || provider === "openai-compatible"),
+    ).toBe(true);
+    expect(providers.has("openai-compatible")).toBe(true);
+    for (const removed of ["openrouter", "anthropic", "openai", "openai-codex", "azure"]) {
+      expect(catalog.some((entry) => entry.provider === removed)).toBe(false);
     }
-    const openai = catalog.filter((entry) => entry.provider === "openai");
-    expect(openai.length).toBeGreaterThan(0);
-    for (const entry of openai) {
-      expect(entry).toMatchObject({
-        providerName: "OpenAI",
-        auth: "api-key",
-        subscription: false,
-        billing: "Uses your OpenAI API key. Doitx does not pay for model usage.",
-      });
-      expect(entry.oauthLabel).toBeUndefined();
-      expect(entry.signIn).toBeUndefined();
-      expect(entry.authHint).toBeUndefined();
-    }
-    const azure = catalog.filter((entry) => entry.provider === "azure");
-    expect(azure.length).toBeGreaterThan(0);
-    for (const entry of azure) {
-      expect(entry).toMatchObject({
-        providerName: "Azure OpenAI",
-        auth: "api-key",
-        subscription: false,
-        billing: "Uses your Azure OpenAI API key. Doitx does not pay for model usage.",
-      });
-    }
+    expect(scriptedCatalogEntry.provider).toBe("scripted");
   });
 
   it("keeps the custom catalog independent of server model IDs", () => {
@@ -268,18 +216,17 @@ describe("Pi model catalog", () => {
     expect(custom[0]).toMatchObject({ id: "custom", placeholder: true, reasoning: false });
   });
 
-  it("says which catalog models support images, the same way runs decide it", () => {
-    const catalog = listPiCatalog();
-    for (const entry of catalog) {
-      if (entry.provider === "openai-compatible") {
-        // The connection's own "Supports images" setting decides this one.
-        expect(entry.images).toBeUndefined();
-      } else {
-        expect(entry.images).toBe(modelAcceptsImageInput(entry.provider, entry.id));
-      }
-    }
-    expect(catalog.some((entry) => entry.images === true)).toBe(true);
-    expect(catalog.some((entry) => entry.images === false)).toBe(true);
+  it("leaves the custom connection's image support to its own setting", () => {
+    const custom = listPiCatalog().find((entry) => entry.provider === "openai-compatible");
+    expect(custom).toMatchObject({
+      providerName: "OpenAI-compatible",
+      auth: "api-key",
+      authHint: "Custom server",
+      subscription: false,
+      billing: "Runs on a URL you control. Doitx does not pay for model usage.",
+    });
+    // The connection's own "Supports images" setting decides this one.
+    expect(custom?.images).toBeUndefined();
   });
 
   afterEach(() => {
@@ -287,115 +234,80 @@ describe("Pi model catalog", () => {
     vi.resetModules();
   });
 
-  it("lists real Pi providers instead of a two-option dropdown", () => {
-    const catalog = listPiCatalog();
-    const providers = new Set(catalog.map((entry) => entry.provider));
-    expect(catalog.length).toBeGreaterThan(20);
-    expect(providers.has("openrouter")).toBe(true);
-    expect(providers.size).toBeGreaterThan(5);
-    expect(
-      catalog.some(
-        (entry) => entry.auth === "oauth" || entry.auth === "both" || entry.subscription,
-      ),
-    ).toBe(true);
-    const chatgpt = catalog.find((entry) => entry.provider === "openai-codex");
-    expect(chatgpt?.signIn).toBe("device-code");
-    expect(chatgpt?.billing).toMatch(/ChatGPT Plus or Pro/);
-    const copilot = catalog.find((entry) => entry.provider === "github-copilot");
-    expect(copilot?.signIn).toBe("device-code");
-    const grok = catalog.find((entry) => entry.provider === "xai");
-    expect(grok?.signIn).toBe("device-code");
-    const claude = catalog.find((entry) => entry.provider === "anthropic");
-    expect(claude).toMatchObject({
-      signIn: "auth-url",
-      authHint: "Claude Pro/Max / key",
-      oauthLabel: "Sign in with Claude",
-      billing: "",
+  it("adds the local provider only once the operator configures models", async () => {
+    expect(listPiCatalog().some((entry) => entry.provider === "local")).toBe(false);
+
+    vi.stubEnv("RAKAZO_LOCAL_MODELS", "qwen3");
+    vi.resetModules();
+    const { listPiCatalog: listConfiguredCatalog } = await import("./pi-models.js");
+    const local = listConfiguredCatalog().filter((entry) => entry.provider === "local");
+    expect(local.map((entry) => entry.id)).toEqual(["qwen3"]);
+    expect(local[0]).toMatchObject({
+      providerName: "Local (Ollama / LM Studio)",
+      auth: "api-key",
+      subscription: false,
+      billing:
+        "Runs on infrastructure configured by the server operator. No model charges from Doitx.",
     });
-    expect(scriptedCatalogEntry.provider).toBe("scripted");
   });
 
-  it("lists DeepSeek API model ids instead of display labels", () => {
-    const deepseek = listPiCatalog().filter((entry) => entry.provider === "deepseek");
-    const ids = deepseek.map((entry) => entry.id);
+  it("lists local model ids exactly as the operator names them", async () => {
+    vi.stubEnv("RAKAZO_LOCAL_MODELS", "deepseek-flash,DeepSeek-V4.1-Flash,Meta-Llama-3.3-70B");
+    vi.resetModules();
+
+    const { listPiCatalog: listConfiguredCatalog } = await import("./pi-models.js");
+    const local = listConfiguredCatalog().filter((entry) => entry.provider === "local");
+    const ids = local.map((entry) => entry.id);
     expect(ids).toContain("deepseek-flash");
-    expect(ids).toContain("deepseek-v4-pro");
-    expect(ids).not.toContain("DeepSeek-V4.1-Flash");
-    expect(ids).not.toContain("DeepSeek V4.1 Flash");
-    for (const entry of deepseek) {
-      expect(entry.id).not.toBe(entry.label);
+    expect(ids).toContain("DeepSeek-V4.1-Flash");
+    for (const entry of local) {
+      expect(entry.id).toBe(entry.label);
       expect(entry.label.length).toBeGreaterThan(0);
     }
-    expect(deepseek.find((entry) => entry.id === "deepseek-flash")?.label).toBe(
-      "DeepSeek V4.1 Flash",
-    );
   });
 
-  it("lists current xAI and OpenCode Go models from the Pi catalog", () => {
-    const catalog = listPiCatalog();
-    const ids = (provider: string) =>
-      catalog.filter((entry) => entry.provider === provider).map((entry) => entry.id);
-    expect(ids("xai")).toContain("grok-4.6");
-    expect(ids("opencode-go")).toContain("glm-5.3");
-    const grok46 = catalog.find((entry) => entry.provider === "xai" && entry.id === "grok-4.6");
-    expect(grok46).toMatchObject({
-      reasoning: true,
-      thinkingLevels: ["low", "medium", "high", "xhigh"],
-    });
-    const openAiCompatible = catalog.find((entry) => entry.provider === "openai-compatible");
-    expect(openAiCompatible).toMatchObject({ id: "custom", placeholder: true });
-    expect(openAiCompatible?.catalogProbe).toBeUndefined();
+  it("marks only the local models the operator declares as vision-capable", async () => {
+    vi.stubEnv("RAKAZO_LOCAL_MODELS", "llava,qwen3");
+    vi.stubEnv("RAKAZO_LOCAL_VISION_MODELS", "llava");
+    vi.resetModules();
+
+    const { listPiCatalog: listConfiguredCatalog } = await import("./pi-models.js");
+    const local = listConfiguredCatalog().filter((entry) => entry.provider === "local");
+    expect(local.find((entry) => entry.id === "llava")?.images).toBe(true);
+    expect(local.find((entry) => entry.id === "qwen3")?.images).toBe(false);
   });
 
-  it("pins catalog probes to registry base URLs and leaves user URLs gated", async () => {
-    const expected = {
-      openrouter: "https://openrouter.ai/api/v1",
-      openai: "https://api.openai.com/v1",
-      groq: "https://api.groq.com/openai/v1",
-    } as const;
-    for (const [provider, baseUrl] of Object.entries(expected)) {
-      expect(catalogProviderProbeBaseUrl(provider)).toBe(baseUrl);
-      expect(listPiCatalog().find((entry) => entry.provider === provider)?.catalogProbe).toBe(true);
+  it("leaves no managed provider with a pinned catalog probe", () => {
+    for (const provider of ["local", "openai-compatible"]) {
+      expect(catalogProviderProbeBaseUrl(provider)).toBeNull();
     }
-    expect(catalogProviderProbeBaseUrl("openai-compatible")).toBeNull();
-    expect(catalogProviderProbeBaseUrl("anthropic")).toBeNull();
-    expect(catalogProviderProbeBaseUrl("cloudflare-workers-ai")).toBeNull();
-    expect(
-      listPiCatalog().find((entry) => entry.provider === "cloudflare-workers-ai")?.catalogProbe,
-    ).toBeUndefined();
+    // Providers removed from the managed catalog are no longer probeable.
+    for (const provider of ["openrouter", "openai", "groq", "anthropic"]) {
+      expect(catalogProviderProbeBaseUrl(provider)).toBeNull();
+      expect(listPiCatalog().some((entry) => entry.provider === provider)).toBe(false);
+    }
+    expect(listPiCatalog().some((entry) => entry.catalogProbe)).toBe(false);
+  });
 
+  it("keeps caller-supplied public endpoints gated", async () => {
     const previous = process.env.RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC;
     delete process.env.RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC;
     try {
       await expect(
         probeOpenAiCompatibleModels(
-          { baseUrl: expected.openrouter, apiKey: "sk-test-key" },
+          { baseUrl: "https://openrouter.ai/api/v1", apiKey: "sk-test-key" },
           async () => {
             throw new Error("user-supplied probe should be rejected before fetch");
           },
         ),
       ).rejects.toThrow(/Public model endpoints are blocked/);
-
-      for (const [provider, baseUrl] of Object.entries(expected)) {
-        let requestedUrl = "";
-        const fetchImpl = async (input: RequestInfo | URL) => {
-          requestedUrl = input instanceof Request ? input.url : String(input);
-          return new Response(JSON.stringify({ object: "list", data: [{ id: "pinned-model" }] }), {
-            status: 200,
-          });
-        };
-        await expect(
-          probeCatalogProviderModels({ provider, apiKey: "sk-test-key-12345678" }, fetchImpl),
-        ).resolves.toEqual(["pinned-model"]);
-        expect(requestedUrl).toContain(baseUrl);
-      }
     } finally {
       if (previous === undefined) delete process.env.RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC;
       else process.env.RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC = previous;
     }
   });
 
-  it("accepts catalog model lists larger than the custom-server probe cap", async () => {
+  it("rejects a custom-server model list over the probe cap", async () => {
     const ids = Array.from({ length: 5_000 }, (_, index) => {
       const suffix = String(index).padStart(4, "0");
       return `vendor/catalog-model-${suffix}-${"x".repeat(120)}`;
@@ -413,12 +325,6 @@ describe("Pi model catalog", () => {
         headers: { "content-length": String(Buffer.byteLength(payload)) },
       });
 
-    await expect(
-      probeCatalogProviderModels(
-        { provider: "openrouter", apiKey: "sk-test-key-12345678" },
-        fetchImpl,
-      ),
-    ).resolves.toEqual(ids);
     await expect(
       probeOpenAiCompatibleModels({ baseUrl: "http://127.0.0.1:8000/v1" }, fetchImpl, undefined, {
         allowPrivate: true,
@@ -466,14 +372,15 @@ describe("Pi model catalog", () => {
   });
 
   it('never labels an older model "latest" and keeps aliases distinct from snapshots', () => {
-    const catalog = listPiCatalog();
-    const label = (id: string) =>
-      catalog.find((entry) => entry.provider === "anthropic" && entry.id === id)?.label;
-    expect(label("claude-opus-5")).toBeDefined();
-    expect(label("claude-opus-4-5")).toBe("Claude Opus 4.5 (auto-updates)");
-    expect(label("claude-haiku-4-5")).toBe("Claude Haiku 4.5 (auto-updates)");
-    expect(label("claude-haiku-4-5-20251001")).toBe("Claude Haiku 4.5");
+    const providerModelIds = ["claude-opus-4-5", "claude-opus-4-5-20251101"];
+    expect(catalogModelLabel("claude-opus-4-5", "Claude Opus 4.5 latest", providerModelIds)).toBe(
+      "Claude Opus 4.5 (auto-updates)",
+    );
+    expect(
+      catalogModelLabel("claude-opus-4-5-20251101", "Claude Opus 4.5 latest", providerModelIds),
+    ).toBe("Claude Opus 4.5");
   });
+
 });
 
 describe("catalogModelLabel", () => {

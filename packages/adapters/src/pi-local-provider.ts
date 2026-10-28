@@ -5,23 +5,15 @@ import {
   type Provider,
 } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
+import { LOCAL_PROVIDER_ID } from "@rakazo/contracts";
 
 import { declaredVisionModelIds, inputModalities } from "./model-modalities.js";
-/**
- * Local OpenAI-compatible model server (Ollama, LM Studio, llama.cpp, MLX).
- *
- * Pi's built-in catalog only ships hosted providers, so a model running on the
- * operator's own machine has no catalog entry to select. This registers one
- * from environment configuration.
- *
- * Most local servers (Ollama, LM Studio, llama.cpp, MLX) are keyless and ignore
- * the Authorization header, so `resolve` falls back to a placeholder. Models
- * treats a provider with no resolvable auth as unconfigured and hides its
- * models, so a value still has to be returned. Set
- * `RAKAZO_LOCAL_MODELS_API_KEY` when the endpoint does check it, such as a
- * gateway or reverse proxy in front of the model server.
- */
-export const LOCAL_PROVIDER_ID = "local";
+
+/** The deployment's centrally managed OpenAI-compatible endpoint. */
+export { LOCAL_PROVIDER_ID };
+
+/** Model ids the local server serves, declared by the operator. */
+export const LOCAL_MODELS_ENV = "RAKAZO_LOCAL_MODELS";
 
 /** Model ids the local server serves with vision, declared by the operator. */
 export const LOCAL_VISION_MODELS_ENV = "RAKAZO_LOCAL_VISION_MODELS";
@@ -70,7 +62,7 @@ function tokenLimit(name: string, fallback: number): number {
 
 /** Comma-separated model ids exactly as the local server names them. */
 function localModelIds(): string[] {
-  return (process.env.RAKAZO_LOCAL_MODELS ?? "")
+  return (process.env[LOCAL_MODELS_ENV] ?? "")
     .split(",")
     .map((id) => id.trim())
     .filter((id) => id.length > 0);
