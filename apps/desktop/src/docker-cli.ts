@@ -79,7 +79,17 @@ const SPAWN_ENV_ALLOWLIST = [
   "DOCKER_CERT_PATH",
   "DOCKER_TLS_VERIFY",
 ];
-const WIN32_ENV_ALLOWLIST = ["SystemRoot", "SystemDrive", "APPDATA", "LOCALAPPDATA", "ProgramData"];
+// ProgramFiles is what the Docker CLI uses to discover its cli-plugins directory
+// (e.g. %ProgramFiles%\Docker\cli-plugins\docker-compose.exe). Without it a spawn
+// still finds docker.exe but reports the `compose` subcommand as unknown.
+const WIN32_ENV_ALLOWLIST = [
+  "SystemRoot",
+  "SystemDrive",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "ProgramData",
+  "ProgramFiles",
+];
 
 /**
  * Compose interpolates the process environment into the stack, so only what docker

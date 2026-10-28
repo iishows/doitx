@@ -369,7 +369,7 @@ const TESTIMONIALS: HomeCopy["testimonials"]["items"] = [
   },
   {
     quote:
-      "Hermes is good but more complicated setup. Rakazo has better multi agent workflow and simpler to setup",
+      "Hermes is good but more complicated setup. Doitx has better multi agent workflow and simpler to setup",
     attribution: "@notabot_92732",
   },
   {
@@ -385,14 +385,14 @@ const TESTIMONIALS: HomeCopy["testimonials"]["items"] = [
 
 const HOME_COPY: Record<Locale, HomeCopy> = {
   en: {
-    title: "Rakazo | Open source Grok Bot alternative",
+    title: "Doitx | Open source Grok Bot alternative",
     description: SITE_DESCRIPTION,
     ogImageAlt:
-      "Rakazo. AI teammates you actually own. Your keys, your model, your machine.",
+      "Doitx. AI teammates you actually own. Your keys, your model, your machine.",
     availableLanguage: "English",
     skipToContent: "Skip to content",
     nav: {
-      home: "Rakazo home",
+      home: "Doitx home",
       primary: "Primary",
       menu: "Menu",
       docs: "Docs",
@@ -453,7 +453,7 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Do I need an API key if I already pay for Claude or ChatGPT?",
           answer:
-            "No. Sign in with Claude Pro/Max or ChatGPT Plus/Pro and that subscription covers the model. An API key is the other path, for Anthropic, OpenAI, OpenRouter, or Grok. Rakazo does not pay either way.",
+            "No. Sign in with Claude Pro/Max or ChatGPT Plus/Pro and that subscription covers the model. An API key is the other path, for Anthropic, OpenAI, OpenRouter, or Grok. Doitx does not pay either way.",
         },
         {
           question: "Can I run a local model?",
@@ -503,15 +503,15 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
     },
   },
   de: {
-    title: "Rakazo | Open-Source-Alternative zu Grok Bot",
+    title: "Doitx | Open-Source-Alternative zu Grok Bot",
     description:
-      "Rakazo ist eine Open-Source-Alternative zu Grok Bot für persistente KI-Teamkollegen, die echte Arbeit erledigen. Deine Keys, dein Modell, deine Maschine.",
+      "Doitx ist eine Open-Source-Alternative zu Grok Bot für persistente KI-Teamkollegen, die echte Arbeit erledigen. Deine Keys, dein Modell, deine Maschine.",
     ogImageAlt:
-      "Rakazo. KI-Teamkollegen, die dir wirklich gehören. Deine Keys, dein Modell, deine Maschine.",
+      "Doitx. KI-Teamkollegen, die dir wirklich gehören. Deine Keys, dein Modell, deine Maschine.",
     availableLanguage: "German",
     skipToContent: "Zum Inhalt springen",
     nav: {
-      home: "Rakazo-Startseite",
+      home: "Doitx-Startseite",
       primary: "Hauptnavigation",
       menu: "Menü",
       docs: "Docs",
@@ -571,12 +571,12 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Kann ich mein Claude Pro/Max- oder ChatGPT Plus/Pro-Abo nutzen?",
           answer:
-            "Ja — melde dich mit diesem Abo an, oder nutze einen API-Key, OpenRouter oder einen lokalen OpenAI-kompatiblen Server (Ollama, LM Studio usw.). Rakazo zahlt die Modellrechnung nicht.",
+            "Ja — melde dich mit diesem Abo an, oder nutze einen API-Key, OpenRouter oder einen lokalen OpenAI-kompatiblen Server (Ollama, LM Studio usw.). Doitx zahlt die Modellrechnung nicht.",
         },
         {
           question: "Brauche ich einen API-Key, wenn ich schon für Claude oder ChatGPT zahle?",
           answer:
-            "Nein. Melde dich mit Claude Pro/Max oder ChatGPT Plus/Pro an. Dieses Abo deckt das Modell ab. Ein API-Key ist der andere Weg, für Anthropic, OpenAI, OpenRouter oder Grok. Rakazo zahlt so oder so nicht.",
+            "Nein. Melde dich mit Claude Pro/Max oder ChatGPT Plus/Pro an. Dieses Abo deckt das Modell ab. Ein API-Key ist der andere Weg, für Anthropic, OpenAI, OpenRouter oder Grok. Doitx zahlt so oder so nicht.",
         },
         {
           question: "Kann ich ein lokales Modell nutzen?",
@@ -626,14 +626,14 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
     },
   },
   ko: {
-    title: "Rakazo | 오픈소스 Grok Bot 대안",
+    title: "Doitx | 오픈소스 Grok Bot 대안",
     description:
-      "Rakazo는 실제 업무를 수행하는 지속형 AI 팀원을 위한 오픈소스 Grok Bot 대안입니다. 키, 모델, 머신, 모두 당신 것.",
-    ogImageAlt: "Rakazo. 진짜로 내 것인 AI 팀원. 키, 모델, 머신, 모두 당신 것.",
+      "Doitx는 실제 업무를 수행하는 지속형 AI 팀원을 위한 오픈소스 Grok Bot 대안입니다. 키, 모델, 머신, 모두 당신 것.",
+    ogImageAlt: "Doitx. 진짜로 내 것인 AI 팀원. 키, 모델, 머신, 모두 당신 것.",
     availableLanguage: "Korean",
     skipToContent: "본문으로 건너뛰기",
     nav: {
-      home: "Rakazo 홈",
+      home: "Doitx 홈",
       primary: "주 메뉴",
       menu: "메뉴",
       docs: "Docs",
@@ -693,12 +693,12 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Claude Pro/Max 또는 ChatGPT Plus/Pro 구독을 쓸 수 있나요?",
           answer:
-            "네 — 그 구독으로 로그인하거나, API 키, OpenRouter, 로컬 OpenAI 호환 서버(Ollama, LM Studio 등)를 사용하세요. 모델 요금은 Rakazo가 내지 않습니다.",
+            "네 — 그 구독으로 로그인하거나, API 키, OpenRouter, 로컬 OpenAI 호환 서버(Ollama, LM Studio 등)를 사용하세요. 모델 요금은 Doitx가 내지 않습니다.",
         },
         {
           question: "이미 Claude나 ChatGPT를 결제 중이면 API 키가 필요한가요?",
           answer:
-            "아니요. Claude Pro/Max 또는 ChatGPT Plus/Pro로 로그인하면 그 구독이 모델을 부담합니다. API 키는 Anthropic, OpenAI, OpenRouter, Grok을 쓰는 다른 경로입니다. 어느 쪽이든 Rakazo가 요금을 내지 않습니다.",
+            "아니요. Claude Pro/Max 또는 ChatGPT Plus/Pro로 로그인하면 그 구독이 모델을 부담합니다. API 키는 Anthropic, OpenAI, OpenRouter, Grok을 쓰는 다른 경로입니다. 어느 쪽이든 Doitx가 요금을 내지 않습니다.",
         },
         {
           question: "로컬 모델을 쓸 수 있나요?",
@@ -748,14 +748,14 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
     },
   },
   zh: {
-    title: "Rakazo | 开源 Grok Bot 替代品",
+    title: "Doitx | 开源 Grok Bot 替代品",
     description:
-      "Rakazo 是一个开源 Grok Bot 替代品，用于运行真正干活的持久化 AI 队友。密钥、模型、机器，都归你所有。",
-    ogImageAlt: "Rakazo：真正属于你的 AI 队友。密钥、模型、机器，都归你所有。",
+      "Doitx 是一个开源 Grok Bot 替代品，用于运行真正干活的持久化 AI 队友。密钥、模型、机器，都归你所有。",
+    ogImageAlt: "Doitx：真正属于你的 AI 队友。密钥、模型、机器，都归你所有。",
     availableLanguage: "Chinese",
     skipToContent: "跳到主要内容",
     nav: {
-      home: "Rakazo 首页",
+      home: "Doitx 首页",
       primary: "主导航",
       menu: "菜单",
       docs: "文档",
@@ -815,12 +815,12 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "可以用我的 Claude Pro/Max 或 ChatGPT Plus/Pro 订阅吗？",
           answer:
-            "可以 — 用该订阅登录，或使用 API 密钥、OpenRouter，或本地的 OpenAI 兼容服务（Ollama、LM Studio 等）。模型费用不由 Rakazo 支付。",
+            "可以 — 用该订阅登录，或使用 API 密钥、OpenRouter，或本地的 OpenAI 兼容服务（Ollama、LM Studio 等）。模型费用不由 Doitx 支付。",
         },
         {
           question: "已经在为 Claude 或 ChatGPT 付费，还需要 API 密钥吗？",
           answer:
-            "不需要。用 Claude Pro/Max 或 ChatGPT Plus/Pro 登录，由该订阅承担模型费用。API 密钥是另一条路，用于 Anthropic、OpenAI、OpenRouter 或 Grok。两种方式都不是 Rakazo 付费。",
+            "不需要。用 Claude Pro/Max 或 ChatGPT Plus/Pro 登录，由该订阅承担模型费用。API 密钥是另一条路，用于 Anthropic、OpenAI、OpenRouter 或 Grok。两种方式都不是 Doitx 付费。",
         },
         {
           question: "可以用本地模型吗？",
@@ -870,15 +870,15 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
     },
   },
   ja: {
-    title: "Rakazo | オープンソースの Grok Bot 代替ツール",
+    title: "Doitx | オープンソースの Grok Bot 代替ツール",
     description:
-      "Rakazo は、実際の仕事をこなす常駐型 AI チームメイトのための、オープンソースの Grok Bot 代替ツールです。キーもモデルもマシンも、すべてあなたのものです。",
+      "Doitx は、実際の仕事をこなす常駐型 AI チームメイトのための、オープンソースの Grok Bot 代替ツールです。キーもモデルもマシンも、すべてあなたのものです。",
     ogImageAlt:
-      "Rakazo。本当に自分のものにできる AI チームメイト。キーもモデルもマシンも、すべてあなたのもの。",
+      "Doitx。本当に自分のものにできる AI チームメイト。キーもモデルもマシンも、すべてあなたのもの。",
     availableLanguage: "Japanese",
     skipToContent: "本文へスキップ",
     nav: {
-      home: "Rakazo ホーム",
+      home: "Doitx ホーム",
       primary: "メインナビゲーション",
       menu: "メニュー",
       docs: "ドキュメント",
@@ -938,12 +938,12 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Claude Pro/Max や ChatGPT Plus/Pro のサブスクリプションを使えますか？",
           answer:
-            "はい。そのサブスクリプションでサインインするか、API キー、OpenRouter、ローカルの OpenAI 互換サーバー（Ollama、LM Studio など）を使えます。モデルの利用料を Rakazo が支払うことはありません。",
+            "はい。そのサブスクリプションでサインインするか、API キー、OpenRouter、ローカルの OpenAI 互換サーバー（Ollama、LM Studio など）を使えます。モデルの利用料を Doitx が支払うことはありません。",
         },
         {
           question: "Claude や ChatGPT にすでに課金している場合、API キーは必要ですか？",
           answer:
-            "いいえ。Claude Pro/Max または ChatGPT Plus/Pro でサインインすれば、そのサブスクリプションでモデルを利用できます。もう一つの方法は API キーで、Anthropic、OpenAI、OpenRouter、Grok に対応しています。どちらの場合も、Rakazo が料金を支払うことはありません。",
+            "いいえ。Claude Pro/Max または ChatGPT Plus/Pro でサインインすれば、そのサブスクリプションでモデルを利用できます。もう一つの方法は API キーで、Anthropic、OpenAI、OpenRouter、Grok に対応しています。どちらの場合も、Doitx が料金を支払うことはありません。",
         },
         {
           question: "ローカルモデルを使えますか？",

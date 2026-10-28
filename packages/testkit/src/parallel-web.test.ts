@@ -245,7 +245,7 @@ describe("Parallel through the ordinary bot caller", () => {
           fixture.peer.requests.every(
             (request) =>
               request.url === "https://search.parallel.ai/mcp" &&
-              request.headers.get("user-agent")?.startsWith("Rakazo/") &&
+              request.headers.get("user-agent")?.startsWith("Doitx/") &&
               !request.headers.has("authorization"),
           ),
         ).toBe(true);

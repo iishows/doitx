@@ -77,7 +77,7 @@ describe("MCP transport seam", () => {
     await session.close();
   });
 
-  it("launches only package bins that Rakazo installed", async () => {
+  it("launches only package bins that Doitx installed", async () => {
     const session = new McpSession();
     await expect(
       session.connectStdio({
@@ -85,7 +85,7 @@ describe("MCP transport seam", () => {
         allowedCommands: ["npx"],
         installedBin: { binPath: process.execPath },
       }),
-    ).rejects.toThrow("not installed by Rakazo");
+    ).rejects.toThrow("not installed by Doitx");
     // The launcher itself must still be allowlisted.
     await expect(
       session.connectStdio({

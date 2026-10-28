@@ -18,6 +18,29 @@ import { assertComputerHomeWritable, assertOpenedDirectoryBeneathRoot } from "./
 const roots: string[] = [];
 const DIRECTORY_OPEN_FLAGS = constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW;
 
+/**
+ * Windows-only stand-in for an entry the sandbox wrote that the host cannot stat.
+ * icacls DENY covers a path and everything below it, so lstat and opendir underneath
+ * both surface EPERM/EACCES, the same refusal a sandbox-written symlink produces.
+ * Resolves to a function that lifts the rule again, or undefined when icacls is
+ * unavailable so the caller can skip rather than assert against an unrestricted home.
+ */
+async function denyReadAccess(target: string): Promise<(() => Promise<void>) | undefined> {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const run = promisify(execFile);
+  const user = process.env.USERNAME ?? "*";
+  try {
+    await run("icacls", [target, "/deny", `${user}:(OI)(CI)(RX)`], { windowsHide: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  return async () => {
+    await run("icacls", [target, "/remove:d", user], { windowsHide: true }).catch(() => undefined);
+  };
+}
+
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
@@ -220,5 +243,32 @@ describe.skipIf(process.platform !== "win32")("computer home ownership on Window
     await writeFile(home, "{}");
 
     await expect(assertComputerHomeWritable(home, 0, 0)).rejects.toThrow(/must be a directory/);
+  });
+
+  // A home is bind mounted into a Linux sandbox, so the sandbox can leave entries on it
+  // that Windows keeps but refuses to describe. Chromium's SingletonCookie and
+  // SingletonSocket are the live case: symlinks the sandbox creates, which Windows lstat
+  // answers with EACCES. The walk used to fail on that and provisioning reported the home
+  // as not writable. An access rule Windows honours but POSIX would not reproduces the
+  // same refusal from the host, without needing a container.
+  it("skips entries Windows refuses to stat instead of refusing the whole home", async () => {
+    const parent = await mkdtemp(path.join(tmpdir(), "rakazo-home-win-unstattable-"));
+    roots.push(parent);
+    const home = path.join(parent, "home");
+    const sandboxWritten = path.join(home, ".browser-profiles");
+    await mkdir(sandboxWritten, { recursive: true });
+    await writeFile(path.join(sandboxWritten, "Preferences"), "{}");
+    const releaseAccess = await denyReadAccess(sandboxWritten);
+    if (!releaseAccess) return;
+    try {
+      // Guard the premise: without a real refusal this case would pass vacuously.
+      await expect(lstat(path.join(sandboxWritten, "Preferences"))).rejects.toMatchObject({
+        code: "EPERM",
+      });
+
+      await expect(assertComputerHomeWritable(home, 0, 0)).resolves.toBeUndefined();
+    } finally {
+      await releaseAccess();
+    }
   });
 });

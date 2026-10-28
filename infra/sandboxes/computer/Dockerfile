@@ -143,7 +143,7 @@ COPY --chmod=755 rakazo-browser /usr/local/bin/rakazo-browser
 COPY --chmod=755 rakazo-focus-or-launch /usr/local/bin/rakazo-focus-or-launch
 COPY --chmod=755 rakazo-page-browser /usr/local/bin/rakazo-page-browser
 COPY --chmod=644 rakazo-browser.desktop /usr/share/applications/rakazo-browser.desktop
-# Rakazo keeps credentials itself; the browser's save prompts would cover pages.
+# Doitx keeps credentials itself; the browser's save prompts would cover pages.
 COPY --chmod=644 browser-policy.json /etc/chromium/policies/managed/rakazo-browser.json
 COPY --chmod=644 browser-policy.json /etc/brave/policies/managed/rakazo-browser.json
 COPY --chmod=644 fluxbox.init /etc/rakazo/fluxbox/init

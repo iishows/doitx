@@ -4,6 +4,14 @@ import path from "node:path";
 
 const DIRECTORY_OPEN_FLAGS = constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW;
 
+const isWindows = process.platform === "win32";
+
+/** Codes Windows reports for entries it can see but will not describe. */
+function isWindowsUnstattableEntry(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "EACCES" || code === "EPERM" || code === "ENOTSUP";
+}
+
 function hasPermissions(stat: Stats, uid: number, gid: number, required: number): boolean {
   const shift = stat.uid === uid ? 6 : stat.gid === gid ? 3 : 0;
   return ((stat.mode >> shift) & required) === required;
@@ -77,6 +85,15 @@ async function assertWritableEntry(
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`computer home ${root} does not exist`);
     }
+    // A home is a bind mount shared with a Linux sandbox, so anything the sandbox
+    // writes lives on it. Chromium there creates SingletonCookie/SingletonSocket
+    // as symlinks to a hostname and to a socket under /tmp; NTFS keeps the reparse
+    // points but Windows refuses to stat them, leaving EACCES with no path forward.
+    // The walk cannot judge such an entry, and nothing in the sandbox can be handed
+    // an unusable home over it, so skip it the same way an unreadable child is skipped.
+    if (isWindows && !isRoot && isWindowsUnstattableEntry(error)) {
+      return;
+    }
     throw error;
   }
   if (stat.isSymbolicLink()) {
@@ -97,7 +114,15 @@ async function assertWritableEntry(
   }
   if (!stat.isDirectory()) return;
 
-  const directory = await opendir(target);
+  let directory: Awaited<ReturnType<typeof opendir>>;
+  try {
+    directory = await opendir(target);
+  } catch (error) {
+    // Same blind spot as the lstat above: a directory the sandbox populated can carry
+    // an access rule Windows honours but POSIX would not, so the walk cannot read it.
+    if (isWindows && isWindowsUnstattableEntry(error)) return;
+    throw error;
+  }
   for await (const entry of directory) {
     await assertWritableEntry(path.join(target, entry.name), root, uid, gid, false, checkOwnership);
   }

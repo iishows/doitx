@@ -625,7 +625,7 @@ async function runMenuUpdateCheck() {
       : dialog.showMessageBox(options);
   if (state.phase === "ready") {
     const { response } = await alert({
-      message: `Rakazo ${state.availableVersion} is ready to install.`,
+      message: `Doitx ${state.availableVersion} is ready to install.`,
       buttons: ["Restart", "Later"],
       defaultId: 0,
       cancelId: 1,
@@ -648,7 +648,7 @@ async function runMenuUpdateCheck() {
       detail: state.message,
     });
   } else if (state.phase === "idle") {
-    await alert({ message: "Rakazo is up to date.", detail: `Version ${state.currentVersion}` });
+    await alert({ message: "Doitx is up to date.", detail: `Version ${state.currentVersion}` });
   }
 }
 
@@ -685,7 +685,7 @@ function installApplicationMenu() {
   };
   const changeServer: Electron.MenuItemConstructorOptions = {
     id: "change-rakazo-server",
-    label: "Change Rakazo Server…",
+    label: "Change Doitx Server…",
     accelerator: "CmdOrCtrl+Shift+K",
     click: () => showSetupWindow(),
   };
@@ -771,7 +771,7 @@ function installApplicationMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-/** Setup IPC must only answer the setup window, never a connected Rakazo server. */
+/** Setup IPC must only answer the setup window, never a connected Doitx server. */
 function fromSetupWindow(event: Electron.IpcMainInvokeEvent) {
   return (
     setupWindow !== null && !setupWindow.isDestroyed() && event.sender === setupWindow.webContents
@@ -798,7 +798,7 @@ async function probeServer(rawUrl: string, signal?: AbortSignal): Promise<Deskto
         ok: false,
         status: response.status,
         url,
-        error: "That address redirects elsewhere. Enter the final Rakazo server address.",
+        error: "That address redirects elsewhere. Enter the final Doitx server address.",
       };
     }
     if (!response.ok) {
@@ -815,7 +815,7 @@ async function probeServer(rawUrl: string, signal?: AbortSignal): Promise<Deskto
         ok: false,
         status: response.status,
         url,
-        error: "That address did not respond like a Rakazo server.",
+        error: "That address did not respond like a Doitx server.",
       };
     }
     return {
@@ -905,9 +905,15 @@ async function openAppOnce(targetUrl: string, switching: boolean) {
   const previous = mainWindow;
   let win: BrowserWindow | null = null;
   try {
-    const documentError = await probeDocument(targetUrl);
-    if (documentError !== null) {
-      throw new Error(documentError);
+    // The managed loopback stack is served by the bundled shell, so its window
+    // does not need a live backend to render. Skip the probe there: on a first
+    // launch the stack is still pulling images, and probing would bounce the
+    // user to the setup window instead of showing the app's reconnect screen.
+    if (!servesBundledRenderer(targetUrl, currentSetup?.mode === "new")) {
+      const documentError = await probeDocument(targetUrl);
+      if (documentError !== null) {
+        throw new Error(documentError);
+      }
     }
     await installBundledRenderer(
       targetUrl,
@@ -1115,6 +1121,7 @@ app.whenReady().then(async () => {
     envUrl: process.env.RAKAZO_WEB_URL,
     saved: currentSetup,
     forceSetup: process.env.RAKAZO_FORCE_SETUP === "1",
+    defaultLocalUrl: localStack.webUrl(),
   });
   if (process.env.RAKAZO_PERFORMANCE_CLEAR_CACHE === "1") {
     const cacheSessions = new Set<Session>([session.defaultSession]);
@@ -1334,7 +1341,7 @@ app.whenReady().then(async () => {
         if (managedUrl === null || !(await localStack.matchesDesiredStack())) {
           return {
             ok: false,
-            error: "The app-managed Rakazo services are not ready. Retry setup.",
+            error: "The app-managed Doitx services are not ready. Retry setup.",
           };
         }
         openSetup = { mode: "new", serverUrl: managedUrl };
@@ -1436,6 +1443,20 @@ app.whenReady().then(async () => {
 
   if (target.kind === "setup") {
     showSetupWindow();
+  } else if (target.source === "default-local") {
+    // First launch: adopt the managed stack instead of asking which backend to
+    // use. Persist it before opening so the bundled shell is served for this
+    // origin (installBundledRenderer keys off currentSetup.mode), and start the
+    // stack in the background -- the window renders immediately and the web
+    // app's own reconnect screen covers the pull.
+    const defaultSetup: DesktopSetup = { mode: "new", serverUrl: target.url };
+    await writeSetup(userDataDir, defaultSetup);
+    currentSetup = defaultSetup;
+    void localStack.start();
+    if (await appOpener.open(target.url)) {
+      commitPendingAppSwitch();
+      destroySetupWindow();
+    }
   } else if (target.source === "saved") {
     if (currentSetup?.mode === "new") {
       const managedUrl = managedLocalOpenUrl(target.url, localStack.webUrl());

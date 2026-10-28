@@ -4,14 +4,14 @@ import type { DesktopSetup, DesktopStackProbeResponse } from "@rakazo/contracts"
 
 /** Managed desktop origin; development keeps its usual web/API ports. */
 export const DEFAULT_LOCAL_WEB_URL = "http://127.0.0.1:45173";
-/** Hosted Rakazo; setup saves it as an `existing` server so it opens like any other. */
+/** Hosted Doitx; setup saves it as an `existing` server so it opens like any other. */
 export const RAKAZO_CLOUD_URL = "https://app.rakazo.com";
 export const PROBE_RESPONSE_LIMIT_BYTES = 64 * 1024;
 
 export const SETUP_FILE_NAME = "setup.json";
 
 export type StartupTarget =
-  | { kind: "app"; url: string; source: "env" | "saved" }
+  | { kind: "app"; url: string; source: "env" | "saved" | "default-local" }
   | { kind: "setup" };
 
 const SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
@@ -19,7 +19,7 @@ const SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//;
 /**
  * Accepts what a person would actually type ("localhost:5173", "rakazo.example.com")
  * and returns a canonical http(s) origin, or null when the input can never
- * securely address a Rakazo server.
+ * securely address a Doitx server.
  */
 export function normalizeServerUrl(input: string): string | null {
   const trimmed = input.trim();
@@ -44,7 +44,7 @@ export function normalizeServerUrl(input: string): string | null {
   // Public login cookies and API traffic must never cross a cleartext connection.
   if (url.protocol === "http:" && !isLocalNetworkHost(url.hostname)) return null;
 
-  // Rakazo serves its renderer, RPC, and auth routes from one origin. Keeping a
+  // Doitx serves its renderer, RPC, and auth routes from one origin. Keeping a
   // user-supplied path would make the setup probe and the loaded app disagree.
   return url.origin;
 }
@@ -106,11 +106,17 @@ export function serializeSetup(setup: DesktopSetup): string {
  * Decides between the first-run setup window and the app window. An explicit
  * `RAKAZO_WEB_URL` still wins over saved configuration so test and performance
  * harnesses can point the shell anywhere without touching a user's real setup.
+ *
+ * `defaultLocalUrl` is the managed loopback stack. When a first launch supplies
+ * it, the shell opens that stack straight away instead of asking which backend
+ * to use; the caller persists the choice so later launches read it back as
+ * ordinary saved configuration.
  */
 export function resolveStartupTarget(input: {
   envUrl?: string;
   saved?: DesktopSetup | null;
   forceSetup?: boolean;
+  defaultLocalUrl?: string;
 }): StartupTarget {
   if (input.forceSetup === true) return { kind: "setup" };
 
@@ -120,6 +126,11 @@ export function resolveStartupTarget(input: {
   if (input.saved != null) {
     const saved = parseSetupInput(input.saved);
     if (saved !== null) return { kind: "app", url: saved.serverUrl, source: "saved" };
+  }
+
+  const defaultLocalUrl = input.defaultLocalUrl?.trim();
+  if (defaultLocalUrl !== undefined && defaultLocalUrl !== "") {
+    return { kind: "app", url: defaultLocalUrl, source: "default-local" };
   }
   return { kind: "setup" };
 }
@@ -156,7 +167,7 @@ export function servesBundledRenderer(targetUrl: string, managedLocalStack: bool
   }
 }
 
-/** Each Rakazo origin gets its own persistent cookie and storage partition. */
+/** Each Doitx origin gets its own persistent cookie and storage partition. */
 export function sessionPartitionForServerUrl(targetUrl: string): string | null {
   try {
     const url = new URL(targetUrl);
@@ -268,7 +279,7 @@ export function isLoopbackHost(hostname: string) {
 
 /**
  * Link-local addresses (IPv4 169.254/16, IPv6 fe80::/10) often host cloud
- * metadata endpoints. Cleartext HTTP to them is never a legitimate Rakazo
+ * metadata endpoints. Cleartext HTTP to them is never a legitimate Doitx
  * deploy target, so they stay out of the private-network HTTP allowlist.
  */
 function isLinkLocalHost(hostname: string) {

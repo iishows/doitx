@@ -1,6 +1,6 @@
-# Contributing to Rakazo
+# Contributing to Doitx
 
-Thanks for helping improve Rakazo. Keep changes focused and testable.
+Thanks for helping improve Doitx. Keep changes focused and testable.
 
 ## Run locally
 

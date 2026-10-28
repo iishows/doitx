@@ -1,4 +1,4 @@
-# Rakazo
+# Doitx
 
 [English](./README.md) | [简体中文](./README.zh-CN.md) | [日本語](./README.ja.md)
 
@@ -7,9 +7,9 @@
 [![App Store で iPhone 版をダウンロード](https://img.shields.io/badge/App%20Store-Download%20for%20iPhone-black?labelColor=black&style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/app/rakazo/id6801531099)
 [![Android APK をダウンロード](https://img.shields.io/badge/Android-Download%20APK-black?labelColor=black&style=for-the-badge&logo=android&logoColor=white)](https://github.com/elie222/rakazo/releases/download/android/rakazo.apk)
 
-![Rakazo：本当に自分のものにできる AI チームメイト](./docs/readme-hero.png)
+![Doitx：本当に自分のものにできる AI チームメイト](./docs/readme-hero.png)
 
-Rakazo は、常駐型の AI チームメイトを持てるオープンソースの AI エージェントです。自分のマシンで動かせる
+Doitx は、常駐型の AI チームメイトを持てるオープンソースの AI エージェントです。自分のマシンで動かせる
 セルフホスト型の AI アシスタントでもあります。Web 版、Electron デスクトップアプリ、
 [iPhone](https://apps.apple.com/app/rakazo/id6801531099) 版と [Android](https://github.com/elie222/rakazo/releases/download/android/rakazo.apk) 版で利用できます。
 モデルやコンピューターのプロバイダーは自分で選べるほか、スタック全体をローカルで動かすこともできます。
@@ -17,7 +17,7 @@ Rakazo は、常駐型の AI チームメイトを持てるオープンソース
 Grok Bot、Meta Muse、OpenAI Dots、Instinct、OpenClaw、Hermes Agent、Claude Duet の
 オープンソースかつセルフホスト可能な代替ツールです。
 
-Rakazo は現在ベータ版です。詳しくは [rakazo.com](https://rakazo.com) をご覧ください。
+Doitx は現在ベータ版です。詳しくは [rakazo.com](https://rakazo.com) をご覧ください。
 
 このドキュメントは[英語版 README](./README.md) の日本語訳です。リンク先のドキュメントは現在英語のみです。
 
@@ -67,7 +67,7 @@ curl -fsSLO https://raw.githubusercontent.com/elie222/rakazo/main/infra/compose/
 bash install-images.sh
 ```
 
-インストーラーは Compose ファイルをダウンロードし、ランダムなシークレットを含む `.env` を作成して Rakazo を起動します。
+インストーラーは Compose ファイルをダウンロードし、ランダムなシークレットを含む `.env` を作成して Doitx を起動します。
 再実行時は既存の `.env` をそのまま残します。
 
 [http://127.0.0.1:5173](http://127.0.0.1:5173) を開き、アカウントを作成してモデルを接続します。
@@ -187,7 +187,7 @@ Railway のサンドボックス利用は従量課金です。
 
 ## デスクトップとモバイル
 
-Electron アプリと Expo アプリは、Web アプリと同じ Rakazo API を使うクライアントです。
+Electron アプリと Expo アプリは、Web アプリと同じ Doitx API を使うクライアントです。
 
 開発用スタックを起動した状態で、次のコマンドで Electron を起動します。
 
@@ -195,14 +195,14 @@ Electron アプリと Expo アプリは、Web アプリと同じ Rakazo API を�
 pnpm --filter @rakazo/desktop dev
 ```
 
-初回起動時、デスクトップアプリは Rakazo をこのコンピューターで動かすか、既存のサーバーに接続するかを
+初回起動時、デスクトップアプリは Doitx をこのコンピューターで動かすか、既存のサーバーに接続するかを
 尋ねます。**This computer**（このコンピューター）を選ぶと、アプリのデータディレクトリに Docker Compose で公開イメージを
 インストールして起動します（`infra/compose/install-images.sh` と同じファイルを使います）。そのため Docker Desktop、
 OrbStack、Docker Engine のいずれかが必要です。インストールされていない場合、アプリからそれらへのリンクを案内します。インストール済みの
 ビルドはイメージタグを自身のバージョンに固定し、パッケージ化されていないビルドは `edge` を取得します。
 `pnpm dev` を実行している開発者は、代わりに **Existing instance**（既存のインスタンス）を選び `http://127.0.0.1:5173` を指定してください。公開サーバーは
 HTTPS を使う必要があります。HTTP はループバックとプライベート LAN のアドレスでのみ受け付けます（リンクローカルは除く）。
-アプリは保存前に Rakazo のヘルスチェックエンドポイントを確認し、以降の起動ではそのインスタンスに直接接続します。
+アプリは保存前に Doitx のヘルスチェックエンドポイントを確認し、以降の起動ではそのインスタンスに直接接続します。
 アプリを終了してもスタックは動き続けます。停止するには、アプリケーションメニューの **Stop Local Stack**（ローカルスタックを停止）を使います。
 
 Linux では、デスクトップアプリは AppImage として配布されており、FUSE 2（`libfuse.so.2`）が必要です。Fedora Silverblue や
@@ -212,14 +212,14 @@ Ubuntu 24.04 では `libfuse2t64`、それ以前の Ubuntu や Debian では `li
 AppImage を実行してください。
 
 ```bash
-chmod +x Rakazo-*.AppImage
-./Rakazo-*.AppImage --appimage-extract-and-run
+chmod +x Doitx-*.AppImage
+./Doitx-*.AppImage --appimage-extract-and-run
 ```
 
 **This computer** は `docker` CLI を探し、Podman は検出しません。`compose` コマンドに対応した別の
 Docker 互換 CLI を試すには、アプリを起動する前に `RAKAZO_DOCKER_BINARY` にそのパスを設定してください。
 
-接続先を変えるには、アプリケーションメニューの **Change Rakazo Server…**（Rakazo サーバーを変更）を使います。保存せずに
+接続先を変えるには、アプリケーションメニューの **Change Doitx Server…**（Doitx サーバーを変更）を使います。保存せずに
 そのウィンドウを閉じると、以前のインスタンスに戻ります。開発の自動化では、`RAKAZO_WEB_URL` を設定すると
 保存済みのインスタンスを変えずにシェルの接続先を変更でき、`RAKAZO_FORCE_SETUP=1` を設定するとセットアップを
 再実行できます。
@@ -268,7 +268,7 @@ pnpm test:e2e
 - [パフォーマンステスト](./docs/performance.md)
 - [作成したボットの管理](./docs/fleet-management.md)
 
-## Rakazo と他製品の比較
+## Doitx と他製品の比較
 
 - [Grok Bot](https://rakazo.com/grok-bot-alternative/)
 - [Muse](https://rakazo.com/muse-alternative/)
@@ -283,6 +283,6 @@ pnpm test:e2e
 コントリビューションを歓迎します。プルリクエストを作成する前に [CONTRIBUTING.md](./CONTRIBUTING.md) をお読みください。
 セキュリティ上の脆弱性は、公開の Issue を作成せず、[SECURITY.md](./SECURITY.md) の手順に従って報告してください。
 
-Rakazo は [Apache License 2.0](./LICENSE) のもとでライセンスされています。
+Doitx は [Apache License 2.0](./LICENSE) のもとでライセンスされています。
 
-質問やアイデアは [Rakazo Discord コミュニティ](https://discord.gg/RWwKa2Sn7h)でお気軽にどうぞ。
+質問やアイデアは [Doitx Discord コミュニティ](https://discord.gg/RWwKa2Sn7h)でお気軽にどうぞ。

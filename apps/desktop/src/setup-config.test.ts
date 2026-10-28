@@ -52,12 +52,12 @@ describe("server address normalization", () => {
     expect(normalizeServerUrl("http://169.254.169.254")).toBeNull();
     expect(normalizeServerUrl("http://169.254.1.1:80")).toBeNull();
     expect(normalizeServerUrl("http://[fe80::1]:3100")).toBeNull();
-    // HTTPS to link-local still normalizes; the health probe must match Rakazo.
+    // HTTPS to link-local still normalizes; the health probe must match Doitx.
     expect(normalizeServerUrl("https://169.254.169.254")).toBe("https://169.254.169.254");
   });
 
   it.each(["", "   ", "not a url", "ftp://example.com", "file:///etc/passwd", "http://"])(
-    "rejects an address that cannot reach a Rakazo server (%s)",
+    "rejects an address that cannot reach a Doitx server (%s)",
     (value) => {
       expect(normalizeServerUrl(value)).toBeNull();
     },
@@ -131,7 +131,7 @@ describe("saved setup", () => {
     });
   });
 
-  it("saves Rakazo Cloud as an existing server under the exact origin setup matches", () => {
+  it("saves Doitx Cloud as an existing server under the exact origin setup matches", () => {
     // The setup window recognizes a saved Cloud choice by comparing against this constant.
     expect(normalizeServerUrl(RAKAZO_CLOUD_URL)).toBe(RAKAZO_CLOUD_URL);
     expect(parseSetupInput({ mode: "existing", serverUrl: RAKAZO_CLOUD_URL })).toEqual({
@@ -185,6 +185,38 @@ describe("startup target", () => {
       }),
     ).toEqual({ kind: "setup" });
   });
+
+  it("opens the managed local stack on a first launch instead of asking", () => {
+    expect(resolveStartupTarget({ defaultLocalUrl: "http://127.0.0.1:45173" })).toEqual({
+      kind: "app",
+      url: "http://127.0.0.1:45173",
+      source: "default-local",
+    });
+  });
+
+  it("still asks when the managed stack URL is blank", () => {
+    expect(resolveStartupTarget({ defaultLocalUrl: "   " })).toEqual({ kind: "setup" });
+  });
+
+  it("keeps the escape hatch ahead of the managed stack default", () => {
+    expect(
+      resolveStartupTarget({ forceSetup: true, defaultLocalUrl: "http://127.0.0.1:45173" }),
+    ).toEqual({ kind: "setup" });
+  });
+
+  it("prefers an explicit env URL and saved setup over the managed stack default", () => {
+    const defaultLocalUrl = "http://127.0.0.1:45173";
+    expect(resolveStartupTarget({ envUrl: "http://127.0.0.1:4321", defaultLocalUrl })).toEqual({
+      kind: "app",
+      url: "http://127.0.0.1:4321",
+      source: "env",
+    });
+    expect(resolveStartupTarget({ saved, defaultLocalUrl })).toEqual({
+      kind: "app",
+      url: "https://rakazo.example.com",
+      source: "saved",
+    });
+  });
 });
 
 describe("bundled renderer eligibility", () => {
@@ -225,7 +257,7 @@ describe("remote-content isolation", () => {
   });
 });
 
-describe("Rakazo health response", () => {
+describe("Doitx health response", () => {
   it("requires the public RPC health contract", () => {
     expect(isRakazoHealth({ json: { ok: true, version: "0.1.0" } })).toBe(true);
     expect(isRakazoHealth({ json: { ok: true } })).toBe(false);

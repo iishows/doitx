@@ -293,7 +293,7 @@ function stdioParams(options: McpStdioOptions): StdioServerParameters {
     throw new Error("MCP stdio command is not in the configured allowlist");
   }
   if (options.installedBin !== undefined && !isInstalledMcpBin(options.installedBin)) {
-    throw new Error("MCP stdio bin was not installed by Rakazo");
+    throw new Error("MCP stdio bin was not installed by Doitx");
   }
   const command = options.installedBin?.binPath ?? options.command.trim();
   const env: Record<string, string> = {};

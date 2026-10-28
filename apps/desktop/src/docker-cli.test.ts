@@ -163,6 +163,22 @@ describe("dockerSpawnEnv", () => {
       PATH: "C:\\Program Files\\Docker\\Docker\\resources\\bin",
     });
   });
+
+  // The Docker CLI locates cli-plugins (and so the `compose` subcommand) through
+  // ProgramFiles. Dropping it makes `docker compose version` fail with "unknown flag",
+  // which we would otherwise misreport as Docker Compose not being installed.
+  it("passes ProgramFiles through so docker can find its cli-plugins", () => {
+    const env = dockerSpawnEnv(
+      "win32",
+      {
+        SystemRoot: "C:\\Windows",
+        ProgramFiles: "C:\\Program Files",
+        PATH: "C:\\Windows\\system32",
+      },
+      "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+    );
+    expect(env.ProgramFiles).toBe("C:\\Program Files");
+  });
 });
 
 describe("classifyDockerFailure", () => {
