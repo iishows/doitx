@@ -7,9 +7,9 @@ import { linkStyle, message } from "./email.js";
 export function pluginSubmissionReceivedEmail(email: string): Promise<TransactionalEmail> {
   return message(
     email,
-    "We received your Rakazo plugin",
+    "We received your Doitx plugin",
     <>
-      <Text>Thanks for submitting a plugin to the Rakazo marketplace.</Text>
+      <Text>Thanks for submitting a plugin to the Doitx marketplace.</Text>
       <Text>We review every submission and will email you when it's done.</Text>
       <Text>If you did not submit a plugin, ignore this email.</Text>
     </>,
@@ -48,13 +48,13 @@ export function pluginSubmissionReviewedEmail(submission: {
   return message(
     submission.email,
     approved
-      ? `${submission.name} is in the Rakazo marketplace`
-      : `Your Rakazo plugin submission: ${submission.name}`,
+      ? `${submission.name} is in the Doitx marketplace`
+      : `Your Doitx plugin submission: ${submission.name}`,
     <>
       <Text>
         {approved
-          ? `${submission.name} is now listed in the Rakazo plugin marketplace.`
-          : `We couldn't list ${submission.name} in the Rakazo plugin marketplace.`}
+          ? `${submission.name} is now listed in the Doitx plugin marketplace.`
+          : `We couldn't list ${submission.name} in the Doitx plugin marketplace.`}
       </Text>
       {submission.reason ? <Text>{submission.reason}</Text> : null}
       <Text>Have any questions? Reply to this email.</Text>

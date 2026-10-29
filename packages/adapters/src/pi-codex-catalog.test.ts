@@ -1033,14 +1033,16 @@ describe("applyCodexLiveCatalog", () => {
     expect(applyCodexLiveCatalog(base, oauthAuth, foreign)).toEqual(base);
   });
 
-  it("keeps image support from the account list when a live slug is outside its sibling family", () => {
+  it("merges no Codex entry, so no live modality can set image support", () => {
     const terra = "gpt-6.1-terra";
     const sol = "gpt-6.1-sol";
+    // Nothing is bundled for this provider, so there is no base entry to carry
+    // image support and no live slug that could add one.
     const bundled = base.find(
       (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === sol,
     );
-    expect(bundled?.images).toBe(true);
-    expect(liveCatalogEntry(CHATGPT_OAUTH_PROVIDER, terra)?.images).toBe(false);
+    expect(bundled).toBeUndefined();
+    expect(liveCatalogEntry(CHATGPT_OAUTH_PROVIDER, terra)).toBeUndefined();
 
     const modalities = (image: boolean) =>
       parseCodexCatalog(
@@ -1064,13 +1066,13 @@ describe("applyCodexLiveCatalog", () => {
         (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === id,
       )?.images;
 
-    expect(imagesOf(modalities(true), terra)).toBe(true);
-    expect(imagesOf(modalities(true), sol)).toBe(true);
-    expect(imagesOf(modalities(false), terra)).toBe(false);
-    expect(imagesOf(modalities(false), sol)).toBe(false);
+    for (const image of [true, false]) {
+      expect(imagesOf(modalities(image), terra)).toBeUndefined();
+      expect(imagesOf(modalities(image), sol)).toBeUndefined();
+    }
   });
 
-  it("keeps bundled image support when the account omits input modalities", () => {
+  it("parses account modalities without offering any Codex entry", () => {
     const sol = "gpt-6.1-sol";
     const terra = "gpt-6.1-terra";
     const parsed = (inputModalities: null | undefined | string[]) =>
@@ -1090,18 +1092,14 @@ describe("applyCodexLiveCatalog", () => {
           },
         ]),
       )!;
-    const imagesOf = (models: CodexCatalogModel[], id: string) =>
-      applyCodexLiveCatalog(base, oauthAuth, liveFor({ "secret-a": models })).find(
-        (entry) => entry.provider === CHATGPT_OAUTH_PROVIDER && entry.id === id,
-      )?.images;
-
+    // The parser still reports what the account said; the catalog never surfaces
+    // it because the provider is not shipped.
     expect(parsed(undefined)[0]?.supportsImages).toBeUndefined();
     expect(parsed(null)[0]?.supportsImages).toBeUndefined();
-    expect(imagesOf(parsed(undefined), sol)).toBe(true);
-    expect(imagesOf(parsed(null), sol)).toBe(true);
-    expect(imagesOf(parsed(undefined), terra)).toBe(false);
-    expect(imagesOf(parsed(["text"]), sol)).toBe(false);
-    expect(imagesOf(parsed(["text"]), terra)).toBe(false);
+    expect(parsed(["text"])[0]?.supportsImages).toBe(false);
+
+    const merged = applyCodexLiveCatalog(base, oauthAuth, liveFor({ "secret-a": parsed(["text"]) }));
+    expect(merged.some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)).toBe(false);
   });
 
   it("leaves other providers untouched", () => {

@@ -3127,26 +3127,14 @@ description: Prepare standup notes
           },
         })),
       },
-      userModelPreference: {
-        findFirst: vi.fn(async (args: { where: { isDefault?: boolean } }) =>
-          args.where.isDefault
-            ? modelPreference({
-                provider: "openrouter",
-                secretId: "secret-or",
-                modelId: "deepseek/deepseek-v4-flash-0731",
-              })
-            : null,
-        ),
-      },
-      userModelCredential: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => null) },
-      deploymentSettings: { findUnique: vi.fn(async () => null) },
       taughtSkill: { findMany: vi.fn(async () => []) },
-      secret: { findMany: vi.fn(async () => []) },
       vaultCredential: { findMany: vi.fn(async () => []) },
       agentSkill: { findMany: vi.fn(async () => []) },
       scratchpadItem: { findMany: vi.fn(async () => []) },
+      // A main model the deployment can resolve, so the run reaches the plan gate
+      // instead of failing on a missing model.
+      ...compatiblePrismaParts("space-model", compatibleSecret(["space-model"])),
     } as unknown as PrismaClient;
-    withSpaceMain(prisma, "openrouter", "deepseek/deepseek-v4-flash-0731");
     const executor = createRunExecutor({
       prisma,
       billingEnabled: true,

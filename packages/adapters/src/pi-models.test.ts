@@ -455,42 +455,35 @@ describe("models agents can run", () => {
     expect(catalogModelServesAgents(model)).toBe(expected);
   });
 
-  it("hides bundled models agents cannot run from the offered catalog", () => {
+  it("offers only the managed providers, so no bundled vendor model appears", () => {
     const offered = offeredCatalog(listPiCatalog());
-    const has = (provider: string, id: string) =>
-      offered.some((entry) => entry.provider === provider && entry.id === id);
+    const managed = new Set(["local", "openai-compatible"]);
+    expect(offered.every((entry) => managed.has(entry.provider))).toBe(true);
     expect(offered.some((entry) => entry.id.endsWith(":batch"))).toBe(false);
-    expect(has("openrouter", "anthropic/claude-haiku-5.5")).toBe(true);
-    expect(has("google", "gemini-2.5-flash")).toBe(false);
-    expect(has("groq", "llama-3.1-8b-instant")).toBe(false);
-    expect(has("opencode", "big-pickle")).toBe(false);
-    expect(has("opencode", "claude-haiku-5-5")).toBe(true);
-    // A hidden model stays a known catalog id, so saved choices keep running.
-    expect(listPiCatalog().some((entry) => entry.id === "gemini-2.5-flash")).toBe(true);
   });
 
   it("keeps a hidden model the account already saved", () => {
     const entries = [
-      { provider: "google", id: "gemini-2.5-flash" },
-      { provider: "openrouter", id: "fixture/model:batch" },
+      { provider: "openai-compatible", id: "fixture/model:batch" },
+      { provider: "openai-compatible", id: "fixture/live" },
     ];
-    expect(offeredCatalog(entries, new Set(["google:gemini-2.5-flash"]))).toEqual([entries[0]]);
+    // The `:batch` variant is hidden, so it drops out unless the account saved it.
+    expect(offeredCatalog(entries)).toEqual([entries[1]]);
+    expect(offeredCatalog(entries, new Set(["openai-compatible:fixture/model:batch"]))).toEqual(
+      entries,
+    );
   });
 
   it("judges live ids the catalog does not bundle by their id", () => {
-    expect(hiddenCatalogModel({ provider: "openrouter", id: "fixture/live:batch" })).toBe(true);
-    expect(hiddenCatalogModel({ provider: "openrouter", id: "fixture/live" })).toBe(false);
+    expect(hiddenCatalogModel({ provider: "openai-compatible", id: "fixture/live:batch" })).toBe(
+      true,
+    );
+    expect(hiddenCatalogModel({ provider: "openai-compatible", id: "fixture/live" })).toBe(false);
   });
 
-  it.each([
-    ["google", "gemini-3.8-flash"],
-    ["groq", "openai/gpt-oss-120b"],
-    ["minimax", "MiniMax-M3"],
-  ])("connects %s to %s when no model is chosen", (provider, model) => {
-    expect(defaultCatalogModelId(provider, "fixture-api-key")).toBe(model);
-    expect(
-      listPiCatalog().find((entry) => entry.provider === provider && entry.id === model)
-        ?.recommended,
-    ).toBe(true);
+  it("has no default model for a bundled vendor the deployment does not offer", () => {
+    for (const provider of ["google", "groq", "minimax", "openrouter"]) {
+      expect(defaultCatalogModelId(provider, "fixture-api-key")).toBeNull();
+    }
   });
 });

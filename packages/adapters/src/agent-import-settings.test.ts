@@ -481,22 +481,13 @@ describe("helpers", () => {
     ["'placeholder\"#suffix' # comment", 'placeholder"#suffix'],
     [String.raw`"placeholder\"#suffix'" # comment`, String.raw`placeholder\"#suffix'`],
     ['placeholder"#suffix', 'placeholder"#suffix'],
-  ])("preserves .env key %s through upload and server preparation", (value, expected) => {
-    const upload = agentImportUpload(
-      [
-        { path: ".hermes/SOUL.md", home: "SOUL.md", content: "Direct.\n" },
-        {
-          path: ".hermes/.env",
-          home: ".env",
-          content: `OPENAI_API_KEY=${value}\n`,
-        },
-      ],
-      { includeSecrets: true },
-    );
-    const folder = readAgentImportFolder(upload, { includeSecrets: true })!;
-    const settings = readAgentImportSettings(folder, { includeSecrets: true });
-
-    expect(settings.keyValues.get("openai")).toBe(expected);
+  ])("preserves .env value %s through parsing", (value, expected) => {
+    // Quoted values keep their inner spaces and `#`, and a trailing comment is
+    // dropped. This is the layer that survives the deployment shipping no
+    // vendor catalog, so no provider key is offered for it.
+    expect(parseDotEnv(`MCP_EXAMPLE_TOKEN=${value}\n`)).toEqual({
+      MCP_EXAMPLE_TOKEN: expected,
+    });
   });
 
   it("converts intervals only when a cron fires at exactly that interval", () => {

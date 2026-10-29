@@ -112,7 +112,7 @@ describe("model vision gating for computer tools", () => {
     });
   });
 
-  it("follows the account catalog for a live Codex slug outside its sibling family", () => {
+  it("treats a Codex slug as text-only because the provider is not shipped", () => {
     const id = "gpt-6.1-terra";
     const provider = CHATGPT_OAUTH_PROVIDER;
     const auth: CodexCatalogSpaceAuth = {
@@ -121,57 +121,37 @@ describe("model vision gating for computer tools", () => {
       secretIdByProvider: { [provider]: "secret-a" },
       secretIdByModel: {},
     };
-    const base = listAvailablePiCatalog(auth.byProvider, auth.byModel);
-    expect(liveCatalogEntry(provider, id)?.images).toBe(false);
+    // openai-codex is not part of the managed catalog, so no live entry exists
+    // and a live listing cannot make one appear.
+    expect(liveCatalogEntry(provider, id)?.images).toBeUndefined();
     expect(modelAcceptsImageInput(provider, id)).toBe(false);
-    expect(resolveRuntimeModel({ provider, id }).model?.input).toEqual(["text"]);
+    expect(resolveRuntimeModel({ provider, id }).model?.input ?? ["text"]).not.toContain("image");
 
-    for (const supportsImages of [true, false]) {
-      const inputModalities = supportsImages ? ["text", "image"] : ["text"];
-      const parsed = parseCodexCatalog({
-        models: [
-          {
-            slug: "gpt-6.1-sol",
-            visibility: "list",
-            supported_in_api: true,
-            input_modalities: ["text", "image"],
-          },
-          {
-            slug: id,
-            visibility: "list",
-            supported_in_api: true,
-            input_modalities: inputModalities,
-          },
-        ],
-      });
-      const entry = applyCodexLiveCatalog(base, auth, new Map([["secret-a", parsed ?? []]])).find(
-        (item) => item.provider === provider && item.id === id,
-      );
-      expect(entry?.images).toBe(supportsImages);
-      expect(modelAcceptsImageInput(provider, id, entry?.images)).toBe(supportsImages);
-      expect(
-        resolveRuntimeModel({ provider, id, acceptsImages: entry?.images }).model?.input.includes(
-          "image",
-        ),
-      ).toBe(supportsImages);
-      const names = filterImageReturningComputerTools(
-        builtinAgentTools,
-        modelAcceptsImageInput(provider, id, entry?.images),
-      ).map((tool) => tool.name);
-      for (const name of IMAGE_RETURNING_COMPUTER_TOOLS) {
-        expect(names.includes(name)).toBe(supportsImages);
-      }
-    }
+    const base = listAvailablePiCatalog(auth.byProvider, auth.byModel);
+    const parsed = parseCodexCatalog({
+      models: [
+        {
+          slug: id,
+          visibility: "list",
+          supported_in_api: true,
+          input_modalities: ["text", "image"],
+        },
+      ],
+    });
+    const entry = applyCodexLiveCatalog(base, auth, new Map([["secret-a", parsed ?? []]])).find(
+      (item) => item.provider === provider && item.id === id,
+    );
+    expect(entry).toBeUndefined();
   });
 
-  it("strips screenshot tools when a bundled Codex model is text-only in the account list", () => {
+  it("strips screenshot tools when the account catalog cannot confirm image input", () => {
     const provider = CHATGPT_OAUTH_PROVIDER;
     const id = "gpt-6.1-sol";
-    expect(modelAcceptsImageInput(provider, id)).toBe(true);
+    // No shipped provider resolves this id, so image input is unconfirmed.
+    expect(modelAcceptsImageInput(provider, id)).toBe(false);
     expect(modelAcceptsImageInput(provider, id, false)).toBe(false);
-    expect(resolveRuntimeModel({ provider, id, acceptsImages: false }).model?.input).toEqual([
-      "text",
-    ]);
+    // The provider is not shipped, so the runtime has no model to attach input to.
+    expect(resolveRuntimeModel({ provider, id, acceptsImages: false }).model).toBeUndefined();
     const names = filterImageReturningComputerTools(
       builtinAgentTools,
       modelAcceptsImageInput(provider, id, false),
@@ -219,10 +199,12 @@ describe("model vision gating for computer tools", () => {
 });
 
 describe("known attachment input capability", () => {
-  it("keeps catalogue misses distinct from known text-only and image models", () => {
+  it("reports no bundled image knowledge for providers the deployment does not ship", () => {
+    // Only local and openai-compatible are offered, so every bundled vendor
+    // catalog lookup is a miss rather than a text-only or image verdict.
     expect(knownModelImageInput("openrouter", "fixture/future-model")).toBeUndefined();
-    expect(knownModelImageInput("openrouter", "deepseek/deepseek-v4-pro")).toBe(false);
-    expect(knownModelImageInput("openrouter", "openai/gpt-4o")).toBe(true);
+    expect(knownModelImageInput("openrouter", "deepseek/deepseek-v4-pro")).toBeUndefined();
+    expect(knownModelImageInput("openrouter", "openai/gpt-4o")).toBeUndefined();
     expect(knownModelImageInput("openai-compatible", "openai/gpt-4o")).toBeUndefined();
   });
 });

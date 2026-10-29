@@ -70,7 +70,7 @@ export class AccountImportError extends Error {
   }
 }
 
-const unreadable = () => new AccountImportError("The file is not a readable Rakazo export.");
+const unreadable = () => new AccountImportError("The file is not a readable Doitx export.");
 const invalidEntry = () => new AccountImportError("The export contains an unexpected file.");
 const outOfOrder = () => new AccountImportError("The export's files are out of order.");
 const missingRecord = () => new AccountImportError("The export refers to a missing record.");
@@ -948,7 +948,7 @@ function parseManifest(bytes: Uint8Array): AccountExportManifest {
   const manifest = AccountExportManifestSchema.safeParse(parsed);
   if (manifest.success) return manifest.data;
   if (version !== ACCOUNT_EXPORT_VERSION)
-    throw new AccountImportError("This export is from a newer version of Rakazo.");
+    throw new AccountImportError("This export is from a newer version of Doitx.");
   throw unreadable();
 }
 

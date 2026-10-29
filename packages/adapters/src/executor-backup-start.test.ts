@@ -1,8 +1,12 @@
 import type { AgentRunRequest } from "@rakazo/adapter-kit";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type * as ComputerLifecycleModule from "./computer-lifecycle.js";
 import { createRunExecutor } from "./executor.js";
-import { OAUTH_RECONNECT_REQUIRED_ERROR, serializeModelSecret } from "./pi-oauth.js";
+import {
+  OAUTH_RECONNECT_REQUIRED_ERROR,
+  registerProviderOAuth,
+  serializeModelSecret,
+} from "./pi-oauth.js";
 import { withModelRoles } from "./testing/model-roles.js";
 
 vi.mock("./computer-lifecycle.js", async (importOriginal) => ({
@@ -17,9 +21,47 @@ vi.mock("./computer-lifecycle.js", async (importOriginal) => ({
 }));
 
 const USER_ID = "user-1";
-const PRIMARY = { provider: "openai-codex", modelId: "gpt-6-luna" };
-const BACKUP = { provider: "openrouter", modelId: "openai/gpt-4o" };
+// The managed catalog serves local and openai-compatible only. The main model is
+// the deployment's local provider; the backup is a distinct compatible connection,
+// so the two roles resolve independently.
+const PRIMARY = { provider: "local", modelId: "gpt-6-luna" };
+const BACKUP = { provider: "openai-compatible", modelId: "gpt-6-sol" };
 const stamp = new Date("2026-08-30T00:00:00.000Z");
+
+beforeAll(() => {
+  // Subscription handlers came from the vendor catalog the app no longer ships.
+  // The fallback machinery is provider-agnostic, so register one here.
+  registerProviderOAuth(PRIMARY.provider, {
+    name: "Fixture subscription",
+    isSubscription: true,
+    login: async () => {
+      throw new Error("not used");
+    },
+    refresh: async () => {
+      const response = await fetch("https://auth.example.test/oauth/token", {
+        method: "POST",
+        body: new URLSearchParams({ grant_type: "refresh_token" }),
+      });
+      if (!response.ok) {
+        // pi embeds the endpoint status and body, which is what the markers read.
+        throw new Error(`failed (${response.status}): ${await response.text()}`);
+      }
+      const body = (await response.json()) as {
+        access_token: string;
+        refresh_token: string;
+        expires_in: number;
+      };
+      return {
+        type: "oauth",
+        access: body.access_token,
+        refresh: body.refresh_token,
+        expires: Date.now() + body.expires_in * 1000,
+      };
+    },
+    toAuth: async (credential) => ({ apiKey: credential.access }),
+  });
+  vi.stubEnv("RAKAZO_LOCAL_MODELS", "gpt-6-luna");
+});
 
 type Credential = {
   id: string;
@@ -55,7 +97,12 @@ const plaintexts: Record<string, string> = {
     kind: "oauth",
     credential: { type: "oauth", access: "fake-access", refresh: "fake-refresh", expires: 1 },
   }),
-  "secret-backup": serializeModelSecret({ kind: "api_key", key: "fake-backup-key" }),
+  "secret-backup": serializeModelSecret({
+    kind: "openai_compatible",
+    baseUrl: "http://127.0.0.1:8000/v1",
+    apiKey: "fake-backup-key",
+    enabledModelIds: [BACKUP.modelId],
+  }),
 };
 
 /**
@@ -162,6 +209,7 @@ async function runTurn({
       },
       attempt: {
         create: vi.fn(async () => ({ id: "attempt-1" })),
+        findMany: vi.fn(async () => []),
         update: vi.fn(),
         updateMany: vi.fn(async () => ({ count: 1 })),
       },
@@ -233,6 +281,8 @@ async function runTurn({
         yield* [];
       }),
     },
+    // The fixture's compatible connection points at loopback.
+    mcpAllowPrivateEndpoint: true,
     home: { commit: vi.fn(async () => "fixture-revision") },
     memory: { read: async () => ({ documents: [] }) },
     memoryProviders: { resolve: async () => null },

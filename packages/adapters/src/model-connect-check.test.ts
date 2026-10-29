@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { verifyModelServesAgents } from "./model-connect-check.js";
 
 const apiKey = "fixture-api-key";
@@ -36,19 +36,26 @@ function requestBody(fetchImpl: typeof fetch): Record<string, unknown> {
 }
 
 describe("connect-time model check", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  // The managed catalog only serves ids the operator declares, so the probe
+  // model has to be named before the runtime can resolve it.
+  beforeEach(() => vi.stubEnv("RAKAZO_LOCAL_MODELS", "probe-model"));
 
   it("accepts a model as soon as the provider starts answering a request with a tool", async () => {
     const fetchImpl = acceptedStream();
     await expect(
       verifyModelServesAgents(
-        { provider: "groq", id: "openai/gpt-oss-120b", apiKey },
+        { provider: "local", id: "probe-model", apiKey },
         { fetch: fetchImpl },
       ),
     ).resolves.toBeUndefined();
     expect(fetchImpl).toHaveBeenCalledOnce();
     expect(requestBody(fetchImpl)).toMatchObject({
-      model: "openai/gpt-oss-120b",
+      model: "probe-model",
       // Small output ceiling: providers reserve credit against it.
       max_completion_tokens: 1024,
       tools: [expect.objectContaining({ function: expect.objectContaining({ name: "noop" }) })],
@@ -58,7 +65,7 @@ describe("connect-time model check", () => {
   it.each([
     {
       name: "a request budget that cannot fit even the connection probe",
-      config: { provider: "groq", id: "openai/gpt-oss-120b" },
+      config: { provider: "local", id: "probe-model" },
       fetch: rejection(413, {
         code: "rate_limit_exceeded",
         type: "tokens",
@@ -68,13 +75,13 @@ describe("connect-time model check", () => {
     },
     {
       name: "an unsupported model reported as a bad request",
-      config: { provider: "groq", id: "openai/gpt-oss-120b" },
+      config: { provider: "local", id: "probe-model" },
       fetch: rejection(400, { code: "400", message: "Unsupported model fixture-model" }),
       error: "can't run this model",
     },
     {
       name: "a free tier that only works inside its own app",
-      config: { provider: "opencode", id: "big-pickle" },
+      config: { provider: "local", id: "probe-model" },
       fetch: rejection(403, {
         type: "FreeTierError",
         message: "The free tier can only be used from within the provider's app.",
@@ -83,7 +90,7 @@ describe("connect-time model check", () => {
     },
     {
       name: "a retired model",
-      config: { provider: "groq", id: "llama-3.1-8b-instant" },
+      config: { provider: "local", id: "probe-model" },
       fetch: rejection(404, {
         error: {
           message:
@@ -96,7 +103,7 @@ describe("connect-time model check", () => {
     },
     {
       name: "a model without tool support",
-      config: { provider: "openrouter", id: "anthropic/claude-haiku-5.5" },
+      config: { provider: "local", id: "probe-model" },
       fetch: rejection(404, {
         error: { message: "No endpoints found that support tool use.", code: 404 },
       }),
@@ -104,7 +111,7 @@ describe("connect-time model check", () => {
     },
     {
       name: "a key without credit",
-      config: { provider: "openrouter", id: "anthropic/claude-haiku-5.5" },
+      config: { provider: "local", id: "probe-model" },
       fetch: rejection(402, {
         error: { message: "Insufficient credits. Add more using the billing page.", code: 402 },
       }),
@@ -112,7 +119,7 @@ describe("connect-time model check", () => {
     },
     {
       name: "a rejected key",
-      config: { provider: "groq", id: "openai/gpt-oss-120b" },
+      config: { provider: "local", id: "probe-model" },
       fetch: rejection(401, {
         error: {
           message: "Invalid API Key",
@@ -138,7 +145,7 @@ describe("connect-time model check", () => {
   ])("lets %s through to the run", async (_, fetchImpl) => {
     await expect(
       verifyModelServesAgents(
-        { provider: "groq", id: "openai/gpt-oss-120b", apiKey },
+        { provider: "local", id: "probe-model", apiKey },
         { fetch: fetchImpl },
       ),
     ).resolves.toBeUndefined();
@@ -156,14 +163,14 @@ describe("connect-time model check", () => {
       }),
     );
     await expect(
-      verifyModelServesAgents({ provider: "google", id: "gemini-2.5-flash", apiKey }),
+      verifyModelServesAgents({ provider: "local", id: "probe-model", apiKey }),
     ).rejects.toThrow("can't run this model");
   });
 
   it("skips a model the catalog cannot resolve", async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     await verifyModelServesAgents(
-      { provider: "anthropic", id: "fixture-unknown-model", apiKey },
+      { provider: "local", id: "undeclared-model", apiKey },
       { fetch: fetchImpl },
     );
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -174,7 +181,7 @@ describe("connect-time model check", () => {
     caller.abort(new Error("cancelled"));
     await expect(
       verifyModelServesAgents(
-        { provider: "groq", id: "openai/gpt-oss-120b", apiKey },
+        { provider: "local", id: "probe-model", apiKey },
         { fetch: acceptedStream(), signal: caller.signal },
       ),
     ).rejects.toThrow("cancelled");
