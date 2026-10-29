@@ -231,9 +231,9 @@ describe.skipIf(process.platform !== "win32")("computer home ownership on Window
     const parent = await mkdtemp(path.join(tmpdir(), "rakazo-home-win-missing-"));
     roots.push(parent);
 
-    await expect(
-      assertComputerHomeWritable(path.join(parent, "missing"), 0, 0),
-    ).rejects.toThrow(/does not exist/);
+    await expect(assertComputerHomeWritable(path.join(parent, "missing"), 0, 0)).rejects.toThrow(
+      /does not exist/,
+    );
   });
 
   it("still rejects a regular file as the home root", async () => {

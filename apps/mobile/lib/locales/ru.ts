@@ -1016,8 +1016,7 @@ export const RU_MESSAGES: Record<string, string> = {
   Work: "Работа",
   Both: "И то, и другое",
   "How will you use Doitx?": "Как вы будете использовать Doitx?",
-  "What do you most want Doitx to help with?":
-    "С чем Doitx должен помогать вам в первую очередь?",
+  "What do you most want Doitx to help with?": "С чем Doitx должен помогать вам в первую очередь?",
   "How big is your team?": "Сколько человек в вашей команде?",
   "How did you hear about us?": "Как вы о нас узнали?",
   "Welcome to Doitx": "Добро пожаловать в Doitx",

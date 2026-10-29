@@ -89,27 +89,21 @@ jobs:
       - name: Choose release platforms
         id: platforms
         env:
-          # Windows builds only when an Authenticode certificate is configured; macOS and Linux always build.
-          WINDOWS_SIGNING: ${{ secrets.DESKTOP_WIN_CSC_LINK != '' }}
           # macOS signs only when a certificate is configured; otherwise it builds unsigned.
           MAC_SIGNING: ${{ secrets.DESKTOP_MAC_CSC_LINK != '' }}
         shell: bash
         run: |
           set -euo pipefail
-          include='[{"os":"ubuntu-24.04","artifact":"linux"}]'
+          # Windows and Linux always build; Windows signs only when a certificate exists.
+          include='[{"os":"ubuntu-24.04","artifact":"linux"},{"os":"windows-2022","artifact":"windows"}]'
           if [[ "$MAC_SIGNING" == "true" ]]; then
             include="$(jq -c '. + [{"os":"macos-26","artifact":"macos"}]' <<<"$include")"
           else
             echo "::notice::Skipping macOS build; DESKTOP_MAC_CSC_LINK is not set."
           fi
-          if [[ "$WINDOWS_SIGNING" == "true" ]]; then
-            include="$(jq -c '. + [{"os":"windows-2022","artifact":"windows"}]' <<<"$include")"
-          else
-            echo "::notice::Skipping Windows build; DESKTOP_WIN_CSC_LINK is not set."
-          fi
           echo "include=$include" >> "$GITHUB_OUTPUT"
           echo "macos=$MAC_SIGNING" >> "$GITHUB_OUTPUT"
-          echo "windows=$WINDOWS_SIGNING" >> "$GITHUB_OUTPUT"
+          echo "windows=true" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build signed ${{ matrix.artifact }} artifacts
@@ -284,7 +278,7 @@ jobs:
             }
           ' "$PWD/$app"
 
-      - name: Require Windows signing credentials
+      - name: Package signed or unsigned x64 Windows app
         if: runner.os == 'Windows'
         shell: bash
         env:
@@ -292,19 +286,18 @@ jobs:
           WIN_CSC_KEY_PASSWORD: ${{ secrets.DESKTOP_WIN_CSC_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$WIN_CSC_LINK"
-          test -n "$WIN_CSC_KEY_PASSWORD"
-      - name: Package signed x64 Windows app
-        if: runner.os == 'Windows'
-        env:
-          WIN_CSC_LINK: ${{ secrets.DESKTOP_WIN_CSC_LINK }}
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.DESKTOP_WIN_CSC_KEY_PASSWORD }}
-        run: >-
-          pnpm --filter @rakazo/desktop exec electron-builder
-          --win --x64 --publish never -c.forceCodeSigning=true
-      - name: Verify Windows Authenticode signature and publisher-bound update feed
+          if [[ -n "$WIN_CSC_LINK" ]]; then
+            pnpm --filter @rakazo/desktop exec electron-builder \
+              --win --x64 --publish never -c.forceCodeSigning=true
+          else
+            pnpm --filter @rakazo/desktop exec electron-builder \
+              --win --x64 --publish never
+          fi
+      - name: Verify Windows update feed and signature when present
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          WIN_CSC_LINK: ${{ secrets.DESKTOP_WIN_CSC_LINK }}
         run: |
           $ErrorActionPreference = "Stop"
           $executables = @(
@@ -312,16 +305,15 @@ jobs:
             Get-ChildItem "apps/desktop/out/win-unpacked/*.exe"
           )
           if ($executables.Count -lt 2) { throw "Windows installer or application was not created." }
-          foreach ($executable in $executables) {
-            $signature = Get-AuthenticodeSignature $executable.FullName
-            if ($signature.Status -ne "Valid") {
-              throw "$($executable.Name) signature is $($signature.Status)."
+          if ($env:WIN_CSC_LINK) {
+            foreach ($executable in $executables) {
+              $signature = Get-AuthenticodeSignature $executable.FullName
+              if ($signature.Status -ne "Valid") {
+                throw "$($executable.Name) signature is $($signature.Status)."
+              }
             }
           }
           $config = "apps/desktop/out/win-unpacked/resources/app-update.yml"
-          if (-not (Select-String -Path $config -Pattern '^publisherName:' -Quiet)) {
-            throw "Windows update config is not bound to the signing publisher."
-          }
           $feed = Get-Content -Raw $config
           foreach ($expected in @("provider: github", "owner: iishows", "repo: doitx")) {
             if ($feed -notmatch "(?m)^$([regex]::Escape($expected))\r?$") {

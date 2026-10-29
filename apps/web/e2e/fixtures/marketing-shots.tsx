@@ -255,8 +255,7 @@ const subscriptionCatalog: ModelCatalogEntry[] = [
     providerName: "OpenAI Codex",
     id: "gpt-6.1-sol",
     label: "GPT-6.1 Sol",
-    billing:
-      "Sign in with ChatGPT Plus or Pro. Uses your OpenAI subscription. Doitx does not pay.",
+    billing: "Sign in with ChatGPT Plus or Pro. Uses your OpenAI subscription. Doitx does not pay.",
     auth: "oauth",
     oauthLabel: "Sign in with ChatGPT",
     authHint: "ChatGPT Plus/Pro",

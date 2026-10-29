@@ -817,8 +817,7 @@ export const DE_MESSAGES: Record<string, string> = {
   "Enter a server URL": "Gib eine Server-URL ein",
   "Public servers need https://. HTTP only works on your local network.":
     "Öffentliche Server brauchen https://. HTTP funktioniert nur im lokalen Netzwerk.",
-  "That URL did not look like a Doitx server":
-    "Diese URL sieht nicht nach einem Doitx-Server aus",
+  "That URL did not look like a Doitx server": "Diese URL sieht nicht nach einem Doitx-Server aus",
   "That URL is missing a host": "Dieser URL fehlt ein Host",
   "That doesn’t look like a URL": "Das sieht nicht nach einer URL aus",
   "Use an http or https URL": "Verwende eine http- oder https-URL",
