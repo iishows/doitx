@@ -32,7 +32,7 @@ describe("resolveDeploymentModel", () => {
       configured: false,
       hostCredentials: false,
     });
-    // The whole point: switching the provider switches the key with it.
+    // Switching the provider switches the key with it.
     expect(resolveDeploymentModel({ ...both, PI_DEFAULT_PROVIDER: "anthropic" })).toEqual({
       provider: "anthropic",
       model: "claude-sonnet-5",

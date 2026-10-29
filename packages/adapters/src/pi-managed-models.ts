@@ -4,18 +4,18 @@ import { registerLocalProvider } from "./pi-local-provider.js";
 import { applyPiModelCompatibility } from "./pi-model-compat.js";
 import { registerOpenAiCompatibleCatalog } from "./pi-openai-compatible-provider.js";
 
-/** The only providers a Rakazo deployment exposes. */
+/** The only providers a Doitx deployment exposes. */
 export const MANAGED_PROVIDER_IDS: ReadonlySet<string> = new Set([
   LOCAL_PROVIDER_ID,
   OPENAI_COMPATIBLE_PROVIDER_ID,
 ]);
 
 /**
- * The one place that decides which providers a Rakazo deployment offers.
+ * The one place that decides which providers a Doitx deployment offers.
  *
  * `@earendil-works/pi-ai/providers/all`'s `builtinModels()` registers every
  * provider in the upstream catalog (OpenRouter, Anthropic, OpenAI, Google,
- * Groq, Bedrock, Copilot, ...). Rakazo deployments run on a centrally managed
+ * Groq, Bedrock, Copilot, ...). Doitx deployments run on a centrally managed
  * endpoint or a user-controlled OpenAI-compatible URL instead, so the upstream
  * catalog is deliberately left empty here and only two providers are added:
  *

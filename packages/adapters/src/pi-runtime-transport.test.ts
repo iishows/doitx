@@ -7,14 +7,14 @@ import type {
 } from "@earendil-works/pi-ai";
 import { DEFAULT_MODEL_MAX_TOKENS } from "@rakazo/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_MODEL_STREAM_MAX_RETRIES, MODEL_STREAM_TIMEOUT_MS } from "./pi-runtime-limits.js";
+import { resolveRuntimeModel } from "./pi-runtime-models.js";
 import {
   conversationSessionId,
   isOpenCodeProvider,
   reliableModelStream,
   reliableStreamOptions,
-  resolveRuntimeModel,
-} from "./pi-runtime.js";
-import { DEFAULT_MODEL_STREAM_MAX_RETRIES, MODEL_STREAM_TIMEOUT_MS } from "./pi-runtime-limits.js";
+} from "./pi-runtime-stream.js";
 
 // The Codex provider shipped with the vendor catalogue the app no longer includes.
 // createManagedModels is the one place providers are registered, so stand up a

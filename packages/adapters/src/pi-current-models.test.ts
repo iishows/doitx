@@ -1,7 +1,7 @@
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
 import { describe, expect, it, vi } from "vitest";
 import { listPiCatalog } from "./pi-models.js";
-import { modelsForRequest } from "./pi-runtime.js";
+import { modelsForRequest } from "./pi-runtime-models.js";
 
 /**
  * This file used to pin the vendor model data (Bedrock pricing, OpenCode
@@ -31,7 +31,7 @@ async function withLocalModels<T>(
   vi.resetModules();
   try {
     const { listPiCatalog: catalog } = await import("./pi-models.js");
-    const { modelsForRequest: resolve } = await import("./pi-runtime.js");
+    const { modelsForRequest: resolve } = await import("./pi-runtime-models.js");
     return fn({ catalog, resolve });
   } finally {
     for (const [key, value] of previous) {
