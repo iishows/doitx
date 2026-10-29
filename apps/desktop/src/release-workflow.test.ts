@@ -55,20 +55,27 @@ describe("desktop release workflow", () => {
     );
   });
 
-  it("builds Windows only when an Authenticode certificate is configured", () => {
+  it("builds Windows and macOS only when signing credentials are configured", () => {
     expect(workflow).toContain(
       `WINDOWS_SIGNING: ${expression("secrets.DESKTOP_WIN_CSC_LINK != ''")}`,
+    );
+    expect(workflow).toContain(
+      `MAC_SIGNING: ${expression("secrets.DESKTOP_MAC_CSC_LINK != ''")}`,
     );
     expect(workflow).toContain(
       `include: ${expression("fromJSON(needs.validate.outputs.platforms)")}`,
     );
     expect(workflow).toContain(
-      `include='[{"os":"macos-26","artifact":"macos"},{"os":"ubuntu-24.04","artifact":"linux"}]'`,
+      `include='[{"os":"ubuntu-24.04","artifact":"linux"}]'`,
+    );
+    expect(workflow).toMatch(
+      /if \[\[ "\$MAC_SIGNING" == "true" \]\]; then\n\s+include=.*\{"os":"macos-26","artifact":"macos"\}/,
     );
     expect(workflow).toMatch(
       /if \[\[ "\$WINDOWS_SIGNING" == "true" \]\]; then\n\s+include=.*\{"os":"windows-2022","artifact":"windows"\}/,
     );
-    expect(workflow.split("windows-2022")).toHaveLength(2);
+    expect(workflow).toContain(`MAC_BUILT: ${expression("needs.validate.outputs.macos")}`);
+    expect(workflow).toContain('if [[ "$MAC_BUILT" == "true" ]]; then');
     expect(workflow).toContain(`WINDOWS_BUILT: ${expression("needs.validate.outputs.windows")}`);
     expect(workflow).toContain('if [[ "$WINDOWS_BUILT" == "true" ]]; then');
     expect(workflow).toContain("feeds+=(release-artifacts/latest.yml)");
@@ -76,8 +83,8 @@ describe("desktop release workflow", () => {
 
   it("pins every platform update feed to the official GitHub owner and repo", () => {
     expect(workflow).toContain('grep -Fqx "provider: github"');
-    expect(workflow).toContain('grep -Fqx "owner: elie222"');
-    expect(workflow).toContain('grep -Fqx "repo: rakazo"');
+    expect(workflow).toContain('grep -Fqx "owner: iishows"');
+    expect(workflow).toContain('grep -Fqx "repo: doitx"');
     expect(workflow).toContain("Verify Linux update feed is pinned to the official GitHub channel");
     expect(workflow).toContain("Windows update config missing");
     expect(workflow).toContain("RELEASE_VERSION:");

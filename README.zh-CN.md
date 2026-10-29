@@ -2,40 +2,21 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md) | [日本語](./README.ja.md)
 
-[![GitHub stars](https://img.shields.io/github/stars/elie222/rakazo?labelColor=black&style=for-the-badge&color=2563EB)](https://github.com/elie222/rakazo/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/iishows/doitx?labelColor=black&style=for-the-badge&color=2563EB)](https://github.com/iishows/doitx/stargazers)
 [![加入 Discord 社区](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?labelColor=black&style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/RWwKa2Sn7h)
 [![在 App Store 下载 iPhone 版](https://img.shields.io/badge/App%20Store-Download%20for%20iPhone-black?labelColor=black&style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/app/rakazo/id6801531099)
-[![下载 Android APK](https://img.shields.io/badge/Android-Download%20APK-black?labelColor=black&style=for-the-badge&logo=android&logoColor=white)](https://github.com/elie222/rakazo/releases/download/android/rakazo.apk)
+[![下载 Android APK](https://img.shields.io/badge/Android-Download%20APK-black?labelColor=black&style=for-the-badge&logo=android&logoColor=white)](https://github.com/iishows/doitx/releases/download/android/rakazo.apk)
 
 ![Doitx：由你掌控的 AI 队友](./docs/readme-hero.png)
 
 Doitx 是一个开源 AI 智能体项目，让你拥有可长期协作的 AI 队友，也可以作为自托管 AI 助手在自己的电脑上运行。
 它提供网页版、Electron 桌面应用，以及 [iPhone](https://apps.apple.com/app/rakazo/id6801531099) 和
-[Android](https://github.com/elie222/rakazo/releases/download/android/rakazo.apk) 应用。
+[Android](https://github.com/iishows/doitx/releases/download/android/rakazo.apk) 应用。
 你可以接入自己的模型和计算环境提供商，也可以在本地运行完整服务。
 
-它是 Grok Bot、Meta Muse、OpenAI Dots、Instinct、OpenClaw、Hermes Agent、Claude Duet 和 Hark Pro 的开源、自托管替代方案。
+它是 Grok Bot、Meta Muse、OpenAI Dots、Instinct、OpenClaw、Hermes Agent 和 Claude Duet 的开源、自托管替代方案。
 
 Doitx 目前处于测试阶段。详情见 [rakazo.com](https://rakazo.com)。
-
-本文是 [英文 README](./README.md) 的简体中文译文，链接指向的其他文档目前仍为英文。
-
-## 与其他产品的比较
-
-Doitx 启动后，你可以像使用 Grok Bot 一样，通过聊天设置和管理机器人。
-Muse、Dots、Instinct、Claude Duet 和 Hark Pro 是托管式助手；OpenClaw 和 Hermes Agent 则同样是可以自行运行的开源智能体。
-后两者的文档介绍了安装器、配置文件和网关。Hermes Desktop 无需命令行即可开始第一次聊天；消息网关则是独立进程。
-
-- [Grok Bot](https://rakazo.com/grok-bot-alternative/)
-- [Muse](https://rakazo.com/muse-alternative/)
-- [Dots](https://rakazo.com/dots-alternative/)
-- [Instinct](https://rakazo.com/instinct-alternative/)，可通过短信或电话交流的个人助手
-- [OpenClaw](https://rakazo.com/openclaw-alternative/)
-- [Hermes Agent](https://rakazo.com/hermes-alternative/)，Nous Research 的开源智能体
-- [Claude Duet](https://rakazo.com/claude-duet-alternative/)，Anthropic 的主动式个人智能体
-- [Hark Pro](https://rakazo.com/hark-alternative/)，hark.com 提供的个人智能体
-- [全部对比](https://rakazo.com/alternatives/)
-- [自托管指南](https://rakazo.com/self-hosted-ai-agent/)
 
 ## 功能
 
@@ -46,11 +27,19 @@ Muse、Dots、Instinct、Claude Duet 和 Hark Pro 是托管式助手；OpenClaw 
 - 机器人可将任务委派给其他机器人或临时子智能体
 - 通过 Pi 接入自己的模型凭据
 - 通过 Composio 或 Pipedream Connect 集成应用，也支持用户自行安装的 Treg、远程 MCP 和 OpenAPI 工具来源
-- 支持 Docker、E2B、Daytona、CreateOS、Box，以及受信任的本机计算环境
+- 支持 Docker、E2B、Daytona、CreateOS、Boat 以及受信任的本机计算环境
 
 ## 演示
 
 https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
+
+## 致谢
+
+- [PromptLayer](https://promptlayer.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
+- [Inbox Zero](https://getinboxzero.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
+- [CodeRabbit](https://www.coderabbit.ai/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
+- [Greptile](https://www.greptile.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
+- [Snyk](https://snyk.io/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
 
 ## 技术栈
 
@@ -62,16 +51,8 @@ https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
 - Better Auth
 - Graphile Worker
 - Pi
-- Docker、E2B、Daytona、CreateOS 和 Box
+- Docker、E2B、Daytona、CreateOS 和 Boat
 - Composio、Pipedream Connect、MCP 和 OpenAPI 集成
-
-## 部署到 Railway
-
-[![部署到 Railway](https://railway.com/button.svg)](https://railway.com/new/template/rakazo-template)
-
-部署包含 PostgreSQL、持久化存储和 Railway 计算机的私有 Doitx 实例。
-填写邮箱和 Railway API 令牌，登录后再连接模型。
-参见[安装、安全默认设置与备份](./infra/railway/README.md)。
 
 ## 快速开始（已发布镜像）
 
@@ -79,7 +60,7 @@ https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
 
 ```bash
 mkdir -p rakazo && cd rakazo &&
-curl -fsSLO https://raw.githubusercontent.com/elie222/rakazo/main/infra/compose/install-images.sh &&
+curl -fsSLO https://raw.githubusercontent.com/iishows/doitx/main/infra/compose/install-images.sh &&
 bash install-images.sh
 ```
 
@@ -87,10 +68,10 @@ bash install-images.sh
 再次运行时会保留已有的 `.env`。
 
 打开 [http://127.0.0.1:5173](http://127.0.0.1:5173)，创建账号并连接模型。
-默认启用本地 Docker 计算机。也可以选择远程提供商 `e2b`、`daytona`、`createos`、`box` 或 `railway`，
+默认启用本地 Docker 计算机。也可以选择远程提供商 `e2b`、`daytona`、`createos`、`boat` 或 `railway`，
 并配置相应的 API 密钥。
 
-默认镜像标签为 `edge`，由主分支构建，支持 `linux/amd64` 和 `linux/arm64`。
+默认镜像标签为 `edge`（主分支构建，支持 `linux/amd64` 和 `linux/arm64`）。
 镜像详情与标签见[自托管指南](./docs/self-host.md#published-images-no-checkout)。
 
 在受限网络中，可以覆盖安装器的下载地址前缀（`RAKAZO_DOWNLOAD_BASE`），跳过已有的 Compose 文件
@@ -113,13 +94,15 @@ bash install-images.sh
 为 5173 端口配置 HTTPS 入口。[docs/self-host.md](./docs/self-host.md#public-single-vm-deployment)
 介绍了 Caddy 配置和主机加固方法。在桌面应用中选择 **Existing instance**（已有实例），填写 `https://` 地址。
 
+也可以[部署到 Railway](https://railway.com/new/template/rakazo-template)；参见 [Railway 部署指南](./infra/railway/README.md)。
+
 ## 本地开发（从源码运行）
 
 需要 Node.js 22.x（至少 22.22.2）、Node.js 24.x 或 Node.js 26 及以上版本，以及 pnpm 9 和 Docker。
 不支持 Node.js 23.x 和 25.x。
 
 ```bash
-git clone https://github.com/elie222/rakazo.git
+git clone https://github.com/iishows/doitx.git
 cd rakazo
 cp .env.example .env
 ```
@@ -144,29 +127,33 @@ Treg 按用量计费。自托管用户需提供自己的 Treg 令牌；
 其中要求托管转售须签订书面协议。
 
 ```bash
-docker compose --env-file .env \
-  -f infra/compose/docker-compose.yml \
-  -f infra/compose/docker-compose.postgres-host.yml \
-  up postgres -d
 pnpm install
-pnpm db:generate
-pnpm db:migrate
 pnpm sandbox:build
 pnpm dev
 ```
 
-默认 Compose 文件中的 Postgres 仅在容器网络内可访问，与已发布镜像的部署方式一致。
-`postgres-host` 叠加配置将数据库端口发布到宿主机的回环地址 `127.0.0.1:5433`，供宿主机上的 `pnpm` 和数据库工具使用。
-如果端口被占用，请同时修改 `.env` 中的 `POSTGRES_HOST_PORT` 以及 `DATABASE_URL` 和 `DATABASE_MIGRATION_URL` 中的端口。
-不使用叠加配置时，可以通过以下命令进入数据库交互终端：
-`docker compose --env-file .env -f infra/compose/docker-compose.yml exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'`。
+当 `DATABASE_URL` 指向的 Postgres 可以连接时，`pnpm dev` 会直接使用它；否则会通过 Docker 启动本地的
+`rakazo-dev-postgres` 容器，所有代码检出共用这一个容器。启动前会应用迁移并生成 Prisma 客户端。
+如果当前分支新增了主分支还没有的迁移，它会在同一服务器上获得独立数据库，并在可能时从共享数据库复制，
+以免未合并的表结构变更混入共享库。默认端口被占用时（例如被另一个 git worktree 占用），
+它会切换到下一个可用端口段并打印 URL。也可以通过 `WEB_PORT` 和 `API_PORT` 自行指定端口。
 
-`POSTGRES_PASSWORD` 应使用无需 URI 转义的字符，例如通过 `openssl rand -hex 16` 生成。
+如果改用 Compose 文件运行 Postgres，请用 `postgres-host` 叠加配置启动，它会将端口发布到回环地址
+`127.0.0.1:5433`，然后把 `DATABASE_URL` 和 `DATABASE_MIGRATION_URL` 指向它：
+
+```bash
+docker compose --env-file .env \
+  -f infra/compose/docker-compose.yml \
+  -f infra/compose/docker-compose.postgres-host.yml \
+  up postgres -d
+```
+
+`POSTGRES_PASSWORD` 应使用无需 URI 转义的字符（例如通过 `openssl rand -hex 16` 生成）。
 已有的 `pgdata` 数据卷会保留首次初始化时的用户、密码和数据库，
 因此应保留 `.env` 中相应的值，或使用 `ALTER ROLE`、重命名等方式在数据库中修改。
 只有在完成备份后，或确认数据可以丢弃时，才重建数据卷；`docker compose down -v` 会删除全部 Postgres 数据。
 
-打开 [http://127.0.0.1:5173](http://127.0.0.1:5173)，创建账号、连接模型，并创建第一个机器人。
+打开提示的 URL（默认为 [http://127.0.0.1:5173](http://127.0.0.1:5173)），创建账号、连接模型，并创建第一个机器人。
 
 部署、提供商选择、备份与升级说明见[自托管指南](./docs/self-host.md)。
 
@@ -202,8 +189,8 @@ pnpm --filter @rakazo/desktop dev
 
 首次运行时，桌面应用会询问是在本机运行 Doitx，还是连接已有服务器。
 选择 **This computer**（本机）会在应用数据目录中，通过 Docker Compose 安装并启动已发布镜像，
-使用的文件与 `infra/compose/install-images.sh` 相同。
-因此需要先安装 Docker Desktop、OrbStack 或 Docker Engine；未安装时，应用会提供相应链接。
+使用的文件与 `infra/compose/install-images.sh` 相同；因此需要先安装 Docker Desktop、OrbStack 或 Docker Engine，
+未安装时应用会提供相应链接。
 已安装的发行版将镜像标签固定为自身版本，未打包的开发版本则拉取 `edge`。
 
 运行 `pnpm dev` 的开发者应选择 **Existing instance**（已有实例），地址填写 `http://127.0.0.1:5173`。
@@ -219,6 +206,9 @@ chmod +x Doitx-*.AppImage
 ./Doitx-*.AppImage --appimage-extract-and-run
 ```
 
+**This computer**（本机）模式只查找 `docker` 命令行，不检测 Podman。如需尝试其他兼容 Docker、
+且支持 `compose` 命令的命令行工具，请在启动应用前将 `RAKAZO_DOCKER_BINARY` 设置为其路径。
+
 使用应用菜单中的 **Change Doitx Server…**（更换 Doitx 服务器）重新选择服务器。
 关闭该窗口且不保存时，会返回之前的实例。
 开发自动化中，可以设置 `RAKAZO_WEB_URL`，让桌面应用连接其他地址而不改变已保存的实例；
@@ -229,10 +219,9 @@ chmod +x Doitx-*.AppImage
 ## 界面语言
 
 网页版及 Electron 内嵌界面可在 **Settings → Language**（设置 → 语言）中选择英语、德语、韩语、土耳其语、
-印地语、巴西葡萄牙语、简体中文、西班牙语、俄语、法语、希伯来语、荷兰语和日语。
-Expo 应用包含英语、简体中文、俄语、德语、荷兰语和日语翻译，**Account → Language**（账号 → 语言）列出这六种语言。
-在用户保存选择之前，移动端的初始语言由设备语言或 `EXPO_PUBLIC_DEFAULT_UI_LOCALE` 决定。
-
+印地语、巴西葡萄牙语、简体中文、繁体中文、西班牙语、俄语、法语、希伯来语、荷兰语和日语。
+Expo 应用包含英语、简体中文、繁体中文、俄语、德语、荷兰语和日语翻译，**Account → Language**（账号 → 语言）列出这七种语言。
+在用户保存选择之前，移动端的初始语言仍由设备语言或 `EXPO_PUBLIC_DEFAULT_UI_LOCALE` 决定。
 官网首页（`apps/www`）提供英语、德语、韩语、中文和日语版本，可通过页脚语言链接切换，
 对应路径为 `/`、`/de/`、`/ko/`、`/zh/` 和 `/ja/`；其他官网页面仍为英文。
 俄语官网首页，以及 Electron 原生设置窗口和菜单的本地化仍有待完成。
@@ -267,6 +256,16 @@ pnpm test:e2e
 - [移动端发布](./docs/mobile-release.md)
 - [性能测试](./docs/performance.md)
 - [计算机集群管理](./docs/fleet-management.md)
+
+## Doitx 的对比
+
+- [Grok Bot](https://rakazo.com/grok-bot-alternative/)
+- [Muse](https://rakazo.com/muse-alternative/)
+- [Dots](https://rakazo.com/dots-alternative/)
+- [Instinct](https://rakazo.com/instinct-alternative/)
+- [OpenClaw](https://rakazo.com/openclaw-alternative/)
+- [Hermes Agent](https://rakazo.com/hermes-alternative/)
+- [全部对比](https://rakazo.com/alternatives/)
 
 ## 参与贡献
 

@@ -23,6 +23,7 @@ jobs:
       version: ${{ steps.release.outputs.version }}
       sha: ${{ steps.release.outputs.sha }}
       platforms: ${{ steps.platforms.outputs.include }}
+      macos: ${{ steps.platforms.outputs.macos }}
       windows: ${{ steps.platforms.outputs.windows }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -90,14 +91,24 @@ jobs:
         env:
           # Windows builds only when an Authenticode certificate is configured; macOS and Linux always build.
           WINDOWS_SIGNING: ${{ secrets.DESKTOP_WIN_CSC_LINK != '' }}
+          # macOS signs only when a certificate is configured; otherwise it builds unsigned.
+          MAC_SIGNING: ${{ secrets.DESKTOP_MAC_CSC_LINK != '' }}
         shell: bash
         run: |
           set -euo pipefail
-          include='[{"os":"macos-26","artifact":"macos"},{"os":"ubuntu-24.04","artifact":"linux"}]'
+          include='[{"os":"ubuntu-24.04","artifact":"linux"}]'
+          if [[ "$MAC_SIGNING" == "true" ]]; then
+            include="$(jq -c '. + [{"os":"macos-26","artifact":"macos"}]' <<<"$include")"
+          else
+            echo "::notice::Skipping macOS build; DESKTOP_MAC_CSC_LINK is not set."
+          fi
           if [[ "$WINDOWS_SIGNING" == "true" ]]; then
             include="$(jq -c '. + [{"os":"windows-2022","artifact":"windows"}]' <<<"$include")"
+          else
+            echo "::notice::Skipping Windows build; DESKTOP_WIN_CSC_LINK is not set."
           fi
           echo "include=$include" >> "$GITHUB_OUTPUT"
+          echo "macos=$MAC_SIGNING" >> "$GITHUB_OUTPUT"
           echo "windows=$WINDOWS_SIGNING" >> "$GITHUB_OUTPUT"
 
   build:
@@ -246,8 +257,8 @@ jobs:
           xcrun stapler validate "$app"
           spctl --assess --type execute --verbose=2 "$app"
           grep -Fqx "provider: github" "$app/Contents/Resources/app-update.yml"
-          grep -Fqx "owner: elie222" "$app/Contents/Resources/app-update.yml"
-          grep -Fqx "repo: rakazo" "$app/Contents/Resources/app-update.yml"
+          grep -Fqx "owner: iishows" "$app/Contents/Resources/app-update.yml"
+          grep -Fqx "repo: doitx" "$app/Contents/Resources/app-update.yml"
 
       - name: Verify packaged native dependencies
         if: runner.os == 'macOS'
@@ -312,7 +323,7 @@ jobs:
             throw "Windows update config is not bound to the signing publisher."
           }
           $feed = Get-Content -Raw $config
-          foreach ($expected in @("provider: github", "owner: elie222", "repo: rakazo")) {
+          foreach ($expected in @("provider: github", "owner: iishows", "repo: doitx")) {
             if ($feed -notmatch "(?m)^$([regex]::Escape($expected))\r?$") {
               throw "Windows update config missing '$expected'."
             }
@@ -337,8 +348,8 @@ jobs:
           test -n "$config"
           test -f "$config"
           grep -Fqx "provider: github" "$config"
-          grep -Fqx "owner: elie222" "$config"
-          grep -Fqx "repo: rakazo" "$config"
+          grep -Fqx "owner: iishows" "$config"
+          grep -Fqx "repo: doitx" "$config"
           test -f apps/desktop/out/latest-linux.yml
           grep -Fqx "version: $RELEASE_VERSION" apps/desktop/out/latest-linux.yml
 
@@ -383,6 +394,7 @@ jobs:
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
           RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+          MAC_BUILT: ${{ needs.validate.outputs.macos }}
           WINDOWS_BUILT: ${{ needs.validate.outputs.windows }}
         shell: bash
         run: |
@@ -393,15 +405,15 @@ jobs:
             exit 1
           fi
 
-          test -f release-artifacts/latest-mac.yml
           test -f release-artifacts/latest-linux.yml
-          compgen -G 'release-artifacts/*.dmg' >/dev/null
-          compgen -G 'release-artifacts/*.zip' >/dev/null
           compgen -G 'release-artifacts/*.AppImage' >/dev/null
-          feeds=(
-            release-artifacts/latest-mac.yml
-            release-artifacts/latest-linux.yml
-          )
+          feeds=(release-artifacts/latest-linux.yml)
+          if [[ "$MAC_BUILT" == "true" ]]; then
+            test -f release-artifacts/latest-mac.yml
+            compgen -G 'release-artifacts/*.dmg' >/dev/null
+            compgen -G 'release-artifacts/*.zip' >/dev/null
+            feeds+=(release-artifacts/latest-mac.yml)
+          fi
           if [[ "$WINDOWS_BUILT" == "true" ]]; then
             test -f release-artifacts/latest.yml
             compgen -G 'release-artifacts/*.exe' >/dev/null
