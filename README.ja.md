@@ -17,7 +17,7 @@ Doitx は、常駐型の AI チームメイトを持てるオープンソース�
 Grok Bot、Meta Muse、OpenAI Dots、Instinct、OpenClaw、Hermes Agent、Claude Duet の
 オープンソースかつセルフホスト可能な代替ツールです。
 
-Doitx は現在ベータ版です。詳しくは [rakazo.com](https://rakazo.com) をご覧ください。
+Doitx は現在ベータ版です。詳しくは [doitx.ai](https://doitx.ai) をご覧ください。
 
 このドキュメントは[英語版 README](./README.md) の日本語訳です。リンク先のドキュメントは現在英語のみです。
 
@@ -62,7 +62,7 @@ https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
 Docker Engine、Compose プラグイン、curl、OpenSSL が必要です。リポジトリのクローンや Node のインストールは不要です。
 
 ```bash
-mkdir -p rakazo && cd rakazo &&
+mkdir -p doitx && cd doitx &&
 curl -fsSLO https://raw.githubusercontent.com/iishows/doitx/main/infra/compose/install-images.sh &&
 bash install-images.sh
 ```
@@ -108,7 +108,7 @@ pnpm 9、Docker が必要です。Node.js 23.x と 25.x はサポートしてい
 
 ```bash
 git clone https://github.com/iishows/doitx.git
-cd rakazo
+cd doitx
 cp .env.example .env
 ```
 

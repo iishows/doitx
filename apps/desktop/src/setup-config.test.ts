@@ -240,10 +240,14 @@ describe("bundled renderer eligibility", () => {
 });
 
 describe("remote-content isolation", () => {
-  it("uses a stable, opaque session partition per server origin", () => {
+  it("uses a stable, opaque session partition per server host", () => {
     const first = sessionPartitionForServerUrl("https://one.example.com/path");
     expect(first).toBe(sessionPartitionForServerUrl("https://one.example.com/other"));
-    expect(first).not.toBe(sessionPartitionForServerUrl("https://one.example.com:8443"));
+    // Cookies are host-scoped, so a port change (local stack port fallback)
+    // must keep the same partition and its login.
+    expect(first).toBe(sessionPartitionForServerUrl("https://one.example.com:8443"));
+    expect(first).not.toBe(sessionPartitionForServerUrl("https://two.example.com"));
+    expect(first).not.toBe(sessionPartitionForServerUrl("http://one.example.com"));
     expect(first).toMatch(/^persist:rakazo-[a-f0-9]{24}$/);
     expect(first).not.toContain("one.example.com");
     expect(sessionPartitionForServerUrl("data:text/html,fixture")).toBeNull();

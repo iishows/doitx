@@ -16,7 +16,7 @@ Doitx 是一个开源 AI 智能体项目，让你拥有可长期协作的 AI 队
 
 它是 Grok Bot、Meta Muse、OpenAI Dots、Instinct、OpenClaw、Hermes Agent 和 Claude Duet 的开源、自托管替代方案。
 
-Doitx 目前处于测试阶段。详情见 [rakazo.com](https://rakazo.com)。
+Doitx 目前处于测试阶段。详情见 [doitx.ai](https://doitx.ai)。
 
 ## 功能
 
@@ -59,7 +59,7 @@ https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
 需要 Docker Engine、Compose 插件、curl 和 OpenSSL。无需克隆仓库或安装 Node.js。
 
 ```bash
-mkdir -p rakazo && cd rakazo &&
+mkdir -p doitx && cd doitx &&
 curl -fsSLO https://raw.githubusercontent.com/iishows/doitx/main/infra/compose/install-images.sh &&
 bash install-images.sh
 ```
@@ -103,7 +103,7 @@ bash install-images.sh
 
 ```bash
 git clone https://github.com/iishows/doitx.git
-cd rakazo
+cd doitx
 cp .env.example .env
 ```
 

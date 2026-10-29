@@ -167,12 +167,19 @@ export function servesBundledRenderer(targetUrl: string, managedLocalStack: bool
   }
 }
 
-/** Each Doitx origin gets its own persistent cookie and storage partition. */
+/**
+ * Each Doitx server gets its own persistent cookie and storage partition.
+ * Keyed by scheme + host, never the port: HTTP cookies are host-scoped, so a
+ * local stack that falls back to a different port must keep its login.
+ */
 export function sessionPartitionForServerUrl(targetUrl: string): string | null {
   try {
     const url = new URL(targetUrl);
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    const digest = createHash("sha256").update(url.origin).digest("hex").slice(0, 24);
+    const digest = createHash("sha256")
+      .update(`${url.protocol}//${url.hostname}`)
+      .digest("hex")
+      .slice(0, 24);
     return `persist:rakazo-${digest}`;
   } catch {
     return null;

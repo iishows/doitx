@@ -17,7 +17,7 @@ and computer provider, or run the complete stack locally.
 It is an open source, self-hosted alternative to Grok Bot, Meta Muse, OpenAI Dots, Instinct,
 OpenClaw, Hermes Agent, and Claude Duet.
 
-Doitx is in beta. Learn more at [rakazo.com](https://rakazo.com).
+Doitx is in beta. Learn more at [doitx.ai](https://doitx.ai).
 
 ## Features
 
@@ -60,7 +60,7 @@ https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
 You need Docker Engine, the Compose plugin, curl, and OpenSSL. No clone or Node install.
 
 ```bash
-mkdir -p rakazo && cd rakazo &&
+mkdir -p doitx && cd doitx &&
 curl -fsSLO https://raw.githubusercontent.com/iishows/doitx/main/infra/compose/install-images.sh &&
 bash install-images.sh
 ```
@@ -106,7 +106,7 @@ pnpm 9; and Docker. Node.js 23.x and 25.x are not supported.
 
 ```bash
 git clone https://github.com/iishows/doitx.git
-cd rakazo
+cd doitx
 cp .env.example .env
 ```
 
