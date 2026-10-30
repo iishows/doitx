@@ -44,6 +44,21 @@ vi.mock("@rakazo/ui-web", () => ({
   Textarea: (props: ComponentProps<"textarea">) => <textarea {...props} />,
   NativeSelect: (props: ComponentProps<"select">) => <select {...props} />,
   NativeSelectOption: (props: ComponentProps<"option">) => <option {...props} />,
+  Checkbox: ({
+    checked,
+    onCheckedChange,
+    ...props
+  }: Omit<ComponentProps<"input">, "onChange"> & {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+      {...props}
+    />
+  ),
   Switch: ({
     onCheckedChange,
     checked,

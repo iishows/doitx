@@ -26,6 +26,7 @@ import {
 } from "@rakazo/core";
 import {
   Button,
+  Checkbox,
   Input,
   NativeSelect,
   NativeSelectOption,
@@ -191,6 +192,7 @@ export function BotSettings({
   const [disabledBuiltinTools, setDisabledBuiltinTools] = useState<string[]>(
     bot.disabledBuiltinTools ?? [],
   );
+  const [toolFilter, setToolFilter] = useState("");
   // The list on screen is updated before the save returns. This stays on the
   // last list the server accepted so a rejection can undo that preview.
   const persistedDisabledToolsRef = useRef(disabledBuiltinTools);
@@ -327,6 +329,12 @@ export function BotSettings({
     []
   ).filter((level) => level !== "off");
   const defaultThinkingLevel = effectiveCredential?.thinkingLevel ?? "medium";
+  const toolQuery = toolFilter.trim().toLowerCase();
+  const availableBuiltinTools = BUILTIN_TOOL_NAMES.filter(
+    (name) =>
+      !disabledBuiltinTools.includes(name) &&
+      (toolQuery === "" || humanizeTool(name).toLowerCase().includes(toolQuery)),
+  );
 
   async function executeSave(
     patchOverrides?: {
@@ -473,13 +481,15 @@ export function BotSettings({
   }
   executeSaveRef.current = executeSave;
 
-  function disableBuiltinTool(raw: string) {
+  function setBuiltinToolDisabled(raw: string, disabled: boolean) {
     const name = raw.trim();
     if (!name) return;
     if (!isBuiltinToolName(name)) return;
     setError(null);
-    if (disabledBuiltinTools.includes(name)) return;
-    const next = [...disabledBuiltinTools, name];
+    if (disabledBuiltinTools.includes(name) === disabled) return;
+    const next = disabled
+      ? [...disabledBuiltinTools, name]
+      : disabledBuiltinTools.filter((entry) => entry !== name);
     setDisabledBuiltinTools(next);
     void enqueueSave({ disabledBuiltinTools: next });
   }
@@ -797,24 +807,41 @@ export function BotSettings({
             <SettingsGroup label={t`Tools`} plain>
               <section data-testid="bot-settings-tools">
                 <div className="space-y-2 [&>*]:mt-0">
-                  <div>
-                    <NativeSelect
-                      id={`${ids}-disabled-tools`}
-                      aria-label={t`Disable a tool`}
-                      value=""
-                      onChange={(event) => disableBuiltinTool(event.target.value)}
-                      className="w-full"
-                    >
-                      <NativeSelectOption value="">{t`Disable a tool`}</NativeSelectOption>
-                      {BUILTIN_TOOL_NAMES.filter(
-                        (name) => !disabledBuiltinTools.includes(name),
-                      ).map((name) => (
-                        <NativeSelectOption key={name} value={name}>
+                  <Input
+                    id={`${ids}-tool-filter`}
+                    value={toolFilter}
+                    onChange={(event) => setToolFilter(event.target.value)}
+                    placeholder={t`Search`}
+                    aria-label={t`Search`}
+                    className="w-full"
+                  />
+                  <fieldset
+                    id={`${ids}-disabled-tools`}
+                    aria-label={t`Disable a tool`}
+                    className="m-0 max-h-64 min-w-0 space-y-0.5 overflow-y-auto border-0 p-0"
+                  >
+                    {availableBuiltinTools.length === 0 ? (
+                      <p className="px-1 py-2 text-sm text-muted-foreground">{t`No results`}</p>
+                    ) : (
+                      availableBuiltinTools.map((name) => (
+                        <label
+                          key={name}
+                          htmlFor={`${ids}-disable-${name}`}
+                          className="flex min-h-9 cursor-pointer items-center gap-2 text-sm"
+                        >
+                          <Checkbox
+                            id={`${ids}-disable-${name}`}
+                            checked={false}
+                            aria-label={humanizeTool(name)}
+                            onCheckedChange={(checked) =>
+                              setBuiltinToolDisabled(name, checked === true)
+                            }
+                          />
                           {humanizeTool(name)}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </div>
+                        </label>
+                      ))
+                    )}
+                  </fieldset>
                   {disabledBuiltinTools.map((toolName) => (
                     <div
                       key={toolName}
@@ -827,11 +854,7 @@ export function BotSettings({
                         size="icon-xs"
                         aria-label={t`Enable ${humanizeTool(toolName)}`}
                         title={t`Enable ${humanizeTool(toolName)}`}
-                        onClick={() => {
-                          const next = disabledBuiltinTools.filter((entry) => entry !== toolName);
-                          setDisabledBuiltinTools(next);
-                          void enqueueSave({ disabledBuiltinTools: next });
-                        }}
+                        onClick={() => setBuiltinToolDisabled(toolName, false)}
                       >
                         <X className="size-4" />
                       </Button>

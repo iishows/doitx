@@ -157,9 +157,9 @@ test("bot creation, editing, and deletion persist", async ({ page }, testInfo) =
     await workRows.first().getByRole("button", { name: "Remove" }).click();
   }
   await expect(openWork).toHaveCount(0);
-  const disabledTools = settings.getByLabel("Disable a tool");
+  const disabledTools = settings.getByRole("group", { name: "Disable a tool" });
   await expect(disabledTools).toBeVisible();
-  await disabledTools.selectOption("web_search");
+  await disabledTools.getByRole("checkbox", { name: "Web search" }).click();
   await expect(settings.getByRole("button", { name: "Enable Web search" })).toBeVisible();
   await captureScreenshot(page, testInfo, "27c-disabled-builtin-tools");
   await expect(teamComputer).toBeVisible();

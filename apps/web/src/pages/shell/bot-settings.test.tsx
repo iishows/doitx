@@ -39,6 +39,21 @@ vi.mock("@rakazo/ui-web", () => ({
   Textarea: (props: ComponentProps<"textarea">) => <textarea {...props} />,
   NativeSelect: (props: ComponentProps<"select">) => <select {...props} />,
   NativeSelectOption: (props: ComponentProps<"option">) => <option {...props} />,
+  Checkbox: ({
+    checked,
+    onCheckedChange,
+    ...props
+  }: Omit<ComponentProps<"input">, "onChange"> & {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+      {...props}
+    />
+  ),
   Switch: ({
     checked,
     onCheckedChange,
@@ -142,10 +157,11 @@ function setField(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-async function submitToolName(input: HTMLSelectElement, value: string) {
+async function submitToolName(group: HTMLElement, value: string) {
+  const toggle = group.querySelector<HTMLButtonElement>(`[id$="-disable-${value}"]`);
+  if (!toggle) throw new Error(`Missing tool checkbox for ${value}`);
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(input, value);
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    toggle.click();
   });
   await flush();
 }
@@ -432,14 +448,12 @@ describe("BotSettings disabled tools", () => {
 
   it("offers only known tools and excludes tools already disabled", async () => {
     await renderSettings(vi.fn(async () => undefined));
-    const picker = container.querySelector<HTMLSelectElement>('[id$="-disabled-tools"]')!;
-    expect([...picker.options].map((option) => option.value)).toContain("web_search");
-    expect([...picker.options].find((option) => option.value === "web_search")?.textContent).toBe(
-      "Web search",
-    );
-    expect([...picker.options].map((option) => option.value)).not.toContain("remember");
+    const picker = container.querySelector<HTMLElement>('[id$="-disabled-tools"]')!;
+    const labels = () => [...picker.querySelectorAll("label")].map((label) => label.textContent);
+    expect(labels()).toContain("Web search");
+    expect(labels()).not.toContain("Remember");
     await submitToolName(picker, "web_search");
-    expect([...picker.options].map((option) => option.value)).not.toContain("web_search");
+    expect(labels()).not.toContain("Web search");
   });
 });
 
