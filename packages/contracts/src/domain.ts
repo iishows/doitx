@@ -125,6 +125,8 @@ export const BotSchema = z.object({
   fleetManagement: z.boolean().default(false),
   disabledBuiltinTools: z.array(z.string()).default([]),
   webhookConfigured: z.boolean(),
+  /** Optional URL receiving the bot's reply after a webhook-triggered run. */
+  webhookCallbackUrl: z.string().nullable(),
   /** Present when created with an idempotency key (e.g. onboarding:first). */
   spawnKey: z.string().nullable(),
   /** The bot is ringing the user right now. */
@@ -271,6 +273,7 @@ export const SpaceGroupSchema = GroupSchema.pick({
 export type SpaceGroup = z.infer<typeof SpaceGroupSchema>;
 
 export const TEAM_CHAT_RULES_MAX_LENGTH = 4000;
+export const BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH = 2048;
 export const AutomatedSenderPolicyModeSchema = z.enum(["ignore", "rollup", "action", "user"]);
 export type AutomatedSenderPolicyMode = z.infer<typeof AutomatedSenderPolicyModeSchema>;
 
@@ -418,8 +421,39 @@ export const UpdateBotInput = z
     crossSpaceCommunication: z.boolean().optional(),
     fleetManagement: z.boolean().optional(),
     disabledBuiltinTools: DisabledBuiltinToolsSchema.optional(),
+    /**
+     * Where to POST the bot's reply after a webhook-triggered run. Null clears
+     * it. Must be https so the signed payload never crosses the wire in clear.
+     */
+    webhookCallbackUrl: z
+      .string()
+      .trim()
+      .max(BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH)
+      .nullable()
+      .optional(),
   })
   .superRefine((value, ctx) => {
+    if (value.webhookCallbackUrl) {
+      let parsed: URL | null = null;
+      try {
+        parsed = new URL(value.webhookCallbackUrl);
+      } catch {
+        parsed = null;
+      }
+      if (!parsed) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Callback URL must be a valid absolute https URL",
+          path: ["webhookCallbackUrl"],
+        });
+      } else if (parsed.protocol !== "https:") {
+        ctx.addIssue({
+          code: "custom",
+          message: "Callback URL must use https",
+          path: ["webhookCallbackUrl"],
+        });
+      }
+    }
     const providerProvided = value.modelProvider !== undefined;
     const modelProvided = value.modelId !== undefined;
     if (!providerProvided && !modelProvided) return;

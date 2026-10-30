@@ -11,6 +11,7 @@ import {
   BOT_COMPUTER_MODES,
   BOT_DESCRIPTION_MAX_LENGTH,
   BOT_NAME_MAX_LENGTH,
+  BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH,
   BUILTIN_TOOL_NAMES,
   isBuiltinToolName,
   resolveBotAvatarSet,
@@ -127,6 +128,7 @@ export function BotSettings({
     fleetManagement?: boolean;
     crossSpaceCommunication?: boolean;
     voiceId?: string | null;
+    webhookCallbackUrl?: string | null;
     modelProvider?: string | null;
     modelId?: string | null;
     thinkingLevel?: ThinkingLevel | null;
@@ -178,6 +180,10 @@ export function BotSettings({
   const [fleetManagement, setFleetManagement] = useState(bot.fleetManagement);
   useEffect(() => setFleetManagement(bot.fleetManagement), [bot.fleetManagement]);
   const [voiceId, setVoiceId] = useState(bot.voiceId ?? "");
+  const [webhookCallbackUrl, setWebhookCallbackUrl] = useState(bot.webhookCallbackUrl ?? "");
+  // The URL the server last accepted, so a rejection can restore it and an
+  // external update does not overwrite typing that is still unsaved.
+  const savedWebhookCallbackUrlRef = useRef(bot.webhookCallbackUrl ?? "");
   const [modelKey, setModelKey] = useState(
     bot.modelProvider && bot.modelId ? modelOptionKey(bot.modelProvider, bot.modelId) : "",
   );
@@ -275,6 +281,11 @@ export function BotSettings({
     if (autoSpeak === saved[4]) setAutoSpeak(next[4]);
     if (voiceId === saved[5]) setVoiceId(next[5]);
     setSavedAdvanced(JSON.stringify(next));
+    const nextCallbackUrl = bot.webhookCallbackUrl ?? "";
+    if (webhookCallbackUrl === savedWebhookCallbackUrlRef.current) {
+      setWebhookCallbackUrl(nextCallbackUrl);
+    }
+    savedWebhookCallbackUrlRef.current = nextCallbackUrl;
   }, [bot]);
 
   const connectedOptions = connectedModelChoices(credentials, catalog);
@@ -371,6 +382,10 @@ export function BotSettings({
         memoryScope,
         autoSpeak,
         voiceId: voiceId || null,
+        // An emptied box clears the callback rather than saving a blank URL.
+        ...(webhookCallbackUrl.trim() !== savedWebhookCallbackUrlRef.current
+          ? { webhookCallbackUrl: webhookCallbackUrl.trim() || null }
+          : {}),
         modelProvider: selected?.provider ?? null,
         modelId: selected?.modelId ?? null,
         ...(modelMetaReady &&
@@ -423,6 +438,7 @@ export function BotSettings({
       };
       if (nextName) savedNameRef.current = nextName;
       savedDescriptionRef.current = nextDescription;
+      savedWebhookCallbackUrlRef.current = webhookCallbackUrl.trim();
       setSavedAdvanced(
         JSON.stringify([modelKey, thinkingLevel, computerMode, memoryScope, autoSpeak, voiceId]),
       );
@@ -737,6 +753,31 @@ export function BotSettings({
                     void enqueueSave({ fleetManagement: checked });
                   }}
                 />
+              </div>
+            </SettingsGroup>
+            <SettingsGroup label={t`Webhook replies`} plain>
+              <div className="space-y-2">
+                <label htmlFor={`${ids}-webhook-callback-url`} className={rowLabelClass}>
+                  <Trans>Callback URL</Trans>
+                </label>
+                <Input
+                  id={`${ids}-webhook-callback-url`}
+                  aria-label={t`Webhook callback URL`}
+                  type="url"
+                  inputMode="url"
+                  value={webhookCallbackUrl}
+                  maxLength={BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH}
+                  onChange={(e) => setWebhookCallbackUrl(e.target.value)}
+                  onBlur={() => void enqueueSave()}
+                  placeholder="https://example.com/rakazo/replies"
+                  disabled={saving}
+                />
+                <p className="text-xs text-muted-foreground">
+                  <Trans>
+                    We POST the bot's reply to this URL after a webhook-triggered run. Signed with
+                    the bot's webhook secret.
+                  </Trans>
+                </p>
               </div>
             </SettingsGroup>
             <InstructionSettings key={bot.id} bot={bot} />

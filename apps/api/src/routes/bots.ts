@@ -388,6 +388,9 @@ export function botsRoutes(ctx: RouterContext) {
             ...(input.disabledBuiltinTools !== undefined
               ? { disabledBuiltinTools: input.disabledBuiltinTools }
               : {}),
+            ...(input.webhookCallbackUrl !== undefined
+              ? { webhookCallbackUrl: input.webhookCallbackUrl }
+              : {}),
           },
         }).catch((error) => {
           if (!(error instanceof InstructionConflictError)) throw error;

@@ -1,6 +1,11 @@
 import { setImmediate } from "node:timers/promises";
 import type { JobPublisher, NotificationProvider } from "@rakazo/adapter-kit";
-import { messagingDeliverJob, routineWakeupJob, runContinueJob } from "@rakazo/adapter-kit";
+import {
+  messagingDeliverJob,
+  routineWakeupJob,
+  runContinueJob,
+  webhookReplyJob,
+} from "@rakazo/adapter-kit";
 import type { MessageBlock } from "@rakazo/contracts";
 import { stuckWorkStatusMessages } from "@rakazo/core";
 import type { Pool, PrismaClient, ThreadEvents } from "@rakazo/db";
@@ -189,40 +194,54 @@ export function createJobReconciler(
             ],
           }
         : undefined;
-      const [runs, dueOutbound, unmirroredMessagingRuns] = await Promise.all([
-        deps.prisma.run.findMany({
-          where: {
-            AND: [
-              {
-                OR: [
-                  { status: "queued" },
-                  {
-                    status: { in: ["leased", "running"] },
-                    leaseExpiresAt: { lte: now },
-                  },
-                ],
-              },
-              ...(runCursorFilter ? [runCursorFilter] : []),
-            ],
-          },
-          orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
-          take: batchSize,
-          select: { id: true, status: true, updatedAt: true },
-        }),
-        deps.prisma.messagingOutbound.findFirst({
-          where: {
-            status: "pending",
-            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-          },
-          select: { id: true },
-        }),
-        deps.prisma.run.findMany({
-          where: { trigger: "messaging", status: "completed", messagingMirroredAt: null },
-          orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
-          take: batchSize,
-          select: { id: true },
-        }),
-      ]);
+      const [runs, dueOutbound, unmirroredMessagingRuns, undeliveredWebhookReplies] =
+        await Promise.all([
+          deps.prisma.run.findMany({
+            where: {
+              AND: [
+                {
+                  OR: [
+                    { status: "queued" },
+                    {
+                      status: { in: ["leased", "running"] },
+                      leaseExpiresAt: { lte: now },
+                    },
+                  ],
+                },
+                ...(runCursorFilter ? [runCursorFilter] : []),
+              ],
+            },
+            orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+            take: batchSize,
+            select: { id: true, status: true, updatedAt: true },
+          }),
+          deps.prisma.messagingOutbound.findFirst({
+            where: {
+              status: "pending",
+              OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+            },
+            select: { id: true },
+          }),
+          deps.prisma.run.findMany({
+            where: { trigger: "messaging", status: "completed", messagingMirroredAt: null },
+            orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+            take: batchSize,
+            select: { id: true },
+          }),
+          // Only bots that opted into a callback have work here; the partial
+          // index covers the rest of the predicate.
+          deps.prisma.run.findMany({
+            where: {
+              trigger: "webhook",
+              status: { in: ["completed", "failed"] },
+              webhookReplyDeliveredAt: null,
+              bot: { webhookCallbackUrl: { not: null } },
+            },
+            orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+            take: batchSize,
+            select: { id: true },
+          }),
+        ]);
 
       const events = deps.events;
       if (events) {
@@ -313,6 +332,7 @@ export function createJobReconciler(
         ),
         ...(dueOutbound ? [deps.jobs.enqueue(messagingDeliverJob())] : []),
         ...unmirroredMessagingRuns.map((run) => deps.jobs.enqueue(messagingDeliverJob(run.id))),
+        ...undeliveredWebhookReplies.map((run) => deps.jobs.enqueue(webhookReplyJob(run.id))),
       ]);
 
       const lastRun = runs.at(-1);
@@ -481,7 +501,7 @@ async function publishAll(publications: Array<Promise<unknown>>) {
 }
 
 /** Prefer the full bot transcript for a run so interim progress is not mistaken for the sole result. */
-async function botRunOutcomeText(
+export async function botRunOutcomeText(
   prisma: {
     message: {
       findMany: (args: {

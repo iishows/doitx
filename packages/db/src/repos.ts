@@ -107,6 +107,7 @@ function mapBot(
     fleetManagement?: boolean;
     disabledBuiltinTools?: string[];
     webhookSecretId?: string | null;
+    webhookCallbackUrl?: string | null;
     spawnKey?: string | null;
   },
   preview = "",
@@ -153,6 +154,7 @@ function mapBot(
     fleetManagement: bot.fleetManagement ?? false,
     disabledBuiltinTools: bot.disabledBuiltinTools ?? [],
     webhookConfigured: Boolean(bot.webhookSecretId),
+    webhookCallbackUrl: bot.webhookCallbackUrl ?? null,
     spawnKey: bot.spawnKey ?? null,
     incomingCall,
   };

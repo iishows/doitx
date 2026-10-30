@@ -1102,6 +1102,10 @@ msgstr "Call back"
 msgid "Call with {0}"
 msgstr "Call with {0}"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Callback URL"
+msgstr "Callback URL"
+
 #: src/components/call/VoiceChatCard.tsx
 msgid "Calling you…"
 msgstr "Calling you…"
@@ -2606,6 +2610,15 @@ msgstr "Docs"
 msgid "Document changed. Reopen to edit the latest version."
 msgstr "Document changed. Reopen to edit the latest version."
 
+#: src/pages/shell/avatar-studio-popover.tsx
+msgid "Doitx"
+msgstr "Doitx"
+
+#: src/components/ModelCredits.tsx
+#: src/pages/Onboarding.tsx
+msgid "Doitx credits"
+msgstr "Doitx credits"
+
 #: src/pages/Auth.tsx
 msgid "Don’t have an account?"
 msgstr "Don’t have an account?"
@@ -4023,6 +4036,7 @@ msgstr "No remote MCP servers found"
 
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/PluginsOverlay.tsx
+#: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "No results"
 msgstr "No results"
@@ -4509,15 +4523,6 @@ msgstr "Pull request"
 #: src/pages/ActivityList.tsx
 msgid "Queued"
 msgstr "Queued"
-
-#: src/pages/shell/avatar-studio-popover.tsx
-msgid "Doitx"
-msgstr "Doitx"
-
-#: src/components/ModelCredits.tsx
-#: src/pages/Onboarding.tsx
-msgid "Doitx credits"
-msgstr "Doitx credits"
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "rakazo-shared and IDs starting with bot- are reserved for Doitx."
@@ -5091,6 +5096,7 @@ msgstr "Screen not connected"
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/model-settings/role-model-picker.tsx
 #: src/pages/PluginsOverlay.tsx
+#: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/bot-picker.tsx
 #: src/pages/shell/chat-model-picker.tsx
 #: src/pages/shell/command-palette.tsx
@@ -6152,6 +6158,10 @@ msgstr "Use defaults"
 msgid "Use defaults for {label}"
 msgstr "Use defaults for {label}"
 
+#: src/components/ModelCredits.tsx
+msgid "Use Doitx credits"
+msgstr "Use Doitx credits"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Use in this bot"
 msgstr "Use in this bot"
@@ -6163,10 +6173,6 @@ msgstr "Use my subscription or API key"
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Use Protected input for passwords."
 msgstr "Use Protected input for passwords."
-
-#: src/components/ModelCredits.tsx
-msgid "Use Doitx credits"
-msgstr "Use Doitx credits"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Use space default"
@@ -6259,6 +6265,10 @@ msgstr "Waiting…"
 msgid "Wallet"
 msgstr "Wallet"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "We POST the bot's reply to this URL after a webhook-triggered run. Signed with the bot's webhook secret."
+msgstr "We POST the bot's reply to this URL after a webhook-triggered run. Signed with the bot's webhook secret."
+
 #: src/components/ModelCredits.tsx
 msgid "Web, desktop and mobile"
 msgstr "Web, desktop and mobile"
@@ -6270,6 +6280,14 @@ msgstr "Web, desktop and mobile apps"
 #: src/pages/RoutineEditor.tsx
 msgid "Webhook"
 msgstr "Webhook"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Webhook callback URL"
+msgstr "Webhook callback URL"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Webhook replies"
+msgstr "Webhook replies"
 
 #: src/components/VaultSettings.tsx
 msgid "Website login"

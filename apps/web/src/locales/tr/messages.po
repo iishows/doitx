@@ -1102,6 +1102,10 @@ msgstr ""
 msgid "Call with {0}"
 msgstr ""
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Callback URL"
+msgstr ""
+
 #: src/components/call/VoiceChatCard.tsx
 msgid "Calling you…"
 msgstr ""
@@ -2606,6 +2610,15 @@ msgstr "Belgeler"
 msgid "Document changed. Reopen to edit the latest version."
 msgstr "Belge değişti. Son sürümü düzenlemek için yeniden açın."
 
+#: src/pages/shell/avatar-studio-popover.tsx
+msgid "Doitx"
+msgstr "Doitx"
+
+#: src/components/ModelCredits.tsx
+#: src/pages/Onboarding.tsx
+msgid "Doitx credits"
+msgstr ""
+
 #: src/pages/Auth.tsx
 msgid "Don’t have an account?"
 msgstr "Hesabın yok mu?"
@@ -4023,6 +4036,7 @@ msgstr ""
 
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/PluginsOverlay.tsx
+#: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "No results"
 msgstr "Sonuç yok"
@@ -4509,15 +4523,6 @@ msgstr "Çekme isteği"
 #: src/pages/ActivityList.tsx
 msgid "Queued"
 msgstr "Kuyrukta"
-
-#: src/pages/shell/avatar-studio-popover.tsx
-msgid "Doitx"
-msgstr "Doitx"
-
-#: src/components/ModelCredits.tsx
-#: src/pages/Onboarding.tsx
-msgid "Doitx credits"
-msgstr ""
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "rakazo-shared and IDs starting with bot- are reserved for Doitx."
@@ -5091,6 +5096,7 @@ msgstr "Ekran bağlı değil"
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/model-settings/role-model-picker.tsx
 #: src/pages/PluginsOverlay.tsx
+#: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/bot-picker.tsx
 #: src/pages/shell/chat-model-picker.tsx
 #: src/pages/shell/command-palette.tsx
@@ -6152,6 +6158,10 @@ msgstr "Varsayılanlarını kullan"
 msgid "Use defaults for {label}"
 msgstr "{label}: varsayılanlarını kullan"
 
+#: src/components/ModelCredits.tsx
+msgid "Use Doitx credits"
+msgstr ""
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Use in this bot"
 msgstr ""
@@ -6162,10 +6172,6 @@ msgstr ""
 
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Use Protected input for passwords."
-msgstr ""
-
-#: src/components/ModelCredits.tsx
-msgid "Use Doitx credits"
 msgstr ""
 
 #: src/pages/model-settings/space-bots-model.tsx
@@ -6259,6 +6265,10 @@ msgstr "Bekleniyor…"
 msgid "Wallet"
 msgstr ""
 
+#: src/pages/shell/bot-panel.tsx
+msgid "We POST the bot's reply to this URL after a webhook-triggered run. Signed with the bot's webhook secret."
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Web, desktop and mobile"
 msgstr ""
@@ -6269,6 +6279,14 @@ msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "Webhook"
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Webhook callback URL"
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Webhook replies"
 msgstr ""
 
 #: src/components/VaultSettings.tsx

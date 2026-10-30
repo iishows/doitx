@@ -36,6 +36,7 @@ function bot(id = "bot-1"): Bot {
     fleetManagement: false,
     disabledBuiltinTools: [],
     webhookConfigured: false,
+    webhookCallbackUrl: null,
     spawnKey: null,
   };
 }

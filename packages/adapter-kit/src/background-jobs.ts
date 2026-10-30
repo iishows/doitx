@@ -24,6 +24,7 @@ const payloadSchemas = {
   "call.expire": z.object({ threadId: z.string().min(1), callId: z.string().min(1) }),
   "history.compact": z.object({ threadId: z.string().min(1) }),
   "messaging.deliver": z.object({ runId: z.string().min(1).optional() }),
+  "webhook.reply": z.object({ runId: z.string().min(1) }),
   "messaging.credential-cleanup": z.object({
     installationId: z.string().min(1),
     ref: z.string().min(1),
@@ -165,6 +166,23 @@ export function messagingDeliverJob(runId?: string, availableAt?: Date): Backgro
     name: "messaging.deliver",
     payload: runId ? { runId } : {},
     replaceKey: `messaging.deliver:${runId ?? "drain"}`,
+    ...(availableAt ? { availableAt } : {}),
+  };
+}
+
+/**
+ * Callback deliveries are retried across a window of minutes; a receiver that
+ * is down briefly should still get its reply, but a permanently dead URL must
+ * not retry forever.
+ */
+export const WEBHOOK_REPLY_MAX_ATTEMPTS = 5;
+
+export function webhookReplyJob(runId: string, availableAt?: Date): BackgroundJob {
+  return {
+    name: "webhook.reply",
+    payload: { runId },
+    replaceKey: `webhook.reply:${runId}`,
+    maxAttempts: WEBHOOK_REPLY_MAX_ATTEMPTS,
     ...(availableAt ? { availableAt } : {}),
   };
 }

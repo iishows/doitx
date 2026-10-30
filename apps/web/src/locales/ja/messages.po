@@ -1102,6 +1102,10 @@ msgstr "折り返し通話"
 msgid "Call with {0}"
 msgstr "{0}と通話"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Callback URL"
+msgstr ""
+
 #: src/components/call/VoiceChatCard.tsx
 msgid "Calling you…"
 msgstr "着信中…"
@@ -2606,6 +2610,15 @@ msgstr "ドキュメント"
 msgid "Document changed. Reopen to edit the latest version."
 msgstr "ドキュメントが変更されました。最新版を編集するには開き直してください。"
 
+#: src/pages/shell/avatar-studio-popover.tsx
+msgid "Doitx"
+msgstr "Doitx"
+
+#: src/components/ModelCredits.tsx
+#: src/pages/Onboarding.tsx
+msgid "Doitx credits"
+msgstr "Doitxクレジット"
+
 #: src/pages/Auth.tsx
 msgid "Don’t have an account?"
 msgstr "アカウントをお持ちでないですか？"
@@ -4023,6 +4036,7 @@ msgstr "リモートMCPサーバーが見つかりません"
 
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/PluginsOverlay.tsx
+#: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "No results"
 msgstr "結果なし"
@@ -4509,15 +4523,6 @@ msgstr "プルリクエスト"
 #: src/pages/ActivityList.tsx
 msgid "Queued"
 msgstr "待機中"
-
-#: src/pages/shell/avatar-studio-popover.tsx
-msgid "Doitx"
-msgstr "Doitx"
-
-#: src/components/ModelCredits.tsx
-#: src/pages/Onboarding.tsx
-msgid "Doitx credits"
-msgstr "Doitxクレジット"
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "rakazo-shared and IDs starting with bot- are reserved for Doitx."
@@ -5091,6 +5096,7 @@ msgstr "画面が接続されていません"
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/model-settings/role-model-picker.tsx
 #: src/pages/PluginsOverlay.tsx
+#: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/bot-picker.tsx
 #: src/pages/shell/chat-model-picker.tsx
 #: src/pages/shell/command-palette.tsx
@@ -6152,6 +6158,10 @@ msgstr "デフォルトを使用"
 msgid "Use defaults for {label}"
 msgstr "{label}でデフォルトを使用"
 
+#: src/components/ModelCredits.tsx
+msgid "Use Doitx credits"
+msgstr "Doitxクレジットを使用"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Use in this bot"
 msgstr ""
@@ -6163,10 +6173,6 @@ msgstr "自分のサブスクリプションまたはAPIキーを使用"
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Use Protected input for passwords."
 msgstr "パスワードには保護された入力を使用してください。"
-
-#: src/components/ModelCredits.tsx
-msgid "Use Doitx credits"
-msgstr "Doitxクレジットを使用"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Use space default"
@@ -6259,6 +6265,10 @@ msgstr "待機中…"
 msgid "Wallet"
 msgstr ""
 
+#: src/pages/shell/bot-panel.tsx
+msgid "We POST the bot's reply to this URL after a webhook-triggered run. Signed with the bot's webhook secret."
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Web, desktop and mobile"
 msgstr "Web、デスクトップ、モバイル"
@@ -6270,6 +6280,14 @@ msgstr "Web、デスクトップ、モバイルアプリ"
 #: src/pages/RoutineEditor.tsx
 msgid "Webhook"
 msgstr "Webhook"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Webhook callback URL"
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Webhook replies"
+msgstr ""
 
 #: src/components/VaultSettings.tsx
 msgid "Website login"

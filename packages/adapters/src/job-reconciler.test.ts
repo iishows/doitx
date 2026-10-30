@@ -316,6 +316,8 @@ describe("createJobReconciler", () => {
     let runPage = 0;
     const runFindMany = vi.fn(async (args: { where?: Record<string, unknown> } = {}) => {
       if (args.where?.messagingMirroredAt === null) return [];
+      // Webhook reply callbacks are a separate scan; they never carry the run cursor.
+      if (args.where?.trigger === "webhook") return [];
       // The stuck-work scan is the only run query that looks at takeover waits.
       if (JSON.stringify(args.where).includes("waiting_takeover")) return [];
       return runPages[runPage++] ?? [];
@@ -351,7 +353,7 @@ describe("createJobReconciler", () => {
       "run:run-5",
       "routine:routine-5",
     ]);
-    expect(runFindMany.mock.calls[4]?.[0]).toMatchObject({
+    expect(runFindMany.mock.calls[5]?.[0]).toMatchObject({
       orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
       where: {
         AND: [
@@ -401,8 +403,8 @@ describe("createJobReconciler", () => {
     expect(new Set(enqueue.mock.calls.map(([job]) => job.replaceKey)).size).toBe(1_000);
     expect(findMany).toHaveBeenCalledTimes(10);
     expect(prisma.computer.findMany).toHaveBeenCalledOnce();
-    // Stuck-work, legacy-run, and unmirrored-messaging scans run once each.
-    expect(prisma.run.findMany).toHaveBeenCalledTimes(3);
+    // Stuck-work, legacy-run, unmirrored-messaging, and webhook-reply scans run once each.
+    expect(prisma.run.findMany).toHaveBeenCalledTimes(4);
     expect(prisma.messagingOutbound.findFirst).toHaveBeenCalledOnce();
     expect(auxiliary).toHaveBeenCalledOnce();
   });
@@ -558,7 +560,7 @@ describe("createJobReconciler", () => {
     await reconciler.reconcileOnce();
 
     expect(runFindMany).toHaveBeenNthCalledWith(
-      4,
+      5,
       expect.objectContaining({
         orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
         where: {

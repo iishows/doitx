@@ -743,6 +743,8 @@ export interface BackgroundJobPayloads {
   "call.expire": { threadId: string; callId: string };
   "history.compact": { threadId: string };
   "messaging.deliver": { runId?: string };
+  /** POST a webhook-triggered run's reply to the bot's callback URL. */
+  "webhook.reply": { runId: string };
   "messaging.credential-cleanup": { installationId: string; ref: string };
   /** Reconcile durable remote-agent intent; scope is loaded from the database. */
   "cloud_agent.poll": { agentId: string };

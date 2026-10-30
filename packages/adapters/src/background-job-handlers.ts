@@ -27,6 +27,7 @@ import type { MemoryProviderResolver } from "./memory-provider-factory.js";
 import { deliverMessagingOutbound, mirrorMessagingOutbound } from "./messaging-delivery.js";
 import { pollPurchase } from "./purchase-poll.js";
 import { expireTaughtSkillTeaching } from "./teaching-session.js";
+import { deliverWebhookReply } from "./webhook-reply.js";
 
 type Tenant = { spaceId: string; userId: string };
 
@@ -151,6 +152,14 @@ export function createBackgroundJobHandlers(deps: {
       }
       await drainMessaging();
     },
+    // Unlike the messaging mirror this is the deliverable itself, so a receiver
+    // failure must throw and let the executor back off rather than be swallowed.
+    "webhook.reply": asOwner(run, async ({ runId }) => {
+      await deliverWebhookReply(
+        { prisma: deps.prisma, secrets: deps.secretStore },
+        runId,
+      );
+    }),
     "routine.wakeup": asOwner(routine, async (payload) => {
       await deps.executor.wakeRoutine(payload.routineId, payload.scheduledFor);
     }),
