@@ -352,7 +352,7 @@ services:
   # container gets the owner login: the API and worker connect as rakazo_app, which row-level
   # security binds, so code running in either cannot find a login that bypasses it.
   migrate:
-    image: ${RAKAZO_IMAGE:-ghcr.io/elie222/rakazo/app}:${RAKAZO_IMAGE_TAG:-local}
+    image: ${RAKAZO_IMAGE:-ghcr.io/iishows/doitx/app}:${RAKAZO_IMAGE_TAG:-local}
     build:
       context: ../..
       dockerfile: infra/compose/Dockerfile
