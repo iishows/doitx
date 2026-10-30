@@ -1440,6 +1440,131 @@ describe("graphical computer spec", () => {
     },
   );
 
+  // A signed-in session only survives a stop-and-restart because two separate things happen:
+  // the browser is asked to close over DevTools (so it flushes its cookie jar), and the dirty
+  // exit state it leaves behind is normalized before the next start. This drives both halves
+  // through the shipped scripts, so degrading either the container's close or the launcher's
+  // repair turns it red.
+  it.skipIf(process.platform !== "linux")(
+    "keeps a signed-in session across the stop and restart that follows it",
+    () => {
+      const root = path.resolve(import.meta.dirname, "../../computer");
+      const temp = mkdtempSync(path.join(tmpdir(), "rakazo-login-restart-"));
+      const bin = path.join(temp, "bin");
+      const home = path.join(temp, "home");
+      const profile = path.join(home, ".browser-profiles", "chromium-bot-live");
+      const prefs = path.join(profile, "Default", "Preferences");
+      const jar = path.join(profile, "Default", "Network", "Cookies");
+      const ready = path.join(temp, "ready");
+      mkdirSync(bin, { recursive: true });
+      mkdirSync(path.dirname(jar), { recursive: true });
+      symlinkSync(path.join(root, "rakazo-browser"), path.join(bin, "rakazo-browser"));
+      // The launcher execs this only after it has already repaired the profile, so a stub that
+      // exits at once leaves the normalization visible without a browser outliving the test.
+      writeFileSync(path.join(bin, "chromium"), "#!/bin/sh\nexit 0\n");
+      chmodSync(path.join(bin, "chromium"), 0o755);
+      const port = Number(
+        spawnSync("python3", [
+          "-c",
+          "import socket;s=socket.socket();s.bind(('127.0.0.1',0));print(s.getsockname()[1])",
+        ]).stdout,
+      );
+
+      // Signs in on start but holds the cookie jar in memory until Browser.close arrives, the way
+      // a real Chromium flushes on a clean close -- then writes the dirty exit state that close
+      // leaves behind. A stop that never reaches Browser.close leaves the jar unwritten, so the
+      // restart below comes back signed out.
+      const signin = path.join(temp, "signin.py");
+      writeFileSync(
+        signin,
+        [
+          "import os, socket, sys",
+          "def flag(name):",
+          "    return next(a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith(name))",
+          "port = int(flag('--remote-debugging-port='))",
+          "profile = flag('--user-data-dir=')",
+          "jar = os.path.join(profile, 'Default', 'Network', 'Cookies')",
+          "prefs = os.path.join(profile, 'Default', 'Preferences')",
+          "server = socket.socket()",
+          "server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)",
+          "server.bind(('127.0.0.1', port))",
+          "server.listen(4)",
+          "open(os.environ['RAKAZO_TEST_READY'], 'w').write('ready')",
+          "while True:",
+          "    client, _ = server.accept()",
+          "    request = b''",
+          "    while b'\\r\\n\\r\\n' not in request:",
+          "        request += client.recv(4096)",
+          "    if request.split(b'\\r\\n', 1)[0].startswith(b'GET /json/version'):",
+          '        body = (\'{"webSocketDebuggerUrl": "ws://127.0.0.1:%d/devtools/browser/live"}\' % port).encode()',
+          "        client.sendall(b'HTTP/1.1 200 OK\\r\\nContent-Length: ' + str(len(body)).encode() + b'\\r\\n\\r\\n' + body)",
+          "        client.close()",
+          "        continue",
+          "    client.sendall(b'HTTP/1.1 101 Switching Protocols\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\n\\r\\n')",
+          "    client.recv(4096)",
+          "    os.makedirs(os.path.dirname(jar), exist_ok=True)",
+          "    open(jar, 'w').write('persistent=kept; session=account')",
+          '    open(prefs, \'w\').write(\'{"profile": {"exit_type": "SessionEnded", "exited_cleanly": false}}\')',
+          "    client.sendall(b'\\x81\\x02{}')",
+          "    os._exit(0)",
+        ].join("\n"),
+      );
+
+      const children: Array<ReturnType<typeof spawn>> = [];
+      try {
+        const live = spawn(
+          "python3",
+          [signin, `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`],
+          { stdio: "ignore", detached: true, env: { ...process.env, RAKAZO_TEST_READY: ready } },
+        );
+        children.push(live);
+        const deadline = Date.now() + 15_000;
+        while (!existsSync(ready)) {
+          if (Date.now() > deadline) throw new Error("the browser never accepted the debug port");
+          spawnSync("sleep", ["0.05"]);
+        }
+        // Sign-in is staged in memory, so nothing has committed the session to disk yet.
+        expect(existsSync(jar)).toBe(false);
+
+        // Stop the way the container's shutdown does: hand the browser's pid and profile to
+        // close-browser.py, which asks it to close over DevTools rather than signalling it.
+        const stopped = spawnSync(
+          "python3",
+          [path.join(root, "close-browser.py"), String(live.pid), profile],
+          { encoding: "utf8", timeout: 15_000 },
+        );
+        expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
+        expect(existsSync(jar), "the stop never reached Browser.close").toBe(true);
+
+        // Restart the way the supervisor does, through the real launcher.
+        const restarted = spawnSync(path.join(bin, "rakazo-browser"), [], {
+          encoding: "utf8",
+          timeout: 15_000,
+          env: {
+            ...process.env,
+            DISPLAY: ":1",
+            HOME: home,
+            PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}`,
+            RAKAZO_BROWSER_PROFILE: profile,
+          },
+        });
+        expect(restarted.status, restarted.stdout + restarted.stderr).toBe(0);
+        expect(readFileSync(jar, "utf8")).toContain("session=account");
+        expect(readFileSync(prefs, "utf8")).not.toContain("SessionEnded");
+      } finally {
+        for (const child of children) {
+          if (!child.pid) continue;
+          try {
+            process.kill(-child.pid, "SIGKILL");
+          } catch {
+            child.kill("SIGKILL");
+          }
+        }
+        rmSync(temp, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("keeps container names stable so a bot can resume", () => {
     expect(containerNameFor("bot_1")).toBe("rakazo-bot-bot_1");
     expect(containerNameFor("bot_1")).toBe(containerNameFor("bot_1"));
