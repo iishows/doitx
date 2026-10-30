@@ -1040,6 +1040,59 @@ describe("graphical computer spec", () => {
     },
   );
 
+  it.skipIf(process.platform === "win32")(
+    "normalizes any dirty exit_type, not just Crashed",
+    () => {
+      const root = path.resolve(import.meta.dirname, "../../computer");
+      const temp = mkdtempSync(path.join(tmpdir(), "rakazo-browser-exit-type-"));
+      const bin = path.join(temp, "bin");
+      const home = path.join(temp, "home");
+      const chromium = path.join(bin, "chromium");
+      mkdirSync(bin);
+      writeFileSync(chromium, "#!/bin/sh\nexit 0\n");
+      chmodSync(chromium, 0o755);
+      const prefsDir = path.join(home, ".browser-profiles/chromium/Default");
+      mkdirSync(prefsDir, { recursive: true });
+      const prefsPath = path.join(prefsDir, "Preferences");
+      const launch = () =>
+        spawnSync("bash", [path.join(root, "rakazo-browser")], {
+          env: {
+            ...process.env,
+            DISPLAY: ":1",
+            HOME: home,
+            PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}`,
+          },
+          encoding: "utf8",
+        });
+      try {
+        // Chrome writes "SessionEnded" for an exit that never completed its shutdown sequence,
+        // which is what a signal-only container stop used to produce. It loses session cookies the
+        // same way "Crashed" does, so the repair may not key off the literal "Crashed".
+        for (const dirty of ["Crashed", "SessionEnded", "Running", "Whatever"]) {
+          writeFileSync(
+            prefsPath,
+            `{\n  "profile": {\n    "exit_type": "${dirty}",\n    "exited_cleanly": false\n  }\n}\n`,
+          );
+          const result = launch();
+          expect(result.status, result.error?.message ?? result.stderr).toBe(0);
+          const repaired = readFileSync(prefsPath, "utf8");
+          expect(repaired, dirty).toContain('"exit_type":"Normal"');
+          expect(repaired, dirty).toContain('"exited_cleanly":true');
+          expect(repaired, dirty).not.toContain(dirty);
+          expect(repaired, dirty).not.toMatch(/"exited_cleanly"\s*:\s*false/);
+        }
+
+        // A file with no exit_type key at all is left as it was.
+        writeFileSync(prefsPath, '{\n  "profile": {\n    "other": 1\n  }\n}\n');
+        expect(launch().status).toBe(0);
+        expect(readFileSync(prefsPath, "utf8")).toContain('"other": 1');
+        expect(readFileSync(prefsPath, "utf8")).not.toContain("exit_type");
+      } finally {
+        rmSync(temp, { recursive: true, force: true });
+      }
+    },
+  );
+
   it.skipIf(process.platform !== "linux")(
     "forwards a URL to the live browser when SingletonLock misses that process",
     () => {

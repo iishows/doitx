@@ -67,11 +67,15 @@ for arg in "$@"; do
   esac
 done
 
+# Normalize whatever dirty value Chrome left, not just "Crashed": an exit that did not complete its
+# shutdown sequence writes "SessionEnded" instead, and either value makes the next start drop
+# session cookies (account sign-in) while persistent cookies remain. Setting the field to "Normal"
+# unconditionally matches the sandbox's own repair and rewrites an already-clean file to itself.
 clear_crash_state() {
   f="$1"
   [ -f "$f" ] || return 0
   sed -E \
-    's/"exit_type"[[:space:]]*:[[:space:]]*"Crashed"/"exit_type":"Normal"/g; s/"exited_cleanly"[[:space:]]*:[[:space:]]*false/"exited_cleanly":true/g' \
+    's/"exit_type"[[:space:]]*:[[:space:]]*"[^"]*"/"exit_type":"Normal"/g; s/"exited_cleanly"[[:space:]]*:[[:space:]]*false/"exited_cleanly":true/g' \
     "$f" > "${f}.tmp" && mv "${f}.tmp" "$f"
 }
 
