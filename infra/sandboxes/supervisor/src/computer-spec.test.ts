@@ -1986,6 +1986,41 @@ describe("computer home storage", () => {
     expect(start).toContain("kill -TERM -- -1");
   });
 
+  it("commits open browsers before the shutdown TERM reaches them", () => {
+    const start = readFileSync(
+      path.resolve(import.meta.dirname, "../../computer/start.sh"),
+      "utf8",
+    );
+    const shutdown = start.match(/shutdown\(\) \{[\s\S]*?\n\}/)?.[0] ?? "";
+    // A browser killed by a signal commits no cookie jar and leaves a dirty exit_type, which makes
+    // the next start drop session cookies (account sign-in) while persistent cookies survive. The
+    // supervisor's own stop path closes over CDP first, so the shutdown this container performs
+    // itself must do the same rather than rely on the blanket TERM.
+    expect(shutdown).toMatch(/flush_browsers/);
+    expect(shutdown.indexOf("flush_browsers")).toBeLessThan(shutdown.indexOf("kill -TERM -- -1"));
+
+    const flush = start.match(/flush_browsers\(\) \{[\s\S]*?\n\}/)?.[0] ?? "";
+    expect(flush).toMatch(/close-browser\.py/);
+    // Browser.close returns before the profile is committed, so the flush has to let each browser
+    // exit rather than signal it immediately.
+    expect(flush).toMatch(/\/proc\/\$pid/);
+    // Xvfb and the screen transports are also children of this shell and never exit on their own,
+    // so the flush must not wait on background jobs; a bare `wait` would block the whole stop.
+    expect(flush).not.toMatch(/^\s*wait\b/m);
+  });
+
+  it("closes a profile over the debug port its own process was launched with", () => {
+    const script = readFileSync(
+      path.resolve(import.meta.dirname, "../../computer/close-browser.py"),
+      "utf8",
+    );
+    // The port is read from the target process rather than discovered on the profile, so an
+    // explicit --remote-debugging-port is honoured too.
+    expect(script).toMatch(/\/proc\//);
+    expect(script).toMatch(/remote-debugging-port=/);
+    expect(script).toMatch(/Browser\.close/);
+  });
+
   it.skipIf(process.platform === "win32")(
     "restarts computer control after an abnormal exit",
     () => {

@@ -27,6 +27,7 @@ export const COMPUTER_IMAGE = resolveComputerImage();
 export const COMPUTER_IMAGE_CONTEXT_FILES = [
   "Dockerfile",
   "start.sh",
+  "close-browser.py",
   "user-env.sh",
   "control.py",
   "xcapture.c",

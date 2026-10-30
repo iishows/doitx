@@ -15,8 +15,72 @@ cd "$AGENT_HOME"
 # its grace period. Install the handler before any child starts so a stop during startup is
 # honoured too.
 XVFB_PID=""
+
+# A browser that is killed by a signal does not commit its cookie jar and leaves a dirty
+# exit_type, which makes the next start drop session cookies (account sign-in) while persistent
+# cookies survive. The supervisor's stop path avoids this by closing each browser over CDP first;
+# the shutdown this container performs itself must do the same, or a host reboot silently signs
+# the user out.
+#
+# Mirrors the supervisor's own matching: a renderer inherits --user-data-dir but always carries
+# --type=, and Browser.close reads --remote-debugging-port from the PID, so both flags are
+# required. The lock is the fast path; the scan covers a lock that does not point at the process.
+browser_matches() {
+  local pid="$1" profile="$2" text
+  case "$pid" in ''|0|*[!0-9]*) return 1 ;; esac
+  [[ -e "/proc/$pid" ]] || return 1
+  case "$(readlink "/proc/$pid/exe" 2>/dev/null || true)" in
+    */bash|*/dash|*/sh|*/timeout) return 1 ;;
+  esac
+  text=" $(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true) "
+  case "$text" in *" --user-data-dir=$profile "*) ;; *) return 1 ;; esac
+  case "$text" in *" --remote-debugging-port="*) ;; *) return 1 ;; esac
+  case "$text" in *" --type="*) return 1 ;; esac
+  return 0
+}
+
+browser_pid_for_profile() {
+  local profile="$1" pid dir
+  pid=$(readlink "$profile/SingletonLock" 2>/dev/null || true)
+  pid=${pid##*-}
+  if browser_matches "$pid" "$profile"; then printf '%s\n' "$pid"; return 0; fi
+  for dir in /proc/[0-9]*; do
+    pid=${dir#/proc/}
+    if browser_matches "$pid" "$profile"; then printf '%s\n' "$pid"; return 0; fi
+  done
+  return 1
+}
+
+flush_browsers() {
+  local profile pid
+  local -a browsers=()
+  shopt -s nullglob
+  # Ask every live browser to close first. Browser.close returns as soon as the browser accepts it,
+  # so this pass is fast even with several profiles.
+  for profile in "$AGENT_HOME"/.browser-profiles/chromium*; do
+    [[ -d "$profile" ]] || continue
+    pid=$(browser_pid_for_profile "$profile" || true)
+    [[ -n "$pid" ]] || continue
+    browsers+=("$pid")
+    timeout 5 python3 /usr/local/bin/close-browser.py "$pid" "$profile" >/dev/null 2>&1 || true
+  done
+  shopt -u nullglob
+  # Then let each one finish exiting before the blanket TERM below, which would otherwise interrupt
+  # the very commit this exists to allow. One shared deadline keeps the shutdown inside Docker's
+  # stop grace; Xvfb and the screen transports are not waited on, as they never exit on their own.
+  local deadline=$((SECONDS + 8)) stragglers=""
+  for pid in ${browsers[@]+"${browsers[@]}"}; do
+    while [[ -e "/proc/$pid" && $SECONDS -lt $deadline ]]; do
+      sleep 0.2
+    done
+    [[ -e "/proc/$pid" ]] && stragglers+=" $pid"
+  done
+  [[ -z "$stragglers" ]] || echo "browsers still up at shutdown:$stragglers" >&2
+}
+
 shutdown() {
   trap - TERM INT
+  flush_browsers
   if [[ -n "$XVFB_PID" ]]; then
     kill -TERM "$XVFB_PID" 2>/dev/null || true
   fi
