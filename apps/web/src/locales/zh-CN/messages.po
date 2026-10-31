@@ -5162,6 +5162,10 @@ msgstr "安全与运维"
 msgid "Select a bot"
 msgstr "选择 Bot"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Select a tool to disable it."
+msgstr "选择工具即可将其禁用。"
+
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Self-hosted"
 msgstr "自托管"

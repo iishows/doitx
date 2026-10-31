@@ -815,6 +815,7 @@ export function BotSettings({
                     aria-label={t`Search`}
                     className="w-full"
                   />
+                  <p className="px-1 text-xs text-muted-foreground">{t`Select a tool to disable it.`}</p>
                   <fieldset
                     id={`${ids}-disabled-tools`}
                     aria-label={t`Disable a tool`}

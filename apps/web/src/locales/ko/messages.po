@@ -5162,6 +5162,10 @@ msgstr ""
 msgid "Select a bot"
 msgstr "대화할 Bot을 선택하세요"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Select a tool to disable it."
+msgstr ""
+
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Self-hosted"
 msgstr "자체 호스팅"

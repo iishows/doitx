@@ -5162,6 +5162,10 @@ msgstr "Security & Ops"
 msgid "Select a bot"
 msgstr "Select a bot"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Select a tool to disable it."
+msgstr "Select a tool to disable it."
+
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Self-hosted"
 msgstr "Self-hosted"
