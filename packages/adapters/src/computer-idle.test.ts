@@ -19,7 +19,6 @@ import {
   BACKGROUND_WORK_LAUNCH,
   BACKGROUND_WORK_PROBE,
   CANCEL_COMPUTER_RUN_WORK,
-  CANCEL_PRIMARY_BROWSER_WORK,
   computerIdleSleepEnabled,
   computerMaxActiveMs,
   createIdleComputerSweeper,
@@ -1441,19 +1440,6 @@ describe("background work launch and probe", () => {
     const setup = `python3() { command python3 -c '${script}' "$@"; }`;
     expect(await probeBackgroundWork(computerId, setup)).toBe(failure.status);
     expect(existsSync(marker)).toBe(failure.status === 2);
-  });
-});
-
-describe("CANCEL_PRIMARY_BROWSER_WORK", () => {
-  it("targets the primary profile and matches browser argv0 only", () => {
-    expect(CANCEL_PRIMARY_BROWSER_WORK).toContain(".browser-profiles/chromium");
-    expect(CANCEL_PRIMARY_BROWSER_WORK).toContain("chromium-screen-");
-    expect(CANCEL_PRIMARY_BROWSER_WORK).toContain('argv0=""; IFS= read -r -d "" argv0');
-    expect(CANCEL_PRIMARY_BROWSER_WORK).toContain("*/chromium|*/chromium-*|chromium|chromium-*");
-    expect(CANCEL_PRIMARY_BROWSER_WORK).toContain("*/firefox|*/firefox-*|firefox|firefox-*");
-    expect(CANCEL_PRIMARY_BROWSER_WORK).not.toContain("*[c]hromium*");
-    expect(CANCEL_PRIMARY_BROWSER_WORK).not.toContain("*[f]irefox*");
-    expect(CANCEL_PRIMARY_BROWSER_WORK).not.toContain("*[g]oogle-chrome*");
   });
 });
 

@@ -156,42 +156,6 @@ export const CANCEL_COMPUTER_RUN_WORK = [
   'rm -f -- "$prefix"* 2>/dev/null || true',
 ].join("\n");
 
-/**
- * Kill the primary browser session without matching chromium-screen-* profiles.
- * Covers Docker (--user-data-dir=.../chromium) and portable launches that only
- * use the symlinked primary profile (E2B desktop.launch / Daytona nohup).
- */
-export const CANCEL_PRIMARY_BROWSER_WORK = [
-  "pkill -TERM -f -- '--user-data-dir=.*/.browser-profiles/chromium$' || true",
-  "pkill -TERM -f -- '--user-data-dir=.*/.browser-profiles/chromium ' || true",
-  // Portable primary browsers often omit --user-data-dir; match argv0 only so
-  // unrelated processes (e.g. node --engine=chromium) are not killed.
-  "if [ -d /proc ]; then for pid in /proc/[0-9]*; do",
-  '  cmdline="$(tr "\\0" " " <"$pid/cmdline" 2>/dev/null)" || continue',
-  '  case "$cmdline" in *chromium-screen-*) continue ;; esac',
-  '  argv0=""; IFS= read -r -d "" argv0 <"$pid/cmdline" || true',
-  '  case "$argv0" in',
-  "    */google-chrome|*/google-chrome-*|google-chrome|google-chrome-*|*/chromium|*/chromium-*|chromium|chromium-*|*/chrome|chrome|*/firefox|*/firefox-*|firefox|firefox-*)",
-  `      kill -TERM "\${pid#/proc/}" 2>/dev/null || true`,
-  "      ;;",
-  "  esac",
-  "done; fi",
-  "sleep 0.2",
-  "pkill -KILL -f -- '--user-data-dir=.*/.browser-profiles/chromium$' || true",
-  "pkill -KILL -f -- '--user-data-dir=.*/.browser-profiles/chromium ' || true",
-  "if [ -d /proc ]; then for pid in /proc/[0-9]*; do",
-  '  cmdline="$(tr "\\0" " " <"$pid/cmdline" 2>/dev/null)" || continue',
-  '  case "$cmdline" in *chromium-screen-*) continue ;; esac',
-  '  argv0=""; IFS= read -r -d "" argv0 <"$pid/cmdline" || true',
-  '  case "$argv0" in',
-  "    */google-chrome|*/google-chrome-*|google-chrome|google-chrome-*|*/chromium|*/chromium-*|chromium|chromium-*|*/chrome|chrome|*/firefox|*/firefox-*|firefox|firefox-*)",
-  `      kill -KILL "\${pid#/proc/}" 2>/dev/null || true`,
-  "      ;;",
-  "  esac",
-  "done; fi",
-  'rm -f "$HOME/.browser-profiles/chromium/SingletonLock" "$HOME/.browser-profiles/chromium/SingletonCookie" "$HOME/.browser-profiles/chromium/SingletonSocket" 2>/dev/null || true',
-].join("; ");
-
 export function cancelComputerRunWorkArgv(computerId: string, runId: string): string[] {
   return ["bash", "-c", CANCEL_COMPUTER_RUN_WORK, "rakazo-cancel-run-work", computerId, runId];
 }
