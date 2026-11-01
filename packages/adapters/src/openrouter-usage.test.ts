@@ -16,7 +16,7 @@ describe("OpenRouter attribution and usage recovery", () => {
     );
     const init = fetcher.mock.calls[0]![1]!;
     const headers = new Headers(init.headers);
-    expect(headers.get("HTTP-Referer")).toBe("https://rakazo.com");
+    expect(headers.get("HTTP-Referer")).toBe("https://doitx.ai");
     expect(headers.get("X-OpenRouter-Title")).toBe("Doitx");
     expect(headers.get("Authorization")).toBe("Bearer fixture");
     expect(init.signal).toBe(controller.signal);

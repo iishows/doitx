@@ -4,14 +4,11 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/iishows/doitx?labelColor=black&style=for-the-badge&color=2563EB)](https://github.com/iishows/doitx/stargazers)
 [![加入 Discord 社区](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?labelColor=black&style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/RWwKa2Sn7h)
-[![在 App Store 下载 iPhone 版](https://img.shields.io/badge/App%20Store-Download%20for%20iPhone-black?labelColor=black&style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/app/rakazo/id6801531099)
-[![下载 Android APK](https://img.shields.io/badge/Android-Download%20APK-black?labelColor=black&style=for-the-badge&logo=android&logoColor=white)](https://github.com/iishows/doitx/releases/download/android/rakazo.apk)
 
 ![Doitx：由你掌控的 AI 队友](./docs/readme-hero.png)
 
 Doitx 是一个开源 AI 智能体项目，让你拥有可长期协作的 AI 队友，也可以作为自托管 AI 助手在自己的电脑上运行。
-它提供网页版、Electron 桌面应用，以及 [iPhone](https://apps.apple.com/app/rakazo/id6801531099) 和
-[Android](https://github.com/iishows/doitx/releases/download/android/rakazo.apk) 应用。
+它提供网页版和 Electron 桌面应用。
 你可以接入自己的模型和计算环境提供商，也可以在本地运行完整服务。
 
 它是 Grok Bot、Meta Muse、OpenAI Dots、Instinct、OpenClaw、Hermes Agent 和 Claude Duet 的开源、自托管替代方案。
@@ -35,11 +32,11 @@ https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
 
 ## 致谢
 
-- [PromptLayer](https://promptlayer.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Inbox Zero](https://getinboxzero.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [CodeRabbit](https://www.coderabbit.ai/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Greptile](https://www.greptile.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Snyk](https://snyk.io/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
+- [PromptLayer](https://promptlayer.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Inbox Zero](https://getinboxzero.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [CodeRabbit](https://www.coderabbit.ai/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Greptile](https://www.greptile.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Snyk](https://snyk.io/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
 
 ## 技术栈
 
@@ -94,7 +91,7 @@ bash install-images.sh
 为 5173 端口配置 HTTPS 入口。[docs/self-host.md](./docs/self-host.md#public-single-vm-deployment)
 介绍了 Caddy 配置和主机加固方法。在桌面应用中选择 **Existing instance**（已有实例），填写 `https://` 地址。
 
-也可以[部署到 Railway](https://railway.com/new/template/rakazo-template)；参见 [Railway 部署指南](./infra/railway/README.md)。
+也可以部署到 Railway；参见 [Railway 部署指南](./infra/railway/README.md)。
 
 ## 本地开发（从源码运行）
 
@@ -270,13 +267,13 @@ pnpm test:e2e
 
 ## Doitx 的对比
 
-- [Grok Bot](https://rakazo.com/grok-bot-alternative/)
-- [Muse](https://rakazo.com/muse-alternative/)
-- [Dots](https://rakazo.com/dots-alternative/)
-- [Instinct](https://rakazo.com/instinct-alternative/)
-- [OpenClaw](https://rakazo.com/openclaw-alternative/)
-- [Hermes Agent](https://rakazo.com/hermes-alternative/)
-- [全部对比](https://rakazo.com/alternatives/)
+- [Grok Bot](https://doitx.ai/grok-bot-alternative/)
+- [Muse](https://doitx.ai/muse-alternative/)
+- [Dots](https://doitx.ai/dots-alternative/)
+- [Instinct](https://doitx.ai/instinct-alternative/)
+- [OpenClaw](https://doitx.ai/openclaw-alternative/)
+- [Hermes Agent](https://doitx.ai/hermes-alternative/)
+- [全部对比](https://doitx.ai/alternatives/)
 
 ## 参与贡献
 

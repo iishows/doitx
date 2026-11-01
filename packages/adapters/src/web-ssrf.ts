@@ -15,7 +15,7 @@ import { fetchPairedWithDispatcher } from "./undici-fetch.js";
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_BYTES = 5 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
-const DEFAULT_USER_AGENT = "Doitx/0.1 (+https://github.com/elie222/rakazo)";
+const DEFAULT_USER_AGENT = "Doitx/0.1 (+https://github.com/iishows/doitx)";
 
 export type { ResolveHostname } from "./network-address.js";
 

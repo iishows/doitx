@@ -20,7 +20,6 @@ const rn = vi.hoisted(() => {
       }),
     },
     Linking: { openURL: vi.fn(async () => true) },
-    Platform: { OS: "ios" },
   };
 });
 
@@ -29,7 +28,6 @@ vi.mock("react-native", () => rn);
 vi.mock("./api", () => ({ configureClientBuild: vi.fn() }));
 vi.mock("./i18n", () => ({ t: (message: string) => message }));
 
-import { IOS_APP_STORE_URL } from "@rakazo/contracts";
 import {
   clientBuildHeaders,
   FOREGROUND_UPDATE_CHECK_MS,
@@ -78,15 +76,13 @@ describe("update required", () => {
     await flush();
     expect(updates.fetchUpdateAsync).toHaveBeenCalledOnce();
     expect(updates.reloadAsync).toHaveBeenCalledOnce();
-    expect(rn.Linking.openURL).not.toHaveBeenCalled();
   });
 
-  it("opens the store when no over-the-air update can fix it, and asks again next time", async () => {
+  it("applies nothing when no over-the-air update can fix it, and asks again next time", async () => {
     noteClientUpdateRequired();
     pressUpdate();
     await flush();
     expect(updates.reloadAsync).not.toHaveBeenCalled();
-    expect(rn.Linking.openURL).toHaveBeenCalledWith(IOS_APP_STORE_URL);
     noteClientUpdateRequired();
     expect(rn.Alert.alert).toHaveBeenCalledTimes(2);
   });

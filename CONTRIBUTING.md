@@ -90,6 +90,6 @@ capability config, fixtures, logs, or snapshots; use the encrypted secret store 
 
 | Address | Use for |
 | --- | --- |
-| [security@rakazo.com](mailto:security@rakazo.com) | Vulnerabilities only — see [SECURITY.md](SECURITY.md) |
-| [support@rakazo.com](mailto:support@rakazo.com) | User and support questions |
-| [elie@rakazo.com](mailto:elie@rakazo.com) | Maintainer |
+| [security@doitx.ai](mailto:security@doitx.ai) | Vulnerabilities only — see [SECURITY.md](SECURITY.md) |
+| [support@doitx.ai](mailto:support@doitx.ai) | User and support questions |
+| [elie@doitx.ai](mailto:elie@doitx.ai) | Maintainer |

@@ -4,14 +4,11 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/iishows/doitx?labelColor=black&style=for-the-badge&color=2563EB)](https://github.com/iishows/doitx/stargazers)
 [![Discord コミュニティに参加](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?labelColor=black&style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/RWwKa2Sn7h)
-[![App Store で iPhone 版をダウンロード](https://img.shields.io/badge/App%20Store-Download%20for%20iPhone-black?labelColor=black&style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/app/rakazo/id6801531099)
-[![Android APK をダウンロード](https://img.shields.io/badge/Android-Download%20APK-black?labelColor=black&style=for-the-badge&logo=android&logoColor=white)](https://github.com/iishows/doitx/releases/download/android/rakazo.apk)
 
 ![Doitx：本当に自分のものにできる AI チームメイト](./docs/readme-hero.png)
 
 Doitx は、常駐型の AI チームメイトを持てるオープンソースの AI エージェントです。自分のマシンで動かせる
-セルフホスト型の AI アシスタントでもあります。Web 版、Electron デスクトップアプリ、
-[iPhone](https://apps.apple.com/app/rakazo/id6801531099) 版と [Android](https://github.com/iishows/doitx/releases/download/android/rakazo.apk) 版で利用できます。
+セルフホスト型の AI アシスタントでもあります。Web 版と Electron デスクトップアプリで利用できます。
 モデルやコンピューターのプロバイダーは自分で選べるほか、スタック全体をローカルで動かすこともできます。
 
 Grok Bot、Meta Muse、OpenAI Dots、Instinct、OpenClaw、Hermes Agent、Claude Duet の
@@ -38,12 +35,12 @@ https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
 
 ## 謝辞
 
-- [PromptLayer](https://promptlayer.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Inbox Zero](https://getinboxzero.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [ConnectorMap](https://connectormap.luinbytes.dev/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [CodeRabbit](https://www.coderabbit.ai/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Greptile](https://www.greptile.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Snyk](https://snyk.io/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
+- [PromptLayer](https://promptlayer.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Inbox Zero](https://getinboxzero.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [ConnectorMap](https://connectormap.luinbytes.dev/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [CodeRabbit](https://www.coderabbit.ai/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Greptile](https://www.greptile.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Snyk](https://snyk.io/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
 
 ## 技術スタック
 
@@ -100,7 +97,7 @@ bash install-images.sh
 [docs/self-host.md](./docs/self-host.md#public-single-vm-deployment) で説明しています。デスクトップアプリでは
 **Existing instance**（既存のインスタンス）を選び、`https://` のアドレスを入力します。
 
-または [Railway にデプロイ](https://railway.com/new/template/rakazo-template)することもできます。[Railway セットアップガイド](./infra/railway/README.md)を参照してください。
+または Railway にデプロイすることもできます。[Railway セットアップガイド](./infra/railway/README.md)を参照してください。
 
 ## ローカル開発（ソースから実行）
 
@@ -271,13 +268,13 @@ pnpm test:e2e
 
 ## Doitx と他製品の比較
 
-- [Grok Bot](https://rakazo.com/grok-bot-alternative/)
-- [Muse](https://rakazo.com/muse-alternative/)
-- [Dots](https://rakazo.com/dots-alternative/)
-- [Instinct](https://rakazo.com/instinct-alternative/)
-- [OpenClaw](https://rakazo.com/openclaw-alternative/)
-- [Hermes Agent](https://rakazo.com/hermes-alternative/)
-- [すべての比較](https://rakazo.com/alternatives/)
+- [Grok Bot](https://doitx.ai/grok-bot-alternative/)
+- [Muse](https://doitx.ai/muse-alternative/)
+- [Dots](https://doitx.ai/dots-alternative/)
+- [Instinct](https://doitx.ai/instinct-alternative/)
+- [OpenClaw](https://doitx.ai/openclaw-alternative/)
+- [Hermes Agent](https://doitx.ai/hermes-alternative/)
+- [すべての比較](https://doitx.ai/alternatives/)
 
 ## コントリビュート
 

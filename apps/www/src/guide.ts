@@ -16,14 +16,14 @@ export const OPENCLAW_SANDBOX_URL = "https://docs.openclaw.ai/gateway/sandboxing
 export const OPENCLAW_GITHUB_URL = "https://github.com/openclaw/openclaw";
 
 export const PUBLISHED_IMAGES_INSTALL = `mkdir -p rakazo && cd rakazo &&
-curl -fsSLO https://raw.githubusercontent.com/elie222/rakazo/main/infra/compose/install-images.sh &&
+curl -fsSLO https://raw.githubusercontent.com/iishows/doitx/main/infra/compose/install-images.sh &&
 bash install-images.sh`;
 
 export const PUBLISHED_IMAGES_SERVER = `bash install-images.sh --prepare-only
 # Edit .env, then:
 bash install-images.sh`;
 
-export const SOURCE_CHECKOUT = `git clone https://github.com/elie222/rakazo.git
+export const SOURCE_CHECKOUT = `git clone https://github.com/iishows/doitx.git
 cd rakazo
 cp .env.example .env`;
 
@@ -84,7 +84,7 @@ export const SELF_HOST_FAQS: readonly FaqItem[] = [
   {
     question: "Is hosted Doitx available?",
     answer:
-      "Yes. Doitx Cloud is in beta at app.rakazo.com. Self-hosting is available too.",
+      "Yes. Doitx Cloud is in beta at app.doitx.ai. Self-hosting is available too.",
   },
   {
     question: "How does this compare with OpenClaw?",

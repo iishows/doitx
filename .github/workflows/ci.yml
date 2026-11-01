@@ -542,7 +542,7 @@ jobs:
       queue: max
     environment:
       name: production
-      url: https://app.rakazo.com
+      url: https://app.doitx.ai
     steps:
       - name: Configure production SSH identity
         env:

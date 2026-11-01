@@ -4,14 +4,11 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/iishows/doitx?labelColor=black&style=for-the-badge&color=2563EB)](https://github.com/iishows/doitx/stargazers)
 [![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?labelColor=black&style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/RWwKa2Sn7h)
-[![Download on the App Store](https://img.shields.io/badge/App%20Store-Download%20for%20iPhone-black?labelColor=black&style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/app/rakazo/id6801531099)
-[![Download the Android APK](https://img.shields.io/badge/Android-Download%20APK-black?labelColor=black&style=for-the-badge&logo=android&logoColor=white)](https://github.com/iishows/doitx/releases/download/android/rakazo.apk)
 
 ![Doitx — AI teammates you actually own](./docs/readme-hero.png)
 
 Doitx is an open source AI agent for persistent teammates, and a self-hosted AI assistant you
-can run on your own machine. It is available on the web, as an Electron desktop app, and on
-[iPhone](https://apps.apple.com/app/rakazo/id6801531099) and [Android](https://github.com/iishows/doitx/releases/download/android/rakazo.apk). Bring your own model
+can run on your own machine. It is available on the web and as an Electron desktop app. Bring your own model
 and computer provider, or run the complete stack locally.
 
 It is an open source, self-hosted alternative to Grok Bot, Meta Muse, OpenAI Dots, Instinct,
@@ -36,12 +33,12 @@ https://github.com/user-attachments/assets/dccdeddb-2134-4a56-8eed-b2e591736b1c
 
 ## Thanks
 
-- [PromptLayer](https://promptlayer.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Inbox Zero](https://getinboxzero.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [ConnectorMap](https://connectormap.luinbytes.dev/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [CodeRabbit](https://www.coderabbit.ai/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Greptile](https://www.greptile.com/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
-- [Snyk](https://snyk.io/?utm_source=github&utm_medium=referral&utm_campaign=rakazo_readme)
+- [PromptLayer](https://promptlayer.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Inbox Zero](https://getinboxzero.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [ConnectorMap](https://connectormap.luinbytes.dev/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [CodeRabbit](https://www.coderabbit.ai/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Greptile](https://www.greptile.com/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
+- [Snyk](https://snyk.io/?utm_source=github&utm_medium=referral&utm_campaign=doitx_readme)
 
 ## Stack
 
@@ -98,7 +95,7 @@ Put HTTPS in front of port 5173; [docs/self-host.md](./docs/self-host.md#public-
 covers the Caddy setup and host hardening. In the desktop app choose **Existing instance** and enter
 the `https://` address.
 
-Or [deploy on Railway](https://railway.com/new/template/rakazo-template); see the [Railway setup guide](./infra/railway/README.md).
+Or deploy on Railway; see the [Railway setup guide](./infra/railway/README.md).
 
 ## Local development (source checkout)
 
@@ -280,13 +277,13 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow and test m
 
 ## How Doitx compares
 
-- [Grok Bot](https://rakazo.com/grok-bot-alternative/)
-- [Muse](https://rakazo.com/muse-alternative/)
-- [Dots](https://rakazo.com/dots-alternative/)
-- [Instinct](https://rakazo.com/instinct-alternative/)
-- [OpenClaw](https://rakazo.com/openclaw-alternative/)
-- [Hermes Agent](https://rakazo.com/hermes-alternative/)
-- [All comparisons](https://rakazo.com/alternatives/)
+- [Grok Bot](https://doitx.ai/grok-bot-alternative/)
+- [Muse](https://doitx.ai/muse-alternative/)
+- [Dots](https://doitx.ai/dots-alternative/)
+- [Instinct](https://doitx.ai/instinct-alternative/)
+- [OpenClaw](https://doitx.ai/openclaw-alternative/)
+- [Hermes Agent](https://doitx.ai/hermes-alternative/)
+- [All comparisons](https://doitx.ai/alternatives/)
 
 ## Contributing
 

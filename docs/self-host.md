@@ -12,12 +12,12 @@ Compose bot homes mount only their own subdirectory of the application volume us
 
 ## Published images (no checkout)
 
-Pull Postgres and `ghcr.io/elie222/rakazo/app` into any empty folder. No clone or image build.
+Pull Postgres and `ghcr.io/iishows/doitx/app` into any empty folder. No clone or image build.
 Requires Docker Engine 26+ (API 1.45+ for bot home volume subpaths), the Compose plugin, curl, and OpenSSL.
 
 ```bash
 mkdir -p rakazo && cd rakazo &&
-curl -fsSLO https://raw.githubusercontent.com/elie222/rakazo/main/infra/compose/install-images.sh &&
+curl -fsSLO https://raw.githubusercontent.com/iishows/doitx/main/infra/compose/install-images.sh &&
 bash install-images.sh
 ```
 
@@ -29,7 +29,7 @@ optional providers before startup, run `bash install-images.sh --prepare-only`, 
 run `bash install-images.sh`. Flags may be combined in either order: `--prepare-only`, `--local`.
 
 `SANDBOX_PROVIDER` defaults to `docker`. The images Compose file runs a sandbox supervisor
-(from the app image, on the internal network only) and pulls `ghcr.io/elie222/rakazo/computer`.
+(from the app image, on the internal network only) and pulls `ghcr.io/iishows/doitx/computer`.
 Signup and local Docker computers work without an E2B account. Optional remote providers: set
 `SANDBOX_PROVIDER` to `e2b`, `novita`, `daytona`, `createos`, or `boat` and add the matching API key. The published-images
 Compose stack requires `SANDBOX_SUPERVISOR_TOKEN` for every provider; leave it empty and `compose up` fails closed.
@@ -182,7 +182,7 @@ a restart. The installer does not download the script on macOS. From the directo
 the stack's `.env`:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/elie222/rakazo/main/infra/compose/restrict-computer-egress.sh
+curl -fsSLO https://raw.githubusercontent.com/iishows/doitx/main/infra/compose/restrict-computer-egress.sh
 ```
 
 Save the following as `egress.yml` beside that script and start it with
@@ -525,7 +525,7 @@ repairs. Investigate `Model credit hold requires review` logs using the shared c
 missing provider evidence into a zero-cost settlement.
 
 OpenRouter inference requests include the normal Doitx user ID in `user`, `HTTP-Referer`
-(`https://rakazo.com`), and `X-OpenRouter-Title` (`Doitx`). These values are sent only to OpenRouter's
+(`https://doitx.ai`), and `X-OpenRouter-Title` (`Doitx`). These values are sent only to OpenRouter's
 HTTPS inference endpoints, never to compatible custom hosts. Recovery uses the existing configured
 deployment credential; no Redis or external accounting service is required.
 
@@ -1115,7 +1115,7 @@ The Electron desktop app is a client of the same API. Docker remains the default
 Native file reads and workspace exports are limited to 8 MiB per file. A larger workspace file fails the checkpoint and preserves the previous saved workspace; local files remain on the computer. Writes are bounded by the 12 MiB encoded request limit.
 
 - **Published images** (`docker-compose.images.yml`) default to `SANDBOX_PROVIDER=docker` with a
-  local supervisor and published `ghcr.io/elie222/rakazo/computer` image. No E2B account required.
+  local supervisor and published `ghcr.io/iishows/doitx/computer` image. No E2B account required.
   Optional: set `e2b`, `novita`, `daytona`, `createos`, or `boat` plus the matching API key for remote computers.
 - **Docker** is the quick-start default for published images and for a source checkout / full local
   Compose stack. Workspace bots share a persistent Team Computer by default; Private computers are
@@ -1983,9 +1983,9 @@ this repository that is:
 
 | Image | Contents |
 | --- | --- |
-| `ghcr.io/elie222/rakazo/app` | api, worker, web, and sandbox supervisor — one image, multiple commands |
-| `ghcr.io/elie222/rakazo/computer` | Linux desktop used as each bot computer |
-| `ghcr.io/elie222/rakazo/updater` | the updater sidecar, plus the Docker CLI |
+| `ghcr.io/iishows/doitx/app` | api, worker, web, and sandbox supervisor — one image, multiple commands |
+| `ghcr.io/iishows/doitx/computer` | Linux desktop used as each bot computer |
+| `ghcr.io/iishows/doitx/updater` | the updater sidecar, plus the Docker CLI |
 
 `infra/compose/docker-compose.images.yml` is the no-checkout path for those app and computer tags
 plus Postgres. The supervisor runs from the app image on the internal network only (not a separate
@@ -2223,7 +2223,7 @@ relying party is that origin's host, so existing passkeys keep working only whil
 stays on the same domain. They are off when password sign-in is disabled for SSO-only
 deployments. On web, a browser offers them where it has a platform authenticator. The macOS
 desktop app uses the system passkey sheet, which only serves the domain the release is
-associated with (`app.rakazo.com`), so it hides passkeys for other servers.
+associated with (`app.doitx.ai`), so it hides passkeys for other servers.
 
 Native apps can use a domain's passkeys only when the domain vouches for them and the app was
 built for that domain (the app's associated domain comes from `EXPO_PUBLIC_API_URL` at build

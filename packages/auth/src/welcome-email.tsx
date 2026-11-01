@@ -1,17 +1,14 @@
 /** @jsxRuntime automatic */
 import type { TransactionalEmail } from "@rakazo/adapter-kit";
-import { ANDROID_APK_URL, IOS_APP_STORE_URL } from "@rakazo/contracts";
 import { displayName } from "@rakazo/core";
 import { lightTokens } from "@rakazo/ui-tokens";
 import { Hr, Link, Text } from "react-email";
 import { linkStyle, message } from "./email.js";
 
 const APPS = [
-  ["iPhone", IOS_APP_STORE_URL],
-  ["Android", ANDROID_APK_URL],
-  ["Mac", "https://rakazo.com/api/download?platform=mac"],
-  ["Windows", "https://rakazo.com/api/download?platform=windows"],
-  ["Linux", "https://rakazo.com/api/download?platform=linux"],
+  ["Mac", "https://doitx.ai/api/download?platform=mac"],
+  ["Windows", "https://doitx.ai/api/download?platform=windows"],
+  ["Linux", "https://doitx.ai/api/download?platform=linux"],
 ] as const;
 
 export function welcomeEmail(
@@ -45,17 +42,14 @@ export function welcomeEmail(
       </Text>
       <Text>
         Doitx is open source. If you like it,{" "}
-        <Link href="https://github.com/elie222/rakazo" style={linkStyle}>
+        <Link href="https://github.com/iishows/doitx" style={linkStyle}>
           a star on GitHub
         </Link>{" "}
         helps others find it.
       </Text>
       <Text>
         Want to run it on your own servers?{" "}
-        <Link
-          href="https://github.com/elie222/rakazo/blob/main/docs/self-host.md"
-          style={linkStyle}
-        >
+        <Link href="https://doitx.ai/docs" style={linkStyle}>
           Self-host Doitx
         </Link>
         .

@@ -1,11 +1,11 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerabilities
-    url: https://github.com/elie222/rakazo/blob/main/SECURITY.md
-    about: Report security issues to security@rakazo.com — do not open a public issue.
+    url: https://github.com/iishows/doitx/blob/main/SECURITY.md
+    about: Report security issues to security@doitx.ai — do not open a public issue.
   - name: User support
-    url: mailto:support@rakazo.com
+    url: mailto:support@doitx.ai
     about: Questions about using Doitx or self-hosting help.
   - name: Maintainer
-    url: mailto:elie@rakazo.com
+    url: mailto:elie@doitx.ai
     about: Reach the maintainer directly.

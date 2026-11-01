@@ -2,35 +2,35 @@
   "specVersion": "1.0",
   "host": {
     "displayName": "Doitx",
-    "documentationUrl": "https://rakazo.com/self-hosted-ai-agent/"
+    "documentationUrl": "https://doitx.ai/self-hosted-ai-agent/"
   },
   "entries": [
     {
-      "identifier": "urn:air:rakazo.com:docs:llms",
+      "identifier": "urn:air:doitx.ai:docs:llms",
       "displayName": "Doitx agent guide",
       "type": "text/plain",
-      "url": "https://rakazo.com/llms.txt",
+      "url": "https://doitx.ai/llms.txt",
       "description": "Product overview, agent-assisted setup guidance, and canonical resources."
     },
     {
-      "identifier": "urn:air:rakazo.com:docs:overview",
+      "identifier": "urn:air:doitx.ai:docs:overview",
       "displayName": "Doitx overview",
       "type": "text/markdown",
-      "url": "https://rakazo.com/index.md",
+      "url": "https://doitx.ai/index.md",
       "description": "Features, model choices, self-hosting, and common questions."
     },
     {
-      "identifier": "urn:air:rakazo.com:docs:self-host",
+      "identifier": "urn:air:doitx.ai:docs:self-host",
       "displayName": "Self-hosting guide",
       "type": "text/html",
-      "url": "https://rakazo.com/self-hosted-ai-agent/",
+      "url": "https://doitx.ai/self-hosted-ai-agent/",
       "description": "Requirements, installation, and connecting desktop and mobile clients."
     },
     {
-      "identifier": "urn:air:rakazo.com:docs:self-host-markdown",
+      "identifier": "urn:air:doitx.ai:docs:self-host-markdown",
       "displayName": "Self-hosting guide as Markdown",
       "type": "text/markdown",
-      "url": "https://rakazo.com/self-hosted-ai-agent.md",
+      "url": "https://doitx.ai/self-hosted-ai-agent.md",
       "description": "The setup guide with language-tagged command examples."
     }
   ]

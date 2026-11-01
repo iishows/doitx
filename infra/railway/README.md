@@ -6,8 +6,6 @@ The template runs Doitx, PostgreSQL and agent computers on Railway. No Docker ho
 
 ## Deploy
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/rakazo-template)
-
 1. Deploy the template. Enter your email in `OWNER_EMAIL` and a Railway workspace or account API token in `RAILWAY_API_TOKEN`.
 2. Wait for Doitx to become healthy. Open its generated HTTPS domain.
 3. Sign in with your email and the generated `OWNER_PASSWORD` from the Doitx service's Variables tab. Change the password in account settings.

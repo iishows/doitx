@@ -146,7 +146,6 @@ it("opens integrations and keeps the existing account actions and links", async 
     "Artifacts",
     "Board",
     "Usage",
-    "Get the mobile app",
     "Docs",
     "Log out",
   ]);
@@ -158,17 +157,6 @@ it("omits Board when unavailable", async () => {
   await render();
   expect(document.querySelector('[data-slot="popover-content"]')?.textContent).not.toContain(
     "Board",
-  );
-});
-
-it("offers the existing Android download on Android", async () => {
-  vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Android");
-  await render();
-  const mobile = [...document.querySelectorAll("a")].find(
-    (link) => link.textContent === "Get the mobile app",
-  )!;
-  expect(mobile.href).toBe(
-    "https://github.com/elie222/rakazo/releases/download/android/rakazo.apk",
   );
 });
 

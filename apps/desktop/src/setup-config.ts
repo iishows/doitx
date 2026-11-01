@@ -5,7 +5,7 @@ import { isLoopbackHost, isPrivateNetworkHost } from "@rakazo/contracts/network-
 /** Managed desktop origin; development keeps its usual web/API ports. */
 export const DEFAULT_LOCAL_WEB_URL = "http://127.0.0.1:45173";
 /** Hosted Doitx; setup saves it as an `existing` server so it opens like any other. */
-export const RAKAZO_CLOUD_URL = "https://app.rakazo.com";
+export const RAKAZO_CLOUD_URL = "https://app.doitx.ai";
 export const PROBE_RESPONSE_LIMIT_BYTES = 64 * 1024;
 
 export const SETUP_FILE_NAME = "setup.json";

@@ -123,7 +123,7 @@ describe("sandboxProviderOptionsFromEnv", () => {
       sandboxProviderOptionsFromEnv({
         KUBERNETES_SANDBOX_NAMESPACE: " rakazo-computers ",
         KUBERNETES_SANDBOX_RUNTIME_CLASS_NAME: "kata",
-        KUBERNETES_SANDBOX_COMPUTER_IMAGE: "ghcr.io/elie222/rakazo/computer@sha256:abc",
+        KUBERNETES_SANDBOX_COMPUTER_IMAGE: "ghcr.io/iishows/doitx/computer@sha256:abc",
         KUBERNETES_SANDBOX_CPU_LIMIT: "2",
         KUBERNETES_SANDBOX_MEMORY_LIMIT: "4Gi",
         KUBERNETES_SANDBOX_POD_LABELS: '{"team":"bots"}',
@@ -133,7 +133,7 @@ describe("sandboxProviderOptionsFromEnv", () => {
     ).toMatchObject({
       kubernetesNamespace: "rakazo-computers",
       kubernetesRuntimeClassName: "kata",
-      kubernetesComputerImage: "ghcr.io/elie222/rakazo/computer@sha256:abc",
+      kubernetesComputerImage: "ghcr.io/iishows/doitx/computer@sha256:abc",
       kubernetesCpuLimit: "2",
       kubernetesMemoryLimit: "4Gi",
       kubernetesPodLabels: { team: "bots" },

@@ -37,7 +37,7 @@ describe("passkeysSupported", () => {
 
   it("on the macOS app, offers passkeys only for relying parties the build is associated with", async () => {
     const mac = (rpIds?: string[] | Error) => ({
-      ...browser("app.rakazo.com"),
+      ...browser("app.doitx.ai"),
       desktop: {
         platform: "darwin",
         passkeys:
@@ -51,12 +51,12 @@ describe("passkeysSupported", () => {
               },
       },
     });
-    await expect(passkeysSupported("app.rakazo.com", mac(["app.rakazo.com"]))).resolves.toBe(true);
-    await expect(passkeysSupported("App.Rakazo.com", mac(["app.rakazo.com"]))).resolves.toBe(true);
-    await expect(passkeysSupported("app.rakazo.com", mac([]))).resolves.toBe(false);
-    await expect(passkeysSupported("app.rakazo.com", mac())).resolves.toBe(false);
-    await expect(passkeysSupported("app.rakazo.com", mac(new Error("ipc")))).resolves.toBe(false);
-    const selfHosted = { ...mac(["app.rakazo.com"]), host: "rakazo.example.com" };
+    await expect(passkeysSupported("app.doitx.ai", mac(["app.doitx.ai"]))).resolves.toBe(true);
+    await expect(passkeysSupported("App.Doitx.ai", mac(["app.doitx.ai"]))).resolves.toBe(true);
+    await expect(passkeysSupported("app.doitx.ai", mac([]))).resolves.toBe(false);
+    await expect(passkeysSupported("app.doitx.ai", mac())).resolves.toBe(false);
+    await expect(passkeysSupported("app.doitx.ai", mac(new Error("ipc")))).resolves.toBe(false);
+    const selfHosted = { ...mac(["app.doitx.ai"]), host: "rakazo.example.com" };
     await expect(passkeysSupported("rakazo.example.com", selfHosted)).resolves.toBe(false);
     expect(
       selfHosted.credential.isUserVerifyingPlatformAuthenticatorAvailable,
