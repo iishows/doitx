@@ -37,6 +37,7 @@ function bot(id = "bot-1"): Bot {
     disabledBuiltinTools: [],
     webhookConfigured: false,
     webhookCallbackUrl: null,
+    browserProxy: null,
     spawnKey: null,
   };
 }

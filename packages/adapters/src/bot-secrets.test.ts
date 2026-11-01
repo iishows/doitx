@@ -5,8 +5,10 @@ import type { PrismaClient } from "@rakazo/db";
 import * as Logging from "@rakazo/logging";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  botBrowserProxyRecordId,
   credentialArgument,
   encodeRunLogin,
+  loadBotBrowserProxy,
   loadLoginPasswordRedactions,
   loadRunLoginRedactions,
   normalizeSecretDestination,
@@ -1186,5 +1188,78 @@ describe("logins kept for one run", () => {
     const redacted = redactSecrets(forms.join("\n"), redactions);
     for (const form of forms) expect(redacted).not.toContain(form);
     expect(await loadRunLoginRedactions(prisma, secretStore, scope, "run-2")).toEqual([]);
+  });
+});
+
+describe("bot browser proxy", () => {
+  const proxyContext = {
+    ...scope,
+    operationId: "proxy",
+    traceId: "proxy",
+    signal: new AbortController().signal,
+  };
+
+  async function storedBot(overrides: Record<string, unknown> = {}) {
+    const sealed = await secretStore.put("user:secret", proxyContext, {
+      recordId: botBrowserProxyRecordId("bot-1"),
+    });
+    return {
+      id: "bot-1",
+      browserProxyEnabled: true,
+      browserProxyUrl: "socks5://proxy.example:1080",
+      browserProxyCiphertext: sealed.ciphertext,
+      ...overrides,
+    };
+  }
+
+  it("returns nothing when the bot has no proxy or it is disabled", async () => {
+    expect(
+      await loadBotBrowserProxy(secretStore, {
+        id: "bot-1",
+        browserProxyEnabled: false,
+        browserProxyUrl: "socks5://proxy.example:1080",
+        browserProxyCiphertext: null,
+      }),
+    ).toBeUndefined();
+    expect(
+      await loadBotBrowserProxy(secretStore, {
+        id: "bot-1",
+        browserProxyEnabled: true,
+        browserProxyUrl: null,
+        browserProxyCiphertext: null,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("decrypts the stored credentials for the launch", async () => {
+    const proxy = await loadBotBrowserProxy(secretStore, await storedBot());
+    expect(proxy).toEqual({
+      url: "socks5://proxy.example:1080",
+      username: "user",
+      password: "secret",
+    });
+  });
+
+  it("allows an enabled proxy with no credential", async () => {
+    const proxy = await loadBotBrowserProxy(secretStore, {
+      id: "bot-1",
+      browserProxyEnabled: true,
+      browserProxyUrl: "http://proxy.example:8080",
+      browserProxyCiphertext: null,
+    });
+    expect(proxy).toEqual({ url: "http://proxy.example:8080" });
+  });
+
+  it("refuses to fall back to a direct connection when the credential cannot be read", async () => {
+    // A silent fallback would browse from this host's real address, which is the
+    // exact leak the setting exists to prevent.
+    await expect(
+      loadBotBrowserProxy(secretStore, {
+        id: "bot-1",
+        browserProxyEnabled: true,
+        browserProxyUrl: "socks5://proxy.example:1080",
+        browserProxyCiphertext: "not-a-real-ciphertext",
+      }),
+    ).rejects.toThrow(/refusing to browse directly/);
   });
 });

@@ -595,6 +595,104 @@ class ControlArgvTest(unittest.TestCase):
             with self.subTest(argv=argv):
                 self.assertFalse(control.allowed_control_argv(argv, ":1"))
 
+    def test_accepts_proxy_env_between_the_profile_and_the_command(self):
+        for argv in (
+            [
+                "env",
+                "DISPLAY=:1",
+                f"RAKAZO_BROWSER_PROFILE={PROFILE}",
+                "RAKAZO_BROWSER_PROXY_UPSTREAM=socks5://1.2.3.4:1080",
+                "RAKAZO_BROWSER_PROXY_PORT=23456",
+                "rakazo-browser",
+                "https://example.test",
+            ],
+            [
+                "env",
+                "DISPLAY=:1",
+                f"RAKAZO_BROWSER_PROFILE={PROFILE}",
+                "RAKAZO_BROWSER_PROXY_UPSTREAM=http://proxy.test:3128",
+                "RAKAZO_BROWSER_PROXY_PORT=20001",
+                "RAKAZO_BROWSER_PROXY_USERNAME=user",
+                "RAKAZO_BROWSER_PROXY_PASSWORD=p@ss=word",
+                "rakazo-browser",
+                "https://example.test",
+            ],
+            [
+                "env",
+                "DISPLAY=:1",
+                f"RAKAZO_BROWSER_PROFILE={PROFILE}",
+                "RAKAZO_BROWSER_PROXY_UPSTREAM=socks5://1.2.3.4:1080",
+                "RAKAZO_BROWSER_PROXY_PORT=23456",
+                "xdg-open",
+                "https://example.test",
+            ],
+        ):
+            with self.subTest(argv=argv):
+                self.assertTrue(control.allowed_control_argv(argv, ":1"))
+
+    def test_proxy_env_needs_its_own_validation(self):
+        base = ["env", "DISPLAY=:1", f"RAKAZO_BROWSER_PROFILE={PROFILE}"]
+        for extra in (
+            # Only the supervisor's proxy names may appear.
+            ["LD_PRELOAD=/tmp/evil.so"],
+            ["RAKAZO_BROWSER_PROFILE_X=1"],
+            # A repeated name could shadow the first value.
+            [
+                "RAKAZO_BROWSER_PROXY_PORT=20001",
+                "RAKAZO_BROWSER_PROXY_PORT=20002",
+            ],
+            # Ports must be a real port, not a token the relay would misread.
+            ["RAKAZO_BROWSER_PROXY_PORT=99999"],
+            ["RAKAZO_BROWSER_PROXY_PORT=abc"],
+            # An empty value is not a set variable.
+            ["RAKAZO_BROWSER_PROXY_UPSTREAM="],
+        ):
+            before_profile = ["env", "DISPLAY=:1", *extra, "rakazo-browser", "https://example.test"]
+            with self.subTest(argv=before_profile):
+                self.assertFalse(control.allowed_control_argv(before_profile, ":1"))
+            after_profile = [*base, *extra, "rakazo-browser", "https://example.test"]
+            with self.subTest(argv=after_profile):
+                self.assertFalse(control.allowed_control_argv(after_profile, ":1"))
+
+    def test_proxy_env_without_the_supervisor_profile_is_rejected(self):
+        # A caller that supplies its own upstream without the supervisor's own
+        # profile marker would be able to route a launch it does not own.
+        for extra in (
+            ["RAKAZO_BROWSER_PROXY_UPSTREAM=socks5://1.2.3.4:1080"],
+            ["RAKAZO_BROWSER_PROXY_PORT=20001"],
+            ["RAKAZO_BROWSER_PROXY_USERNAME=user"],
+        ):
+            argv = ["env", "DISPLAY=:1", *extra, "rakazo-browser", "https://example.test"]
+            with self.subTest(argv=argv):
+                self.assertFalse(control.allowed_control_argv(argv, ":1"))
+
+    def test_rejects_a_non_browser_command_carrying_proxy_env(self):
+        argv = [
+            "env",
+            "DISPLAY=:1",
+            f"RAKAZO_BROWSER_PROFILE={PROFILE}",
+            "RAKAZO_BROWSER_PROXY_PORT=20001",
+            "bash",
+            "-c",
+            "id",
+        ]
+        self.assertFalse(control.allowed_control_argv(argv, ":1"))
+
+    def test_proxy_env_does_not_change_the_spawn_poll(self):
+        argv = [
+            "env",
+            "DISPLAY=:1",
+            f"RAKAZO_BROWSER_PROFILE={PROFILE}",
+            "RAKAZO_BROWSER_PROXY_UPSTREAM=socks5://1.2.3.4:1080",
+            "RAKAZO_BROWSER_PROXY_PORT=23456",
+            "rakazo-browser",
+            "https://example.test",
+        ]
+        self.assertEqual(control.control_command_index(argv), 5)
+        self.assertEqual(control.launch_spawn_poll_sec(argv), control.BROWSER_OPEN_POLL_SEC)
+        # The browser is long-lived; the proxy env must not change that.
+        self.assertTrue(control.is_long_lived_control(argv))
+
     def test_wrapped_browser_keeps_the_browser_spawn_poll(self):
         argv = ["env", "DISPLAY=:1", "rakazo-focus-or-launch", "rakazo-browser"]
         self.assertEqual(control.launch_spawn_poll_sec(argv), control.BROWSER_OPEN_POLL_SEC)
@@ -866,6 +964,108 @@ class ControlArgvTest(unittest.TestCase):
             finally:
                 if handle:
                     lib.rakazo_xcapture_close(handle)
+
+
+class BrowserProxyEnvTest(unittest.TestCase):
+    """The proxy env must reach the relay but never the browser it serves.
+
+    The upstream URL may embed credentials of its own, so unsetting only the
+    explicit username and password variables would still leak them.
+    """
+
+    def run_browser_script(self, env_extra, bin_dir, record):
+        fake_browser = bin_dir / "chromium"
+        fake_browser.write_text(
+            "#!/bin/sh\n"
+            # Write to a temp file and move it in, so a reader never sees a
+            # partially written record: the existence check below would
+            # otherwise race a file the redirect has created but not filled.
+            f'{{\n'
+            f'  env | grep -E "^RAKAZO_BROWSER_PROXY" | sort || :\n'
+            f'  echo "ARGV: $*"\n'
+            f'}} > "{record}.part"\n'
+            f'mv "{record}.part" "{record}"\n'
+        )
+        fake_browser.chmod(0o755)
+        # The relay path is container-only, so answer it with a stub that records
+        # the environment it inherited and then listens like a real relay.
+        shim = bin_dir / "python3"
+        shim.write_text(
+            "#!/bin/sh\n"
+            'if [ "$1" = "/usr/local/bin/browser-proxy-relay.py" ]; then\n'
+            f'  env | grep -E "^RAKAZO_BROWSER_PROXY" | sort > "{record}.relay.part"\n'
+            f'  mv "{record}.relay.part" "{record}.relay"\n'
+            '  exec "$REAL_PYTHON" -c \'import os,socket,time;'
+            "s=socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);"
+            's.bind(("127.0.0.1", int(os.environ["RAKAZO_BROWSER_PROXY_PORT"])));'
+            "s.listen(4); time.sleep(10)'\n"
+            "fi\n"
+            'exec "$REAL_PYTHON" "$@"\n'
+        )
+        shim.chmod(0o755)
+        env = {
+            **os.environ,
+            "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+            "REAL_PYTHON": sys.executable,
+            "HOME": str(bin_dir.parent / "home"),
+            "RAKAZO_BROWSER_PROFILE": str(bin_dir.parent / "profile"),
+            **env_extra,
+        }
+        script = Path(__file__).with_name("rakazo-browser")
+        proc = subprocess.Popen(
+            ["sh", str(script), "https://example.test"],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        try:
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline and not record.exists():
+                time.sleep(0.05)
+            self.assertTrue(record.exists(), "the browser was never launched")
+            return record.read_text()
+        finally:
+            proc.kill()
+            proc.wait()
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "needs a POSIX shell and /proc-free env")
+    def test_proxy_env_reaches_the_relay_but_not_the_browser(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            record = root / "record.txt"
+            listing = self.run_browser_script(
+                {
+                    "RAKAZO_BROWSER_PROXY_UPSTREAM": "http://alice:hunter2@127.0.0.1:9",
+                    "RAKAZO_BROWSER_PROXY_PORT": "24999",
+                    "RAKAZO_BROWSER_PROXY_USERNAME": "alice",
+                    "RAKAZO_BROWSER_PROXY_PASSWORD": "s3cret",
+                },
+                bin_dir,
+                record,
+            )
+            # The browser must be pointed at the loopback relay and must not hold
+            # any proxy variable, including one carrying embedded credentials.
+            self.assertIn("--proxy-server=http://127.0.0.1:24999", listing)
+            self.assertNotIn("RAKAZO_BROWSER_PROXY", listing)
+            self.assertNotIn("hunter2", listing)
+            self.assertNotIn("s3cret", listing)
+            # The relay still needs the credentials to authenticate upstream.
+            relay_env = Path(f"{record}.relay").read_text()
+            self.assertIn("RAKAZO_BROWSER_PROXY_UPSTREAM=http://alice:hunter2@127.0.0.1:9", relay_env)
+            self.assertIn("RAKAZO_BROWSER_PROXY_PASSWORD=s3cret", relay_env)
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "needs a POSIX shell")
+    def test_no_proxy_env_means_no_relay_and_no_proxy_flag(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            record = root / "record.txt"
+            listing = self.run_browser_script({}, bin_dir, record)
+            self.assertNotIn("--proxy-server", listing)
+            self.assertFalse(Path(f"{record}.relay").exists())
 
 
 class ScriptTest(unittest.TestCase):

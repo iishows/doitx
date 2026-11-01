@@ -108,6 +108,9 @@ function mapBot(
     disabledBuiltinTools?: string[];
     webhookSecretId?: string | null;
     webhookCallbackUrl?: string | null;
+    browserProxyEnabled?: boolean;
+    browserProxyUrl?: string | null;
+    browserProxyCiphertext?: string | null;
     spawnKey?: string | null;
   },
   preview = "",
@@ -155,6 +158,20 @@ function mapBot(
     disabledBuiltinTools: bot.disabledBuiltinTools ?? [],
     webhookConfigured: Boolean(bot.webhookSecretId),
     webhookCallbackUrl: bot.webhookCallbackUrl ?? null,
+    browserProxy:
+      bot.browserProxyUrl && bot.browserProxyEnabled
+        ? {
+            enabled: true,
+            url: bot.browserProxyUrl,
+            hasCredentials: Boolean(bot.browserProxyCiphertext),
+          }
+        : bot.browserProxyUrl
+          ? {
+              enabled: false,
+              url: bot.browserProxyUrl,
+              hasCredentials: Boolean(bot.browserProxyCiphertext),
+            }
+          : null,
     spawnKey: bot.spawnKey ?? null,
     incomingCall,
   };

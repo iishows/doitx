@@ -24,6 +24,18 @@ KNOWN_LAUNCH = frozenset(
 )
 # Focus-or-launch wraps KNOWN_LAUNCH launchers: rakazo-focus-or-launch <launcher> [uri].
 FOCUS_OR_LAUNCH = "rakazo-focus-or-launch"
+# Supervisor-owned browser env assignments sit between DISPLAY and the command:
+# env DISPLAY=:1 [RAKAZO_BROWSER_PROFILE=...] [RAKAZO_BROWSER_PROXY_*=...] <command>
+BROWSER_PROFILE_PREFIX = "RAKAZO_BROWSER_PROFILE="
+BROWSER_PROFILE_PATTERN = re.compile(r"/home/rakazo/\.browser-profiles/chromium-bot-[a-f0-9]{32}")
+PROXY_ENV_NAMES = frozenset(
+    {
+        "RAKAZO_BROWSER_PROXY_UPSTREAM",
+        "RAKAZO_BROWSER_PROXY_PORT",
+        "RAKAZO_BROWSER_PROXY_USERNAME",
+        "RAKAZO_BROWSER_PROXY_PASSWORD",
+    }
+)
 CONTROL_TIMEOUT_SEC = 10
 LAUNCH_SPAWN_POLL_SEC = 0.2
 # A live browser opens a URL in this process, then exits. rakazo-browser caps the
@@ -189,9 +201,51 @@ def _allowed_wheel(argv):
     )
 
 
+def is_supervisor_env_assignment(value):
+    """True for the profile and proxy assignments the supervisor owns."""
+    if value.startswith(BROWSER_PROFILE_PREFIX):
+        return True
+    name, separator, _ = value.partition("=")
+    return bool(separator) and name in PROXY_ENV_NAMES
+
+
 def control_command_index(argv):
-    """Locate the executable after the optional supervisor-owned browser profile."""
-    return 3 if len(argv) > 2 and argv[2].startswith("RAKAZO_BROWSER_PROFILE=") else 2
+    """Locate the executable after the optional supervisor-owned env assignments."""
+    index = 2
+    while index < len(argv) and is_supervisor_env_assignment(argv[index]):
+        index += 1
+    return index
+
+
+def allowed_browser_env(assignments):
+    """Validate the env block a browser launch may carry.
+
+    Callers pass argv[2:index]. The profile is the supervisor's own marker; the
+    proxy assignments only ride along with one, and each name appears at most
+    once so a caller cannot shadow an earlier value.
+    """
+    profiles = [
+        value.removeprefix(BROWSER_PROFILE_PREFIX)
+        for value in assignments
+        if value.startswith(BROWSER_PROFILE_PREFIX)
+    ]
+    if len(profiles) != 1 or BROWSER_PROFILE_PATTERN.fullmatch(profiles[0]) is None:
+        return False
+    seen = set()
+    for value in assignments:
+        name, separator, raw = value.partition("=")
+        if not separator:
+            return False
+        if name == BROWSER_PROFILE_PREFIX.rstrip("="):
+            continue
+        if name not in PROXY_ENV_NAMES or name in seen or not raw:
+            return False
+        seen.add(name)
+        if name.endswith("_PORT") and (
+            ASCII_INT.fullmatch(raw) is None or not 1 <= int(raw) <= 65535
+        ):
+            return False
+    return True
 
 
 def allowed_control_argv(argv, display):
@@ -206,9 +260,8 @@ def allowed_control_argv(argv, display):
     if index >= len(argv):
         return False
     command = argv[index]
-    if index == 3:
-        profile = argv[2].removeprefix("RAKAZO_BROWSER_PROFILE=")
-        if not re.fullmatch(r"/home/rakazo/\.browser-profiles/chromium-bot-[a-f0-9]{32}", profile):
+    if index > 2:
+        if not allowed_browser_env(argv[2:index]):
             return False
         if command not in ("xdg-open", "rakazo-browser", FOCUS_OR_LAUNCH):
             return False

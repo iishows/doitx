@@ -170,6 +170,31 @@ set `SANDBOX_COMPUTER_EGRESS=open`, recreate the supervisor, and run
 uninstall the host rules, which keep matching the still-named `rakazo-c*` bridges until
 removed.
 
+### Per-bot browser proxy
+
+A bot can browse through its own upstream proxy, set in the bot's settings, so several bots
+on one install (or on one shared computer) each leave from a different address. The setting
+covers the bot's browser only — its shell, `git`, and package managers are unaffected.
+
+Chromium cannot send proxy credentials itself, so each bot's launch starts a small loopback
+relay inside the computer that holds the credential and speaks either HTTP `CONNECT` or
+SOCKS5 to the real proxy. Supported schemes are `http`, `https`, `socks5`, and `socks5h`
+(`socks5` resolves names locally in the computer, `socks5h` at the proxy). Credentials are
+sealed at rest and never returned to the client; leaving the password blank keeps the stored
+one. The proxy is applied per bot at browser launch, from the relay's own port derived from
+that bot's browser profile, so bots sharing a computer never share a relay or an egress.
+
+Two operational notes:
+
+- **Egress restrictions.** The computer must be able to reach the proxy. A public proxy
+  address already passes the restricted-egress rules; a proxy on a private address (LAN, a
+  VPC, or the Docker host) needs `SANDBOX_COMPUTER_EGRESS=open`, since the ruleset drops
+  exactly that traffic.
+- **Failure is not silent.** If the configured proxy cannot be reached, or its stored
+  credential cannot be decrypted, the browser launch fails with an error rather than
+  connecting directly — a fallback would expose this host's real address, which is the thing
+  the setting exists to prevent. Clear the proxy setting to browse directly again.
+
 The ruleset requires Linux Docker Engine with the iptables backend; Docker Desktop, rootless
 Docker, and `firewall-backend: nftables` are unsupported. The
 `SANDBOX_SCREEN_NETWORK=internal` topology shares one network instead of per-bot bridges,

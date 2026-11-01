@@ -633,6 +633,12 @@ model Bot {
   webhookSecretId   String?
   // Optional callback receiving the bot's reply after a webhook-triggered run.
   webhookCallbackUrl String?
+  // Per-bot upstream proxy for this bot's browser only. The URL carries scheme,
+  // host and port but never credentials; the credential blob is sealed in
+  // browserProxyCiphertext so the plaintext password is never stored.
+  browserProxyEnabled    Boolean @default(false)
+  browserProxyUrl        String?
+  browserProxyCiphertext String?
   teamChatAmbientEnabled Boolean @default(false)
   teamChatRules          String  @default("")
   crossSpaceCommunication Boolean @default(false)

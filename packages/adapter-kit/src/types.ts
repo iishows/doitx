@@ -23,6 +23,21 @@ export interface AdapterContext {
   connectedConnections?: ConnectedConnector[];
   /** @deprecated Prefer connectedConnections so providers with the same app slug cannot collide. */
   connectedProviders?: string[];
+  /**
+   * Upstream proxy for this bot's browser only. Resolved by the caller that owns
+   * storage; adapters stay storage-agnostic and just forward it to the sandbox.
+   */
+  browserProxy?: BrowserProxySpec;
+}
+
+/**
+ * A resolved browser proxy. `url` carries scheme, host and port; the credential
+ * is kept separately and only ever sent to the sandbox that launches the browser.
+ */
+export interface BrowserProxySpec {
+  url: string;
+  username?: string;
+  password?: string;
 }
 
 export interface ConnectedConnector {

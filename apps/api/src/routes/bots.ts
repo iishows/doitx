@@ -1,9 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { ORPCError } from "@orpc/server";
 import { runContinueJob, runJobKey } from "@rakazo/adapter-kit";
+import type { AdapterContext, SecretStore } from "@rakazo/adapter-kit";
 import type { getBotSecretMetadata } from "@rakazo/adapters";
 import {
   archiveBot,
+  botBrowserProxyRecordId,
   cancelComputerRunWork,
   checkpointAndStopComputer,
   forgetBotSecret,
@@ -21,6 +23,7 @@ import {
 import type {
   Actor,
   Bot,
+  BotBrowserProxyInput,
   BotSecretMetadata,
   SettingsScope,
   VaultPutInput,
@@ -82,6 +85,45 @@ export function mapBotSecretInputError(error: unknown): unknown {
     return new ORPCError("BAD_REQUEST", { message: error.message });
   }
   return error;
+}
+
+/**
+ * Turn an incoming browser-proxy edit into Prisma update data. The credential
+ * lives in the sealed ciphertext column: an omitted or blank password keeps the
+ * stored one, and disabling the proxy keeps the row so the user can re-enable it.
+ */
+async function resolveBrowserProxyUpdate(
+  input: BotBrowserProxyInput | null | undefined,
+  options: { secrets: SecretStore; context: AdapterContext; existingCiphertext: string | null },
+): Promise<{
+  browserProxyEnabled?: boolean;
+  browserProxyUrl?: string | null;
+  browserProxyCiphertext?: string | null;
+}> {
+  if (input === undefined) return {};
+  if (input === null) {
+    return { browserProxyEnabled: false, browserProxyUrl: null, browserProxyCiphertext: null };
+  }
+  const password = input.password?.trim() ? input.password : undefined;
+  const username = input.username?.trim() ? input.username.trim() : undefined;
+  const needsCredential = password !== undefined || username !== undefined;
+  let ciphertext = options.existingCiphertext;
+  if (needsCredential) {
+    if (!password || !username) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "A proxy username and password must be set together",
+      });
+    }
+    const record = await options.secrets.put(`${username}:${password}`, options.context, {
+      recordId: botBrowserProxyRecordId(options.context.botId ?? ""),
+    });
+    ciphertext = record.ciphertext;
+  }
+  return {
+    browserProxyUrl: input.url,
+    browserProxyEnabled: input.enabled,
+    browserProxyCiphertext: ciphertext ?? null,
+  };
 }
 
 /** Map credential validation failures to a bad request without echoing the submitted value. */
@@ -350,6 +392,18 @@ export function botsRoutes(ctx: RouterContext) {
         });
         if (!modelChange.ok) throw new ORPCError("BAD_REQUEST", { message: modelChange.error });
         const thinkingLevel = input.thinkingLevel;
+        const browserProxyUpdate = await resolveBrowserProxyUpdate(input.browserProxy, {
+          secrets: deps.secrets,
+          context: {
+            operationId: `bot-proxy:${input.botId}`,
+            traceId: `bot-proxy:${input.botId}`,
+            spaceId: context.actor.spaceId,
+            userId: context.actor.userId,
+            botId: input.botId,
+            signal: context.signal ?? new AbortController().signal,
+          },
+          existingCiphertext: existing.browserProxyCiphertext ?? null,
+        });
         if (!existing.thread) throw new IsolationError();
         await commitBotUpdate({
           prisma: deps.prisma,
@@ -391,6 +445,7 @@ export function botsRoutes(ctx: RouterContext) {
             ...(input.webhookCallbackUrl !== undefined
               ? { webhookCallbackUrl: input.webhookCallbackUrl }
               : {}),
+            ...browserProxyUpdate,
           },
         }).catch((error) => {
           if (!(error instanceof InstructionConflictError)) throw error;

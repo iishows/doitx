@@ -418,6 +418,7 @@ export class DockerSandboxProvider implements SandboxProvider {
         actions,
         observe: request.observe,
         settleMs: clampRounded(request.settleMs ?? 0, 0, 5_000),
+        ...(context.browserProxy ? { browserProxy: context.browserProxy } : {}),
       }),
       signal: context.signal,
     });

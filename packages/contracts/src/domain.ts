@@ -127,6 +127,15 @@ export const BotSchema = z.object({
   webhookConfigured: z.boolean(),
   /** Optional URL receiving the bot's reply after a webhook-triggered run. */
   webhookCallbackUrl: z.string().nullable(),
+  /** Redacted browser proxy: the URL only, never the stored credential. */
+  browserProxy: z
+    .object({
+      enabled: z.boolean(),
+      url: z.string(),
+      /** Whether a username/password was stored; the secret itself is not sent. */
+      hasCredentials: z.boolean(),
+    })
+    .nullable(),
   /** Present when created with an idempotency key (e.g. onboarding:first). */
   spawnKey: z.string().nullable(),
   /** The bot is ringing the user right now. */
@@ -274,6 +283,63 @@ export type SpaceGroup = z.infer<typeof SpaceGroupSchema>;
 
 export const TEAM_CHAT_RULES_MAX_LENGTH = 4000;
 export const BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH = 2048;
+export const BOT_BROWSER_PROXY_URL_MAX_LENGTH = 1024;
+export const BOT_BROWSER_PROXY_USERNAME_MAX_LENGTH = 255;
+export const BOT_BROWSER_PROXY_PASSWORD_MAX_LENGTH = 512;
+
+/**
+ * Upstream proxies a bot's browser may use. `socks5`/`socks5h` differ only in
+ * where the hostname is resolved; a local relay sits in front of either.
+ */
+export const BotBrowserProxySchemeSchema = z.enum(["http", "https", "socks5", "socks5h"]);
+export type BotBrowserProxyScheme = z.infer<typeof BotBrowserProxySchemeSchema>;
+
+/**
+ * Scheme, host and port only. Credentials are never part of this value: they are
+ * sealed separately so the plaintext password is never stored or echoed back.
+ */
+export const BotBrowserProxyUrlSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(BOT_BROWSER_PROXY_URL_MAX_LENGTH)
+  .superRefine((value, ctx) => {
+    let parsed: URL;
+    try {
+      parsed = new URL(value);
+    } catch {
+      ctx.addIssue({ code: "custom", message: "Proxy URL must be a valid absolute URL" });
+      return;
+    }
+    if (!BotBrowserProxySchemeSchema.safeParse(parsed.protocol.replace(/:$/, "")).success) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Proxy URL scheme must be http, https, socks5 or socks5h",
+      });
+    }
+    if (!parsed.hostname) {
+      ctx.addIssue({ code: "custom", message: "Proxy URL must include a host" });
+    }
+    if (!parsed.port) {
+      ctx.addIssue({ code: "custom", message: "Proxy URL must include a port" });
+    }
+    if (parsed.username || parsed.password) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Proxy credentials belong in the username and password fields",
+      });
+    }
+  });
+
+export const BotBrowserProxyInputSchema = z.object({
+  enabled: z.boolean(),
+  url: BotBrowserProxyUrlSchema,
+  username: z.string().trim().max(BOT_BROWSER_PROXY_USERNAME_MAX_LENGTH).optional(),
+  /** Write-only: omitted or empty means "keep the stored credential". */
+  password: z.string().max(BOT_BROWSER_PROXY_PASSWORD_MAX_LENGTH).optional(),
+});
+export type BotBrowserProxyInput = z.infer<typeof BotBrowserProxyInputSchema>;
+
 export const AutomatedSenderPolicyModeSchema = z.enum(["ignore", "rollup", "action", "user"]);
 export type AutomatedSenderPolicyMode = z.infer<typeof AutomatedSenderPolicyModeSchema>;
 
@@ -431,6 +497,8 @@ export const UpdateBotInput = z
       .max(BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH)
       .nullable()
       .optional(),
+    /** Browser-only upstream proxy for this bot. Null clears it. */
+    browserProxy: BotBrowserProxyInputSchema.nullable().optional(),
   })
   .superRefine((value, ctx) => {
     if (value.webhookCallbackUrl) {

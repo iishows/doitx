@@ -1084,6 +1084,10 @@ msgstr "浏览"
 msgid "Browse MCP servers"
 msgstr "浏览 MCP 服务器"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Browser proxy"
+msgstr "浏览器代理"
+
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Built-in"
@@ -3015,8 +3019,8 @@ msgid "Get a free month for each friend who starts a trial."
 msgstr "每有一位朋友开始试用，你就能获得一个月免费。"
 
 #: src/components/SidebarFooter.tsx
-msgid "Get the mobile app"
-msgstr "获取移动应用"
+#~ msgid "Get the mobile app"
+#~ msgstr "获取移动应用"
 
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
@@ -3152,6 +3156,10 @@ msgstr "如何检查"
 #: src/components/SignupSurvey.tsx
 msgid "How will you use Doitx?"
 msgstr "你打算如何使用 Doitx？"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "http, https, socks5 or socks5h. Only this bot's browser uses it, so bots on the same computer keep separate addresses."
+msgstr "支持 http、https、socks5 或 socks5h。仅该机器人的浏览器走此代理，因此共用同一台电脑的机器人各自保持独立出口地址。"
 
 #: src/pages/shell/computer-release-actions.tsx
 msgid "I’m done"
@@ -3366,6 +3374,10 @@ msgstr "稍后"
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Leave"
 msgstr "退出"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Leave blank to keep it"
+msgstr "留空则保留原值"
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Let bots use this computer"
@@ -4316,6 +4328,7 @@ msgstr "通行密钥"
 #: src/components/VaultSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/shell/bot-panel.tsx
 msgid "Password"
 msgstr "密码"
 
@@ -4515,6 +4528,18 @@ msgstr "提供方"
 #: src/pages/model-settings/providers-section.tsx
 msgid "Providers"
 msgstr "提供方"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Proxy password"
+msgstr "代理密码"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Proxy URL"
+msgstr "代理地址"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Proxy username"
+msgstr "代理用户名"
 
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
@@ -5205,6 +5230,10 @@ msgstr "发送录音"
 #: src/pages/Auth.tsx
 msgid "Send reset link"
 msgstr "发送重置链接"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Send this bot's browser through a proxy"
+msgstr "让该机器人的浏览器走代理"
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Send with Enter"
@@ -6192,6 +6221,7 @@ msgstr "用户 peer"
 
 #: src/components/AskCard.tsx
 #: src/components/VaultSettings.tsx
+#: src/pages/shell/bot-panel.tsx
 msgid "Username"
 msgstr "用户名"
 

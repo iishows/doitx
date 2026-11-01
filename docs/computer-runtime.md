@@ -57,6 +57,11 @@ The web and desktop computer view opens a terminal and a file browser from a doc
 - Providers opt in through `SandboxProvider.connectTerminal`. Docker, E2B, Daytona, and Boat support it. Host (`desktop`) computers never expose a browser shell; other computers without it show only Activity.
 - The fake provider serves an emulated shell from a loopback websocket gateway that speaks the same frame protocol. Tests can then drive the browser terminal through the sealed capability and web proxy without exposing a host shell.
 
+**Browser proxy**
+- A bot can be configured to browse through an upstream proxy (see "Per-bot browser proxy" in `self-host.md`). Because Chromium cannot carry proxy credentials, the launch starts `browser-proxy-relay.py` on `127.0.0.1` inside the computer and passes `--proxy-server=http://127.0.0.1:<port>` instead.
+- The relay port is derived from the bot's browser profile path, so two bots sharing one computer get separate relays. Loopback stays direct, so CDP and the screen path never traverse the upstream proxy.
+- The relay is launched with the browser by `rakazo-browser` and stopped when the browser exits; only that bot's browser is affected.
+
 **Files**
 - Browsing and text preview work on stopped computers through the stored workspace.
 - While the Files window is visible, the open folder refreshes every few seconds and after each bot command, so changes from a shell or the bot appear without reopening.

@@ -29,6 +29,7 @@ import {
   computerControlTimeoutMs,
   containerActionStep,
   containerActionSteps,
+  browserProxyRelayPort,
   controlHandlesActions,
   createDockerStreamDemuxer,
   currentComputerScreens,
@@ -517,6 +518,42 @@ describe("sandbox supervisor input containment", () => {
         ],
       },
     ]);
+  });
+
+  it("carries the bot's browser proxy only on browser launches", () => {
+    const profile = browserProfilePathForScreen("writer");
+    const proxy = { url: "socks5://proxy.example:1080", username: "u", password: "p" };
+    const launch = { kind: "launch" as const, application: "chromium", uri: "https://example.com" };
+    const step = containerActionSteps([launch], ":2", profile, proxy)[0]!;
+    const argv = "argv" in step ? step.argv : [];
+    expect(argv).toContain("RAKAZO_BROWSER_PROXY_UPSTREAM=socks5://proxy.example:1080");
+    expect(argv).toContain("RAKAZO_BROWSER_PROXY_USERNAME=u");
+    expect(argv).toContain("RAKAZO_BROWSER_PROXY_PASSWORD=p");
+    expect(argv.some((entry) => entry.startsWith("RAKAZO_BROWSER_PROXY_PORT="))).toBe(true);
+    // The port is derived from the profile, so one bot's relay never collides
+    // with another bot's on a shared computer.
+    expect(browserProxyRelayPort(profile)).toBe(
+      browserProxyRelayPort(browserProfilePathForScreen("writer")),
+    );
+    expect(browserProxyRelayPort(profile)).not.toBe(
+      browserProxyRelayPort(browserProfilePathForScreen("other")),
+    );
+
+    // A non-browser step must not receive the proxy.
+    const focusing = containerActionSteps(
+      [{ kind: "focus", application: "xterm" }],
+      ":2",
+      profile,
+      proxy,
+    )[0]!;
+    expect("argv" in focusing ? focusing.argv.join(" ") : "").not.toContain("RAKAZO_BROWSER_PROXY");
+  });
+
+  it("leaves browser argv unchanged when no proxy is configured", () => {
+    const profile = browserProfilePathForScreen("writer");
+    const launch = { kind: "launch" as const, application: "chromium", uri: "https://example.com" };
+    const step = containerActionSteps([launch], ":2", profile)[0]!;
+    expect("argv" in step ? step.argv.join(" ") : "").not.toContain("RAKAZO_BROWSER_PROXY");
   });
 
   it("falls back to docker-exec when computer control fails", async () => {

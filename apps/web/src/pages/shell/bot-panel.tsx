@@ -8,6 +8,7 @@ import type {
   ThinkingLevel,
 } from "@rakazo/contracts";
 import {
+  BOT_BROWSER_PROXY_URL_MAX_LENGTH,
   BOT_COMPUTER_MODES,
   BOT_DESCRIPTION_MAX_LENGTH,
   BOT_NAME_MAX_LENGTH,
@@ -185,6 +186,17 @@ export function BotSettings({
   // The URL the server last accepted, so a rejection can restore it and an
   // external update does not overwrite typing that is still unsaved.
   const savedWebhookCallbackUrlRef = useRef(bot.webhookCallbackUrl ?? "");
+  // The stored credential is never sent back, so an empty password field means
+  // "keep what is saved" rather than "clear it".
+  const [proxyEnabled, setProxyEnabled] = useState(bot.browserProxy?.enabled ?? false);
+  const [proxyUrl, setProxyUrl] = useState(bot.browserProxy?.url ?? "");
+  const [proxyUsername, setProxyUsername] = useState("");
+  const [proxyPassword, setProxyPassword] = useState("");
+  const savedProxyRef = useRef({
+    enabled: bot.browserProxy?.enabled ?? false,
+    url: bot.browserProxy?.url ?? "",
+    hasCredentials: bot.browserProxy?.hasCredentials ?? false,
+  });
   const [modelKey, setModelKey] = useState(
     bot.modelProvider && bot.modelId ? modelOptionKey(bot.modelProvider, bot.modelId) : "",
   );
@@ -375,6 +387,12 @@ export function BotSettings({
 
       if (nextName) setName(nextName);
       setDescription(nextDescription);
+      const savedProxy = savedProxyRef.current;
+      const proxyChanged =
+        proxyEnabled !== savedProxy.enabled ||
+        proxyUrl.trim() !== savedProxy.url ||
+        Boolean(proxyUsername.trim()) ||
+        Boolean(proxyPassword);
       const patch = {
         ...(nextName && nextName !== savedNameRef.current.trim() ? { name: nextName } : {}),
         // Keep untouched profile fields off the wire.
@@ -393,6 +411,19 @@ export function BotSettings({
         // An emptied box clears the callback rather than saving a blank URL.
         ...(webhookCallbackUrl.trim() !== savedWebhookCallbackUrlRef.current
           ? { webhookCallbackUrl: webhookCallbackUrl.trim() || null }
+          : {}),
+        ...(proxyChanged
+          ? {
+              browserProxy: proxyUrl.trim()
+                ? {
+                    enabled: proxyEnabled,
+                    url: proxyUrl.trim(),
+                    // Blank means "keep the stored credential".
+                    ...(proxyUsername.trim() ? { username: proxyUsername.trim() } : {}),
+                    ...(proxyPassword ? { password: proxyPassword } : {}),
+                  }
+                : null,
+            }
           : {}),
         modelProvider: selected?.provider ?? null,
         modelId: selected?.modelId ?? null,
@@ -447,6 +478,16 @@ export function BotSettings({
       if (nextName) savedNameRef.current = nextName;
       savedDescriptionRef.current = nextDescription;
       savedWebhookCallbackUrlRef.current = webhookCallbackUrl.trim();
+      if (proxyChanged) {
+        savedProxyRef.current = {
+          enabled: proxyEnabled,
+          url: proxyUrl.trim(),
+          hasCredentials:
+            savedProxy.hasCredentials || Boolean(proxyUsername.trim()) || Boolean(proxyPassword),
+        };
+      }
+      setProxyUsername("");
+      setProxyPassword("");
       setSavedAdvanced(
         JSON.stringify([modelKey, thinkingLevel, computerMode, memoryScope, autoSpeak, voiceId]),
       );
@@ -788,6 +829,80 @@ export function BotSettings({
                     the bot's webhook secret.
                   </Trans>
                 </p>
+              </div>
+            </SettingsGroup>
+            <SettingsGroup label={t`Browser proxy`} plain>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label htmlFor={`${ids}-browser-proxy-enabled`} className={rowLabelClass}>
+                    <Trans>Send this bot's browser through a proxy</Trans>
+                  </label>
+                  <Switch
+                    id={`${ids}-browser-proxy-enabled`}
+                    checked={proxyEnabled}
+                    disabled={saving || !proxyUrl.trim()}
+                    onCheckedChange={(checked) => {
+                      setProxyEnabled(checked);
+                      void enqueueSave();
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor={`${ids}-browser-proxy-url`} className={rowLabelClass}>
+                    <Trans>Proxy URL</Trans>
+                  </label>
+                  <Input
+                    id={`${ids}-browser-proxy-url`}
+                    aria-label={t`Proxy URL`}
+                    inputMode="url"
+                    value={proxyUrl}
+                    maxLength={BOT_BROWSER_PROXY_URL_MAX_LENGTH}
+                    onChange={(e) => setProxyUrl(e.target.value)}
+                    onBlur={() => void enqueueSave()}
+                    placeholder="socks5://proxy.example.com:1080"
+                    disabled={saving}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <Trans>
+                      http, https, socks5 or socks5h. Only this bot's browser uses it, so bots on the
+                      same computer keep separate addresses.
+                    </Trans>
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label htmlFor={`${ids}-browser-proxy-username`} className={rowLabelClass}>
+                      <Trans>Username</Trans>
+                    </label>
+                    <Input
+                      id={`${ids}-browser-proxy-username`}
+                      aria-label={t`Proxy username`}
+                      autoComplete="off"
+                      value={proxyUsername}
+                      onChange={(e) => setProxyUsername(e.target.value)}
+                      onBlur={() => void enqueueSave()}
+                      disabled={saving}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor={`${ids}-browser-proxy-password`} className={rowLabelClass}>
+                      <Trans>Password</Trans>
+                    </label>
+                    <Input
+                      id={`${ids}-browser-proxy-password`}
+                      aria-label={t`Proxy password`}
+                      type="password"
+                      autoComplete="new-password"
+                      value={proxyPassword}
+                      onChange={(e) => setProxyPassword(e.target.value)}
+                      onBlur={() => void enqueueSave()}
+                      placeholder={
+                        savedProxyRef.current.hasCredentials ? t`Leave blank to keep it` : ""
+                      }
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
               </div>
             </SettingsGroup>
             <InstructionSettings key={bot.id} bot={bot} />

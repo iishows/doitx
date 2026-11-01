@@ -1084,6 +1084,10 @@ msgstr ""
 msgid "Browse MCP servers"
 msgstr ""
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Browser proxy"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Built-in"
@@ -3015,8 +3019,8 @@ msgid "Get a free month for each friend who starts a trial."
 msgstr "Ganhe um mês grátis para cada amigo que iniciar um teste."
 
 #: src/components/SidebarFooter.tsx
-msgid "Get the mobile app"
-msgstr "Baixar o aplicativo móvel"
+#~ msgid "Get the mobile app"
+#~ msgstr "Baixar o aplicativo móvel"
 
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
@@ -3151,6 +3155,10 @@ msgstr "Como verificar"
 
 #: src/components/SignupSurvey.tsx
 msgid "How will you use Doitx?"
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "http, https, socks5 or socks5h. Only this bot's browser uses it, so bots on the same computer keep separate addresses."
 msgstr ""
 
 #: src/pages/shell/computer-release-actions.tsx
@@ -3365,6 +3373,10 @@ msgstr ""
 
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Leave"
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Leave blank to keep it"
 msgstr ""
 
 #: src/components/ComputerDeviceSettings.tsx
@@ -4316,6 +4328,7 @@ msgstr "Chaves de acesso"
 #: src/components/VaultSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/shell/bot-panel.tsx
 msgid "Password"
 msgstr "Senha"
 
@@ -4515,6 +4528,18 @@ msgstr "Provedor"
 #: src/pages/model-settings/providers-section.tsx
 msgid "Providers"
 msgstr "Provedores"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Proxy password"
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Proxy URL"
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Proxy username"
+msgstr ""
 
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
@@ -5205,6 +5230,10 @@ msgstr ""
 #: src/pages/Auth.tsx
 msgid "Send reset link"
 msgstr "Enviar link de redefinição"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Send this bot's browser through a proxy"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Send with Enter"
@@ -6192,6 +6221,7 @@ msgstr ""
 
 #: src/components/AskCard.tsx
 #: src/components/VaultSettings.tsx
+#: src/pages/shell/bot-panel.tsx
 msgid "Username"
 msgstr ""
 

@@ -51,6 +51,7 @@ import { PARTIAL_REPLY_NOTE } from "./automated-messages.js";
 import { loadBotMessageContext } from "./bot-messages.js";
 import {
   commandCredentialRedactions,
+  loadBotBrowserProxy,
   loadBotCommandEnvironment,
   loadLoginPasswordRedactions,
   loadRunLoginRedactions,
@@ -547,6 +548,9 @@ export function createRunExecutor(deps: ExecutorDeps) {
           storedConnections,
           connectedComposio.map((connection) => connection.provider),
         );
+        // The bot's browser proxy, if any, travels with this run's context so only
+        // this bot's browser egress is affected.
+        const browserProxy = await loadBotBrowserProxy(deps.secretStore, bot);
         const context = {
           operationId: runId,
           traceId: runId,
@@ -556,6 +560,7 @@ export function createRunExecutor(deps: ExecutorDeps) {
           runId,
           screenLeaseId: screenLeaseIdForRun(computerLease, runId, fence),
           signal: runAbortController.signal,
+          ...(browserProxy ? { browserProxy } : {}),
           ...connectedContext(connectedPlugins),
           connectedProviders: connectedComposio.map((row) => row.provider),
         };

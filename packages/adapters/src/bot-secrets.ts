@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { SecretStore } from "@rakazo/adapter-kit";
+import type { BrowserProxySpec, SecretStore } from "@rakazo/adapter-kit";
 import type {
   BotSecretDestination,
   LoginField,
@@ -195,6 +195,51 @@ export async function loadBotCommandEnvironment(
     if (value && !value.includes("\0")) environment[variable] = value;
   }
   return environment;
+}
+
+/**
+ * The secret-store record id for a bot's browser proxy credential. The write path
+ * and the read path must agree on this, so it lives in one place.
+ */
+export function botBrowserProxyRecordId(botId: string): string {
+  return `bot-browser-proxy:${botId}`;
+}
+
+/**
+ * The browser proxy configured for one bot, with its credential decrypted. Only
+ * this bot's browser is routed through it, so a computer shared by several bots
+ * still gives each one its own egress.
+ *
+ * An enabled proxy whose credential cannot be read is an error rather than a
+ * silent direct connection: falling back would leak the host's real address,
+ * which is the thing the setting exists to avoid.
+ */
+export async function loadBotBrowserProxy(
+  secretStore: Pick<SecretStore, "load">,
+  bot: {
+    id: string;
+    browserProxyEnabled: boolean;
+    browserProxyUrl: string | null;
+    browserProxyCiphertext: string | null;
+  },
+): Promise<BrowserProxySpec | undefined> {
+  if (!bot.browserProxyEnabled || !bot.browserProxyUrl) return undefined;
+  const spec: BrowserProxySpec = { url: bot.browserProxyUrl };
+  if (!bot.browserProxyCiphertext) return spec;
+  let credential: string;
+  try {
+    credential = await secretStore.load(bot.browserProxyCiphertext, botBrowserProxyRecordId(bot.id));
+  } catch {
+    throw new Error(
+      `Cannot read the stored browser proxy credential for bot ${bot.id}; refusing to browse directly`,
+    );
+  }
+  const separator = credential.indexOf(":");
+  if (separator > 0) {
+    spec.username = credential.slice(0, separator);
+    spec.password = credential.slice(separator + 1);
+  }
+  return spec;
 }
 
 /**

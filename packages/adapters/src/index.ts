@@ -13,9 +13,11 @@ export * from "./boat-sandbox.js";
 export * from "./bot-avatar.js";
 export * from "./bot-messages.js";
 export {
+  botBrowserProxyRecordId,
   forgetBotSecret,
   getBotSecretMetadata,
   listBotSecretMetadata,
+  loadBotBrowserProxy,
   normalizeSecretDestination,
   pageUrlOrigin,
   revealBotSecret,

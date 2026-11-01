@@ -22,7 +22,7 @@ export {
   stopExtraScreenCommand,
 } from "@rakazo/core/node/desktop-runtime";
 
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import { pathToFileURL } from "node:url";
@@ -89,6 +89,17 @@ export const computerActionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("launch"), application: z.string(), uri: z.string().optional() }),
   z.object({ kind: z.literal("focus"), application: z.string(), uri: z.string().optional() }),
 ]);
+
+/**
+ * Per-bot browser proxy, supplied by the API at action time. The supervisor has
+ * no database, so it only ever receives an already-resolved value.
+ */
+export const browserProxySchema = z.object({
+  url: z.string().url(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+});
+export type BrowserProxySpec = z.infer<typeof browserProxySchema>;
 
 export { BROWSER_APPLICATIONS as DOCKER_BROWSER_ALIASES } from "@rakazo/core/node/desktop-runtime";
 
@@ -491,13 +502,39 @@ export async function withKeyedLock<T>(
   }
 }
 
-/** X11 wheel buttons: up, down, left and right. */
+/** X11 wheel buttons: up, down, left, right. */
 const WHEEL_BUTTONS = { up: "4", down: "5", left: "6", right: "7" } as const;
+
+/**
+ * Upstream proxy env for a browser launch. The loopback port is derived from the
+ * bot's profile so the launcher and any teardown agree without discovery, and so
+ * two bots sharing one computer never collide.
+ */
+export function browserProxyEnv(
+  proxy: BrowserProxySpec | undefined,
+  browserProfile?: string,
+): string[] {
+  if (!proxy?.url || !browserProfile) return [];
+  const port = browserProxyRelayPort(browserProfile);
+  return [
+    `RAKAZO_BROWSER_PROXY_UPSTREAM=${proxy.url}`,
+    `RAKAZO_BROWSER_PROXY_PORT=${port}`,
+    ...(proxy.username ? [`RAKAZO_BROWSER_PROXY_USERNAME=${proxy.username}`] : []),
+    ...(proxy.password ? [`RAKAZO_BROWSER_PROXY_PASSWORD=${proxy.password}`] : []),
+  ];
+}
+
+/** Stable loopback port for a bot's relay, kept in the ephemeral range. */
+export function browserProxyRelayPort(browserProfile: string): number {
+  const digest = createHash("sha256").update(browserProfile).digest();
+  return 20000 + (digest.readUInt32BE(0) % 10000);
+}
 
 export function containerActionStep(
   action: z.infer<typeof computerActionSchema>,
   display = ":1",
   browserProfile?: string,
+  browserProxy?: BrowserProxySpec,
 ): { argv: string[] } | { waitMs: number } {
   if (action.kind === "wait") {
     return { waitMs: Math.min(Math.max(action.ms, 0), 5_000) };
@@ -529,6 +566,7 @@ export function containerActionStep(
       "env",
       `DISPLAY=${display}`,
       ...(browserProfile ? [`RAKAZO_BROWSER_PROFILE=${browserProfile}`] : []),
+      ...browserProxyEnv(browserProxy, browserProfile),
       isHttpUrl ? "xdg-open" : "rakazo-browser",
       target,
     ];
@@ -538,6 +576,7 @@ export function containerActionStep(
       "env",
       `DISPLAY=${display}`,
       ...(browser && browserProfile ? [`RAKAZO_BROWSER_PROFILE=${browserProfile}`] : []),
+      ...(browser ? browserProxyEnv(browserProxy, browserProfile) : []),
       // focus routes through the image wrapper, which raises a matching window
       // by WM_CLASS or execs the allowlisted launcher to spawn one.
       ...(action.kind === "focus" ? ["rakazo-focus-or-launch"] : []),
@@ -574,8 +613,11 @@ export function containerActionSteps(
   actions: Array<z.infer<typeof computerActionSchema>>,
   display = ":1",
   browserProfile?: string,
+  browserProxy?: BrowserProxySpec,
 ) {
-  return actions.map((action) => containerActionStep(action, display, browserProfile));
+  return actions.map((action) =>
+    containerActionStep(action, display, browserProfile, browserProxy),
+  );
 }
 
 export function normalizeWorkspaceRelative(value: string) {

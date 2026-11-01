@@ -440,7 +440,58 @@ fi
 # WebGL still needs SwiftShader: --disable-software-rasterizer blocks it, and
 # current Chromium allows that fallback only with --enable-unsafe-swiftshader.
 FLAGS="--test-type --no-sandbox --disable-dev-shm-usage --disable-gpu --enable-unsafe-swiftshader --no-first-run --no-default-browser-check --disable-session-crashed-bubble --hide-crash-restore-bubble --password-store=basic --restore-last-session --start-maximized --remote-debugging-address=127.0.0.1 --remote-debugging-port=$DEBUG_PORT"
-if [ "$USER_DATA_DIR_SET" -eq 0 ]; then
-  exec "$BIN" $FLAGS --user-data-dir="$PROFILE" "$@"
+
+# Per-bot upstream proxy. Chromium cannot carry proxy credentials, so a loopback
+# relay holds them and Chromium is pointed at the relay. Only this bot's browser
+# is affected; a bare `--proxy-server` on the host would leak across the bots
+# that share one computer.
+RELAY_PID=""
+if [ -n "${RAKAZO_BROWSER_PROXY_UPSTREAM:-}" ] && [ -n "${RAKAZO_BROWSER_PROXY_PORT:-}" ]; then
+  # The relay needs the whole proxy env, but it must not reach the browser or
+  # anything the bot later runs. Keep the port in a shell variable, then drop
+  # every proxy variable: the upstream URL may embed credentials of its own, so
+  # unsetting only the explicit ones would still leak them.
+  RELAY_PORT="$RAKAZO_BROWSER_PROXY_PORT"
+  python3 /usr/local/bin/browser-proxy-relay.py &
+  RELAY_PID=$!
+  unset RAKAZO_BROWSER_PROXY_UPSTREAM RAKAZO_BROWSER_PROXY_PORT \
+    RAKAZO_BROWSER_PROXY_USERNAME RAKAZO_BROWSER_PROXY_PASSWORD
+  # Bound the wait so a relay that cannot start does not stall the launch.
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    kill -0 "$RELAY_PID" 2>/dev/null || { echo "browser proxy relay exited during startup" >&2; RELAY_PID=""; break; }
+    python3 -c 'import socket,sys; s=socket.socket(); s.settimeout(0.2); sys.exit(0 if s.connect_ex(("127.0.0.1", int(sys.argv[1]))) == 0 else 1)' "$RELAY_PORT" 2>/dev/null && break
+    sleep 0.2
+  done
+  # Loopback stays direct (Chromium bypasses it by default); the upstream proxy
+  # therefore never sees CDP or the screen path.
+  FLAGS="$FLAGS --proxy-server=http://127.0.0.1:$RELAY_PORT"
 fi
-exec "$BIN" $FLAGS "$@"
+
+reap_relay() {
+  if [ -n "$RELAY_PID" ]; then
+    kill "$RELAY_PID" 2>/dev/null || true
+    wait "$RELAY_PID" 2>/dev/null || true
+  fi
+}
+
+if [ "$USER_DATA_DIR_SET" -eq 0 ]; then
+  if [ -z "$RELAY_PID" ]; then
+    exec "$BIN" $FLAGS --user-data-dir="$PROFILE" "$@"
+  fi
+  "$BIN" $FLAGS --user-data-dir="$PROFILE" "$@" &
+  BROWSER_PID=$!
+else
+  if [ -z "$RELAY_PID" ]; then
+    exec "$BIN" $FLAGS "$@"
+  fi
+  "$BIN" $FLAGS "$@" &
+  BROWSER_PID=$!
+fi
+
+# Without a relay we exec'd above, so reaching here means one is running and must
+# not outlive the browser it serves.
+trap reap_relay EXIT INT TERM
+wait "$BROWSER_PID"
+STATUS=$?
+reap_relay
+exit "$STATUS"

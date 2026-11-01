@@ -68,8 +68,10 @@ import {
   ComputerControlUnavailableError,
   clearComputerScreenRegistry,
   completeWarmReleasedScreen,
+  browserProxySchema,
   computerActionSchema,
   computerCommandEnv,
+  type BrowserProxySpec,
   computerControlTimeoutMs,
   containerActionSteps,
   controlHandlesActions,
@@ -674,6 +676,7 @@ app.post("/computers/:id/actions", async (c) => {
       actions: z.array(computerActionSchema).max(24),
       observe: z.boolean().optional(),
       settleMs: z.number().min(0).max(5_000).optional(),
+      browserProxy: browserProxySchema.optional(),
     })
     .parse(await c.req.json());
   try {
@@ -697,13 +700,20 @@ app.post("/computers/:id/actions", async (c) => {
               browserProfile,
               body.observe !== false,
               body.settleMs ?? 0,
+              body.browserProxy,
             )
         : undefined,
     );
     if (attempt.status === "failed") throw attempt.error;
     const controlResult = attempt.status === "ok" ? attempt.value : undefined;
     if (shouldReplayComputerActions(attempt) && body.actions.length)
-      await applyContainerActions(container, body.actions, layout.display, browserProfile);
+      await applyContainerActions(
+        container,
+        body.actions,
+        layout.display,
+        browserProfile,
+        body.browserProxy,
+      );
     if (shouldReplayComputerActions(attempt) && body.settleMs)
       await new Promise((resolve) => setTimeout(resolve, body.settleMs));
     return c.json({
@@ -1546,6 +1556,7 @@ export async function controlDesktop(
   browserProfile: string,
   observe: boolean,
   settleMs: number,
+  browserProxy?: BrowserProxySpec,
 ) {
   const signal = AbortSignal.timeout(computerControlTimeoutMs(actions, settleMs));
   let response: Response;
@@ -1560,7 +1571,7 @@ export async function controlDesktop(
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        steps: containerActionSteps(actions, display, browserProfile),
+        steps: containerActionSteps(actions, display, browserProfile, browserProxy),
         display,
         observe,
         settleMs,
@@ -2105,6 +2116,7 @@ async function applyContainerActions(
   actions: Array<z.infer<typeof computerActionSchema>>,
   display = ":1",
   browserProfile?: string,
+  browserProxy?: BrowserProxySpec,
 ) {
   const script = [
     "import json, subprocess, sys, time",
@@ -2118,7 +2130,7 @@ async function applyContainerActions(
     "python3",
     "-c",
     script,
-    JSON.stringify(containerActionSteps(actions, display, browserProfile)),
+    JSON.stringify(containerActionSteps(actions, display, browserProfile, browserProxy)),
   ]);
   if (result.code !== 0) throw new Error(result.stderr || "computer action failed");
 }

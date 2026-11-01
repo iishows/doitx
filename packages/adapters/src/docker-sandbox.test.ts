@@ -106,6 +106,35 @@ describe("Docker sandbox", () => {
     });
   });
 
+  it("sends the bot's browser proxy with computer actions only when one is set", async () => {
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        Response.json({ completed: 1 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new DockerSandboxProvider("http://supervisor.test", "test-token");
+    const computer = {
+      id: "computer",
+      botId: "bot",
+      kind: "docker" as const,
+      providerRef: "computer",
+    };
+
+    await provider.act(computer, { actions: [{ kind: "open", path: "https://example.com" }] }, {
+      ...context,
+      browserProxy: { url: "socks5://proxy.example:1080", username: "u", password: "p" },
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      browserProxy: { url: "socks5://proxy.example:1080", username: "u", password: "p" },
+    });
+
+    // Without a proxy the field is absent, so a bot with none is unaffected.
+    await provider.act(computer, { actions: [{ kind: "open", path: "https://example.com" }] }, context);
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).not.toHaveProperty(
+      "browserProxy",
+    );
+  });
+
   it("yields stdout from a streaming exec before the command exits", async () => {
     let releaseExit: () => void = () => undefined;
     const exitGate = new Promise<void>((resolve) => {
