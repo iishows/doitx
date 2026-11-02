@@ -29,7 +29,10 @@ export type AccountExportStores = {
   home: Pick<AgentHomeStore, "exportHome">;
 };
 
-type ArchiveFile = { path: string; data: AsyncIterable<Uint8Array> | Iterable<Uint8Array> };
+export type ArchiveFile = {
+  path: string;
+  data: AsyncIterable<Uint8Array> | Iterable<Uint8Array>;
+};
 
 const encoder = new TextEncoder();
 /** Records are batched into chunks about this size, so deflate is not fed one line at a time. */

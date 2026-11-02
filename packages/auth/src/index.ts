@@ -25,7 +25,9 @@ import { emailOTP, organization } from "better-auth/plugins";
 import {
   ACCOUNT_EXPORT_TOKEN_PREFIX,
   consumeAccountExportToken,
+  consumeTeamConfigToken,
   issueAccountExportToken,
+  issueTeamConfigToken,
 } from "./account-export-token.js";
 import {
   accountSecurity,
@@ -627,6 +629,10 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
       issueAccountExportToken((await auth.$context).internalAdapter, userId),
     consumeAccountExportToken: async (token: string) =>
       consumeAccountExportToken((await auth.$context).internalAdapter, token),
+    issueTeamConfigToken: async (scope: { userId: string; spaceId: string }) =>
+      issueTeamConfigToken((await auth.$context).internalAdapter, scope),
+    consumeTeamConfigToken: async (token: string) =>
+      consumeTeamConfigToken((await auth.$context).internalAdapter, token),
     disposeOidcDiscovery: () => discovery?.dispose(),
   });
 }

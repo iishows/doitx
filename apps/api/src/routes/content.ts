@@ -18,13 +18,14 @@ import {
 import { requireIdentityConfirmation } from "../identity-confirmation.js";
 import { listSpaceRuns } from "../runs.js";
 import { querySpaceSearch } from "../search.js";
+import { createTeamConfig, previewTeamConfig } from "../team-config-apply.js";
 import { loadAllMessages } from "../thread-message-pages.js";
 import type { RouterContext } from "./context.js";
 
 const EXPORT_MESSAGE_PAGE_SIZE = 500;
 
 export function contentRoutes(ctx: RouterContext) {
-  const { deps, repos, favicons, groupRepos, authed } = ctx;
+  const { deps, repos, favicons, groupRepos, authed, agentImportServices } = ctx;
   return {
     artifacts: {
       list: authed.artifacts.list.handler(async ({ context, input }) => {
@@ -253,6 +254,21 @@ export function contentRoutes(ctx: RouterContext) {
         await requireIdentityConfirmation(deps.auth, context);
         return { token: await deps.auth.issueAccountExportToken(context.actor.userId) };
       }),
+      teamConfigToken: authed.export.teamConfigToken.handler(async ({ context }) => {
+        await requireIdentityConfirmation(deps.auth, context);
+        return {
+          token: await deps.auth.issueTeamConfigToken({
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+          }),
+        };
+      }),
+      teamConfigPreview: authed.export.teamConfigPreview.handler(async ({ context, input }) =>
+        previewTeamConfig(agentImportServices, context.actor, input),
+      ),
+      teamConfigCreate: authed.export.teamConfigCreate.handler(async ({ context, input }) =>
+        createTeamConfig(agentImportServices, context.actor, input),
+      ),
     },
     search: {
       query: authed.search.query.handler(async ({ context, input }) => ({

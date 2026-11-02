@@ -50,3 +50,4 @@ playwright-report-www
 # Local scratch, not part of the repo
 Python/
 .iconprobe/
+.diagnostics/

@@ -2,6 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { Button, Input } from "@rakazo/ui-web";
 import { useEffect, useId, useState } from "react";
 import { SettingsGroup, SettingsRow } from "../components/SettingsRows";
+import { TeamConfigSettings } from "../components/TeamConfigSettings";
 import { SpaceSettingOverrides } from "./SpaceSettingOverrides";
 import type { SettingsSpace } from "./shell/dialogs";
 import { DeleteSpaceDialog } from "./shell/dialogs";
@@ -101,6 +102,9 @@ export function SpaceSettingsPanel({
         </SettingsGroup>
       ) : null}
       <SpaceSettingOverrides onClose={onClose} onBusyChange={setOverridesBusy} />
+      <SettingsGroup title={<Trans>Workspace configuration</Trans>}>
+        <TeamConfigSettings />
+      </SettingsGroup>
       {space.canDelete ? (
         <Button
           variant="destructive"

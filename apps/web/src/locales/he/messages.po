@@ -136,6 +136,12 @@ msgstr "{0} MB"
 msgid "{0} rollup hours"
 msgstr "שעות סיכום של {0}"
 
+#. placeholder {0}: bot.routines
+#. placeholder {1}: bot.mcpServers
+#: src/components/TeamConfigSettings.tsx
+msgid "{0} routines · {1} servers"
+msgstr ""
+
 #. placeholder {0}: parts.amount
 #: src/components/ArtifactFileCard.tsx
 msgid "{0} TB"
@@ -422,6 +428,10 @@ msgstr "קצת מהכול"
 msgid "A command's output"
 msgstr ""
 
+#: src/components/TeamConfigSettings.tsx
+msgid "a name is taken, it is renamed"
+msgstr ""
+
 #. placeholder {0}: oauth.verificationUri.replace(/^https:\/\//, "")
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
@@ -704,6 +714,13 @@ msgstr "כבר מחובר"
 #: src/pages/Auth.tsx
 msgid "Already have an account?"
 msgstr "כבר יש חשבון?"
+
+#. placeholder {0}: preview.counts.sections
+#. placeholder {1}: preview.counts.skills
+#. placeholder {2}: preview.counts.connections
+#: src/components/TeamConfigSettings.tsx
+msgid "Also adds {0} sections, {1} skills and {2} connections."
+msgstr ""
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
@@ -1068,6 +1085,10 @@ msgstr "בוטים"
 msgid "Bots and browser automation"
 msgstr ""
 
+#: src/components/TeamConfigSettings.tsx
+msgid "Bots with servers needing credentials will not run until you add them."
+msgstr ""
+
 #: src/pages/Paywall.tsx
 msgid "Bots with their own computer and browser"
 msgstr "בוטים עם מחשב ודפדפן משלהם"
@@ -1138,6 +1159,7 @@ msgstr "לא ניתן לקרוא תמונות"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
+#: src/components/TeamConfigSettings.tsx
 #: src/components/VaultSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
@@ -2309,6 +2331,15 @@ msgstr "יצירת Doitx משלך"
 msgid "Created"
 msgstr "נוצר"
 
+#. placeholder {0}: created.length
+#: src/components/TeamConfigSettings.tsx
+msgid "Created {0} bots."
+msgstr ""
+
+#: src/components/TeamConfigSettings.tsx
+msgid "Created 1 bot."
+msgstr ""
+
 #: src/pages/GroupPanel.tsx
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2658,6 +2689,14 @@ msgstr "הורדת {name}"
 msgid "Download CSV"
 msgstr "הורדת CSV"
 
+#: src/components/TeamConfigSettings.tsx
+msgid "Download this workspace's bots, skills, sections and connections as a file, or build a workspace from one. Credentials are never included."
+msgstr ""
+
+#: src/components/TeamConfigSettings.tsx
+msgid "Download workspace"
+msgstr ""
+
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr "מוריד…"
@@ -2996,6 +3035,11 @@ msgstr "מתאריך"
 msgid "From {0}"
 msgstr "מ-{0}"
 
+#. placeholder {0}: preview.sourceWorkspace
+#: src/components/TeamConfigSettings.tsx
+msgid "From {0}. Choose the bots to create."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "From GitHub"
@@ -3017,10 +3061,6 @@ msgstr "כללי"
 #: src/components/InviteDialog.tsx
 msgid "Get a free month for each friend who starts a trial."
 msgstr "קבלו חודש חינם על כל חבר שמתחיל תקופת ניסיון."
-
-#: src/components/SidebarFooter.tsx
-#~ msgid "Get the mobile app"
-#~ msgstr "הורדת האפליקציה לנייד"
 
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
@@ -3190,6 +3230,15 @@ msgstr "קלט תמונה לא מוגדר עבור המודל הזה."
 msgid "Image upload area"
 msgstr "אזור העלאת תמונה"
 
+#. placeholder {0}: ticked.size
+#: src/components/TeamConfigSettings.tsx
+msgid "Import {0} bots"
+msgstr ""
+
+#: src/components/TeamConfigSettings.tsx
+msgid "Import 1 bot"
+msgstr ""
+
 #: src/components/AccountDataSettings.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Import an agent"
@@ -3198,6 +3247,10 @@ msgstr "ייבוא סוכן"
 #: src/components/AccountDataSettings.tsx
 msgid "Import data"
 msgstr "ייבוא נתונים"
+
+#: src/components/TeamConfigSettings.tsx
+msgid "Import workspace"
+msgstr ""
 
 #: src/lib/ticket-status.ts
 msgid "In progress"
@@ -3772,6 +3825,11 @@ msgstr "מזהה מודל"
 msgid "Model options"
 msgstr "אפשרויות מודל"
 
+#. placeholder {0}: preview.droppedPreferences .map((item) => item.provider) .join(", ")
+#: src/components/TeamConfigSettings.tsx
+msgid "Model preferences for {0} are skipped: connect those providers first."
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -3889,6 +3947,10 @@ msgstr "ממתין לתשובה"
 #: src/lib/user-error.ts
 msgid "Needs an OAuth client ID"
 msgstr "נדרש מזהה לקוח OAuth"
+
+#: src/components/TeamConfigSettings.tsx
+msgid "needs credentials"
+msgstr ""
 
 #: src/pages/ActivityList.tsx
 msgid "Needs input"
@@ -5729,6 +5791,10 @@ msgstr ""
 msgid "Testing…"
 msgstr "בודק…"
 
+#: src/components/TeamConfigSettings.tsx
+msgid "That file is not a workspace archive."
+msgstr ""
+
 #: src/pages/shell/composer-error.tsx
 msgid "The bot can use the file but won't see the picture."
 msgstr "הבוט יוכל להשתמש בקובץ, אבל לא יראה את התמונה."
@@ -5771,6 +5837,14 @@ msgstr "קישור המסך פג."
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "The selected memory provider is not available in this build."
 msgstr "ספק הזיכרון שנבחר אינו זמין בגרסה הזו."
+
+#: src/components/TeamConfigSettings.tsx
+msgid "The workspace could not be downloaded."
+msgstr ""
+
+#: src/components/TeamConfigSettings.tsx
+msgid "The workspace could not be imported."
+msgstr ""
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Their own model is cleared. You can pick one again in each bot."
@@ -6434,6 +6508,10 @@ msgstr "עובד עם המינוי שלך ל-ChatGPT או ל-Claude."
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
+msgstr ""
+
+#: src/pages/SpaceSettingsPanel.tsx
+msgid "Workspace configuration"
 msgstr ""
 
 #: src/lib/billing.ts

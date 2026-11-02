@@ -162,6 +162,12 @@ import {
 import { SearchQueryOutputSchema } from "./search.js";
 import { SecurityEventListInputSchema, SecurityEventSchema } from "./security-events.js";
 import { SettingsScopeSchema, SpaceSettingSchema, settingsScopeInput } from "./settings-scope.js";
+import {
+  TeamConfigCreateInput,
+  TeamConfigCreateResultSchema,
+  TeamConfigPreviewInput,
+  TeamConfigPreviewSchema,
+} from "./team-config.js";
 
 const botId = z.object({ botId: Id });
 const groupId = z.object({ groupId: Id });
@@ -1228,6 +1234,21 @@ export const appContract = {
      * a recent identity confirmation on this session (IDENTITY_CONFIRMATION_REQUIRED).
      */
     accountToken: oc.output(z.object({ token: z.string() })),
+    /**
+     * A one-time token for `GET /api/team-config/export?token=`, which streams this workspace's
+     * configuration as a zip. Needs a recent identity confirmation (IDENTITY_CONFIRMATION_REQUIRED).
+     */
+    teamConfigToken: oc.output(z.object({ token: z.string() })),
+    /**
+     * Reads a team-config archive and reports what importing it would create. Writes nothing, so it
+     * is safe to call as the user ticks and unticks bots.
+     */
+    teamConfigPreview: oc.input(TeamConfigPreviewInput).output(TeamConfigPreviewSchema),
+    /**
+     * Creates the ticked bots and the shared sections, connections, skills and rules. Never carries
+     * credentials: every imported server or connection needs the user to supply one before it runs.
+     */
+    teamConfigCreate: oc.input(TeamConfigCreateInput).output(TeamConfigCreateResultSchema),
   },
   notifications: {
     registerPush: oc

@@ -159,7 +159,11 @@ async function takenNames(db: Reader, actor: Actor) {
   };
 }
 
-type Built = {
+/**
+ * A parsed bot, ready to write. Every import format produces this shape; nothing below
+ * `buildPlan` knows which one it came from.
+ */
+export type Built = {
   plan: AgentImportPlan;
   settings: (AgentImportSettings & { keyValues: Map<string, string> }) | null;
   routineInputs: Map<string, CreateRoutineInputType>;
@@ -322,11 +326,53 @@ export async function createImportedBot<PreparedKey>(
   };
   const retried = await already();
   if (retried) return retried;
-  const { plan, settings, routineInputs, mcpConfigs, connectedKeyIds } = await buildPlan(
-    services as AgentImportServices,
+  const built = await buildPlan(services as AgentImportServices, actor, input);
+  return materializeImportedBot(
+    services,
     actor,
-    input,
+    {
+      name: input.name,
+      description: input.description,
+      computerMode: input.computerMode,
+      color: input.color,
+      avatarSet: input.avatarSet,
+      selection: input.selection,
+      importKey,
+      source: built.plan.source,
+      digest,
+      already,
+    },
+    built,
+    signal,
   );
+}
+
+/** Bot metadata and idempotency for a write; produced by each import format's read half. */
+export type MaterializeImportedBotInput = Pick<
+  AgentImportCreateInput,
+  "name" | "description" | "computerMode" | "color" | "avatarSet" | "selection" | "importKey"
+> & {
+  /** Stored on the import record as a label. Nothing below this point parses it. */
+  source: string;
+  digest: string;
+  /** Resolves a retried import to the bot it already made, or null. */
+  already: () => Promise<Bot | null>;
+};
+
+/**
+ * Writes an already-parsed bot: instructions, memory, skills, MCP servers, routines, key
+ * encryption and the import record, in one transaction. Format-agnostic — the vendor import
+ * and the team-config import both call this, so both obey the same validation.
+ */
+export async function materializeImportedBot<PreparedKey>(
+  services: AgentImportServices<PreparedKey>,
+  actor: Actor,
+  input: MaterializeImportedBotInput,
+  built: Built,
+  signal?: AbortSignal,
+): Promise<Bot> {
+  const owner = { spaceId: actor.spaceId, userId: actor.userId };
+  const { plan, settings, routineInputs, mcpConfigs, connectedKeyIds } = built;
   const instructions = combineImportedInstructions(
     selected(plan.instructions, input.selection.instructions),
   );
@@ -596,9 +642,9 @@ export async function createImportedBot<PreparedKey>(
       data: {
         ...owner,
         botId,
-        source: plan.source,
-        importKey: importKey ?? null,
-        requestDigest: digest,
+        source: input.source,
+        importKey: input.importKey ?? null,
+        requestDigest: input.digest,
         created: record as unknown as Prisma.InputJsonValue,
       },
     });
@@ -619,7 +665,7 @@ export async function createImportedBot<PreparedKey>(
     });
   } catch (error) {
     // Two requests with one import key: the second's transaction lost the race.
-    const winner = isUniqueViolation(error) ? await already() : null;
+    const winner = isUniqueViolation(error) ? await input.already() : null;
     if (!winner) throw error;
     return winner;
   }

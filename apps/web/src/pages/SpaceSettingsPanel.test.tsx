@@ -46,6 +46,10 @@ vi.mock("./SpaceSettingOverrides", () => ({
   SpaceSettingOverrides: () => <div data-testid="space-setting-overrides" />,
 }));
 
+vi.mock("../components/TeamConfigSettings", () => ({
+  TeamConfigSettings: () => <div data-testid="team-config-settings" />,
+}));
+
 import { SpaceSettingsPanel } from "./SpaceSettingsPanel";
 
 let container: HTMLDivElement;
