@@ -151,6 +151,11 @@ COPY --chmod=644 rakazo-browser.desktop /usr/share/applications/rakazo-browser.d
 # Doitx keeps credentials itself; the browser's save prompts would cover pages.
 COPY --chmod=644 browser-policy.json /etc/chromium/policies/managed/rakazo-browser.json
 COPY --chmod=644 browser-policy.json /etc/brave/policies/managed/rakazo-browser.json
+# Without this, a page that asks for a macOS/Windows CJK family (e.g. "PingFang SC")
+# falls back to DejaVu Sans, which has no CJK glyphs, and screenshots render Chinese
+# as tofu boxes. The shipped fonts-noto-cjk is only reachable once fontconfig maps
+# those family names (and the generic families) onto it.
+COPY --chmod=644 fontconfig-cjk.conf /etc/fonts/local.conf
 COPY --chmod=644 fluxbox.init /etc/rakazo/fluxbox/init
 COPY --chmod=644 fluxbox.apps /etc/rakazo/fluxbox/apps
 COPY --chmod=644 fluxbox.menu /etc/rakazo/fluxbox/menu
