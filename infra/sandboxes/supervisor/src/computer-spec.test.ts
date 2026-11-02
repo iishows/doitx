@@ -1907,6 +1907,7 @@ describe("graphical computer spec", () => {
 describe("computer resource limits", () => {
   const KEYS = [
     "RAKAZO_COMPUTER_MEMORY",
+    "RAKAZO_COMPUTER_SWAP",
     "RAKAZO_COMPUTER_CPUS",
     "RAKAZO_COMPUTER_PIDS_LIMIT",
   ] as const;
@@ -1936,8 +1937,8 @@ describe("computer resource limits", () => {
 
   it("caps memory and cpu by default and keeps #343's pids ceiling", () => {
     const { HostConfig } = containerCreateOptions(createInput);
-    expect(HostConfig.Memory).toBe(2 * 1024 ** 3);
-    expect(HostConfig.MemorySwap).toBe(HostConfig.Memory);
+    expect(HostConfig.Memory).toBe(6 * 1024 ** 3);
+    expect(HostConfig.MemorySwap).toBe(HostConfig.Memory + 2 * 1024 ** 3);
     expect(HostConfig.NanoCpus).toBe(2 * 1e9);
     expect(HostConfig.PidsLimit).toBe(2048);
   });
@@ -1945,19 +1946,39 @@ describe("computer resource limits", () => {
   it("falls back to the defaults when a variable is blank", () => {
     // .env.example ships these keys blank; a blank value must read as "unset".
     process.env.RAKAZO_COMPUTER_MEMORY = "";
+    process.env.RAKAZO_COMPUTER_SWAP = "";
     process.env.RAKAZO_COMPUTER_CPUS = "  ";
     process.env.RAKAZO_COMPUTER_PIDS_LIMIT = "";
     const { HostConfig } = containerCreateOptions(createInput);
-    expect(HostConfig.Memory).toBe(2 * 1024 ** 3);
+    expect(HostConfig.Memory).toBe(6 * 1024 ** 3);
+    expect(HostConfig.MemorySwap).toBe(HostConfig.Memory + 2 * 1024 ** 3);
     expect(HostConfig.NanoCpus).toBe(2e9);
     expect(HostConfig.PidsLimit).toBe(2048);
   });
 
-  it("pins MemorySwap to Memory so the ceiling cannot be swapped past", () => {
+  it("keeps Memory as the RAM ceiling and adds swap on top of it", () => {
     process.env.RAKAZO_COMPUTER_MEMORY = "1536m";
+    process.env.RAKAZO_COMPUTER_SWAP = "512m";
+    const { HostConfig } = containerCreateOptions(createInput);
+    // MemorySwap must exceed Memory, or Docker reads it as unset and the container swaps to
+    // twice Memory. The gap is the swap region the kernel may page anonymous memory into.
+    expect(HostConfig.Memory).toBe(1536 * 1024 ** 2);
+    expect(HostConfig.MemorySwap).toBe((1536 + 512) * 1024 ** 2);
+  });
+
+  it("pins MemorySwap to Memory when swap is disabled", () => {
+    process.env.RAKAZO_COMPUTER_MEMORY = "1536m";
+    process.env.RAKAZO_COMPUTER_SWAP = "0";
     const { HostConfig } = containerCreateOptions(createInput);
     expect(HostConfig.Memory).toBe(1536 * 1024 ** 2);
     expect(HostConfig.MemorySwap).toBe(1536 * 1024 ** 2);
+  });
+
+  it("defaults to a swap region rather than none", () => {
+    // The regression this guards: with no swap region, a browser desktop that outgrows RAM can
+    // only refault file pages, which saturates the Docker disk instead of just slowing down.
+    const { HostConfig } = containerCreateOptions(createInput);
+    expect(HostConfig.MemorySwap).toBeGreaterThan(HostConfig.Memory);
   });
 
   it("accepts fractional CPUs", () => {
@@ -1999,6 +2020,31 @@ describe("computer resource limits", () => {
     }
     process.env.RAKAZO_COMPUTER_MEMORY = "6m";
     expect(containerCreateOptions(createInput).HostConfig.Memory).toBe(6 * 1024 ** 2);
+  });
+
+  it("rejects a swap value that is not a bounded size", () => {
+    // "unlimited" reads as 0 in the shared parser, which here would silently mean "no swap" —
+    // the exact condition this variable exists to avoid.
+    for (const value of ["unlimited", "2 gigs", "-1", "1m"]) {
+      process.env.RAKAZO_COMPUTER_SWAP = value;
+      expect(() => containerCreateOptions(createInput)).toThrow(/RAKAZO_COMPUTER_SWAP/);
+    }
+  });
+
+  it("treats none as no swap, same as 0", () => {
+    process.env.RAKAZO_COMPUTER_MEMORY = "1g";
+    process.env.RAKAZO_COMPUTER_SWAP = "none";
+    const { HostConfig } = containerCreateOptions(createInput);
+    expect(HostConfig.MemorySwap).toBe(HostConfig.Memory);
+  });
+
+  it("leaves an uncapped container uncapped instead of capping it at the swap size", () => {
+    // Memory 0 means "no RAM ceiling". Adding a swap region to it would turn that into a
+    // container capped at 2g — the opposite of what the operator asked for.
+    process.env.RAKAZO_COMPUTER_MEMORY = "0";
+    const { HostConfig } = containerCreateOptions(createInput);
+    expect(HostConfig.Memory).toBe(0);
+    expect(HostConfig.MemorySwap).toBe(0);
   });
 
   it("rejects a CPU count that would floor to Docker's unlimited", () => {

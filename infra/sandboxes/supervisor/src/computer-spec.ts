@@ -79,7 +79,8 @@ export function resolveSpaceComputerLimit(
  * runaway page must not starve the host or sibling bots. Set any of these to
  * "0", "none" or "unlimited" to opt out.
  */
-const DEFAULT_COMPUTER_MEMORY = "2g";
+const DEFAULT_COMPUTER_MEMORY = "6g";
+const DEFAULT_COMPUTER_SWAP = "2g";
 const DEFAULT_COMPUTER_CPUS = "2";
 const DEFAULT_COMPUTER_PIDS_LIMIT = "2048";
 /** The daemon refuses HostConfig.Memory below this at container creation. */
@@ -115,6 +116,22 @@ export function parseMemoryBytes(name: string, raw: string): number {
     throw new Error(`${name} must be at least 6m, Docker's minimum, received "${raw}"`);
   }
   return bytes;
+}
+
+/**
+ * Swap headroom in bytes from a docker-style size string. "0" and "none" opt out:
+ * MemorySwap is pinned to Memory, leaving the container with no swap.
+ */
+export function parseSwapBytes(name: string, raw: string): number {
+  const value = raw.trim().toLowerCase();
+  if (value === "0" || value === "none") return 0;
+  // Unlike Memory, an unbounded swap region has no ceiling to hold, so the value
+  // must name a size. `parseMemoryBytes` would read "unlimited" as 0, which here
+  // would silently mean "no swap" — reject it instead.
+  if (value === "unlimited") {
+    throw new Error(`${name} must be a bounded size, or "0" to disable swap, received "${raw}"`);
+  }
+  return parseMemoryBytes(name, raw);
 }
 
 /** Docker NanoCpus (1e9 per core) from a CPU count like "1.5". */
@@ -158,11 +175,28 @@ export function computerResourceLimits() {
     "RAKAZO_COMPUTER_PIDS_LIMIT",
     envOrDefault("RAKAZO_COMPUTER_PIDS_LIMIT", DEFAULT_COMPUTER_PIDS_LIMIT),
   );
+  const swapBytes = parseSwapBytes(
+    "RAKAZO_COMPUTER_SWAP",
+    envOrDefault("RAKAZO_COMPUTER_SWAP", DEFAULT_COMPUTER_SWAP),
+  );
   return {
-    // Memory and MemorySwap are set together: leaving MemorySwap unset lets the
-    // container swap to twice Memory, so the ceiling would not hold.
+    // Memory stays a hard RAM ceiling. MemorySwap must be >= Memory or Docker
+    // treats it as unset and lets the container swap to twice Memory, so the
+    // ceiling would not hold.
+    //
+    // The gap between the two is the swap region (MemorySwap - Memory). Pinning
+    // it to exactly Memory sets that region to zero, which leaves Chromium with
+    // nowhere to page out to. Once RAM fills, the kernel can only evict file
+    // pages synchronously on the fault path, and Chromium re-reads them
+    // immediately — a refault loop that saturates the Docker disk and stalls the
+    // desktop on I/O. A bounded swap region lets anonymous pages be reclaimed
+    // instead, so memory pressure degrades throughput rather than hanging disk.
+    //
+    // Memory 0 means "no RAM ceiling" (the documented opt-out), so MemorySwap must
+    // be 0 too — adding a swap region there would turn an uncapped container into
+    // one capped at the swap size.
     Memory: memoryBytes,
-    MemorySwap: memoryBytes,
+    MemorySwap: memoryBytes === 0 ? 0 : memoryBytes + swapBytes,
     NanoCpus: nanoCpus,
     PidsLimit: pidsLimit,
   };

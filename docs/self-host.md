@@ -93,12 +93,21 @@ Docker computer topology:
 
 | Variable | Default | Accepts |
 | --- | --- | --- |
-| `RAKAZO_COMPUTER_MEMORY` | `2g` | `2g`, `1536m`, a byte count. Minimum `6m`, Docker's own floor. Also caps swap, so the ceiling holds. |
+| `RAKAZO_COMPUTER_MEMORY` | `6g` | `6g`, `1536m`, a byte count. Minimum `6m`, Docker's own floor. Hard RAM ceiling. |
+| `RAKAZO_COMPUTER_SWAP` | `2g` | A bounded size, or `0`/`none` to give the container no swap. Added on top of `RAKAZO_COMPUTER_MEMORY`. |
 | `RAKAZO_COMPUTER_CPUS` | `2` | Whole or fractional cores, e.g. `1.5` |
 | `RAKAZO_COMPUTER_PIDS_LIMIT` | `2048` | A positive integer |
 
-Set any of them to `0`, `none` or `unlimited` to remove that ceiling. A malformed value fails the
-supervisor at startup naming the variable, rather than surfacing later as a failed bot.
+Set any of them to `0`, `none` or `unlimited` to remove that ceiling — except
+`RAKAZO_COMPUTER_SWAP`, which has no ceiling to remove and so must name a size (or `0`). A
+malformed value fails the supervisor at startup naming the variable, rather than surfacing later
+as a failed bot.
+
+Give the swap region real headroom. With none, a browser desktop that outgrows RAM can only evict
+file pages on the fault path and immediately refault them, which saturates the Docker disk and
+stalls the desktop on I/O instead of merely slowing it down. The swap region must also be
+backed by swap on the host: Docker Desktop defaults to `swap=0` in `.wslconfig`, so set a size
+there too.
 
 ### API and worker memory
 
