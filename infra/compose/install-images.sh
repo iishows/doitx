@@ -343,6 +343,118 @@ egress_rules_unsupported() {
   command -v iptables >/dev/null 2>&1 || echo "iptables is not installed"
 }
 
+# Compose sizes ("6g", "1536m", a byte count) as bytes, empty when unparsable so callers
+# can skip rather than guess. awk, because bash arithmetic is integer-only and these
+# accept decimals.
+size_to_bytes() {
+  awk -v value="$1" 'BEGIN {
+    v = tolower(value)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+    unit = 1
+    if (v ~ /t[i]?b?$/) unit = 1099511627776
+    else if (v ~ /g[i]?b?$/) unit = 1073741824
+    else if (v ~ /m[i]?b?$/) unit = 1048576
+    else if (v ~ /k[i]?b?$/) unit = 1024
+    else if (v !~ /b$/) unit = 1
+    sub(/[kmgt]?i?b?$/, "", v)
+    if (v !~ /^[0-9]+(\.[0-9]+)?$/) exit 1
+    printf "%.0f\n", v * unit
+  }'
+}
+
+# Bytes as a short human figure, for warnings an operator has to read.
+human_size() {
+  awk -v b="$1" 'BEGIN {
+    split("B KB MB GB TB", unit, " ")
+    i = 1
+    while (b >= 1024 && i < 5) { b /= 1024; i++ }
+    printf (i == 1 ? "%.0f %s" : "%.1f %s"), b, unit[i]
+  }'
+}
+
+# A setting as the containers will see it: shell value, else .env, else the Compose default.
+effective_setting() {
+  local key="$1" value
+  if [[ -n "${!key:-}" ]]; then
+    value="${!key}"
+  else
+    value=$(sed -nE "s/^[[:space:]]*(export[[:space:]]+)?${key}=(.*)/\\2/p" "$ENV_FILE" 2>/dev/null | tail -1)
+  fi
+  if [[ -z "$value" ]]; then
+    value=$(sed -nE "s/.*\\\$\\{${key}:-([^}]*)\\}.*/\\1/p" "$COMPOSE_FILE" 2>/dev/null | head -1)
+  fi
+  printf '%s\n' "${value%$'\r'}"
+}
+
+# Every mem_limit the Compose file hardcodes, summed in bytes.
+compose_mem_limit_bytes() {
+  local total=0 value bytes
+  while IFS= read -r value; do
+    bytes=$(size_to_bytes "$value" 2>/dev/null) || continue
+    [[ -n "$bytes" ]] && total=$((total + bytes))
+  done < <(sed -nE 's/^[[:space:]]*mem_limit:[[:space:]]*([^[:space:]#]+).*/\1/p' "$COMPOSE_FILE" 2>/dev/null)
+  printf '%s\n' "$total"
+}
+
+# The app's own defaults (computer-spec.ts): a computer still gets these when neither the
+# shell, the .env, nor the Compose file says otherwise — older published Compose files do
+# not declare RAKAZO_COMPUTER_SWAP at all, yet the app still requests swap.
+APP_DEFAULT_COMPUTER_MEMORY=6g
+APP_DEFAULT_COMPUTER_SWAP=2g
+
+# Warn, never fail, when this Docker host looks too small for the stack. A limit is a ceiling
+# rather than a reservation, so a smaller host can still serve it and the operator knows the
+# machine better than this script does; the aim is to catch the desktop-thrashing setup (too
+# little RAM, no host swap behind the container swap) before images are pulled, not to gate.
+warn_host_resources() {
+  local limits host_bytes computer_memory requested_swap host_swap path
+
+  limits=$(compose_mem_limit_bytes)
+  if [[ "$limits" -gt 0 ]]; then
+    host_bytes=$(docker info --format '{{.MemTotal}}' 2>/dev/null) || host_bytes=""
+    host_bytes=$(size_to_bytes "$host_bytes" 2>/dev/null) || host_bytes=""
+    if [[ -n "$host_bytes" ]] && ((host_bytes < limits)); then
+      computer_memory=$(effective_setting RAKAZO_COMPUTER_MEMORY)
+      computer_memory=${computer_memory:-$APP_DEFAULT_COMPUTER_MEMORY}
+      echo "Warning: this Docker host reports $(human_size "$host_bytes") of RAM, but the stack's" >&2
+      echo "container limits total $(human_size "$limits")${computer_memory:+, plus ${computer_memory} per computer}." >&2
+      echo "Give Docker more memory or lower RAKAZO_COMPUTER_MEMORY; see docs/self-host.md." >&2
+    fi
+  fi
+
+  # A container swap region is only useful when the host has swap to back it: without, the
+  # desktop thrashes the disk instead of paging out.
+  requested_swap=$(effective_setting RAKAZO_COMPUTER_SWAP)
+  requested_swap=${requested_swap:-$APP_DEFAULT_COMPUTER_SWAP}
+  case "$(printf '%s' "$requested_swap" | tr 'A-Z' 'a-z')" in
+    "" | 0 | 0b | none | unlimited) return 0 ;;
+  esac
+  case "$(uname -s)" in
+    Linux)
+      path="${RAKAZO_MEMINFO_PATH:-/proc/meminfo}"
+      if [[ -r "$path" ]]; then
+        host_swap=$(sed -nE 's/^SwapTotal:[[:space:]]*([0-9]+) kB.*/\1/p' "$path" | head -1)
+        [[ -n "$host_swap" ]] && host_swap=$((host_swap * 1024))
+      fi
+      ;;
+    MINGW* | MSYS* | CYGWIN*)
+      path="${RAKAZO_WSLCONFIG_PATH:-${USERPROFILE:-$HOME}/.wslconfig}"
+      if [[ -r "$path" ]]; then
+        host_swap=$(sed -nE 's/^[[:space:]]*swap[[:space:]]*=[[:space:]]*(.*)$/\1/p' "$path" | tail -1)
+        host_swap=$(size_to_bytes "${host_swap%$'\r'}" 2>/dev/null) || host_swap=""
+      fi
+      ;;
+    *) host_swap="" ;;
+  esac
+  if [[ -z "$host_swap" ]]; then
+    echo "Warning: each computer is given ${requested_swap} of swap, but this host's swap could not be read." >&2
+    echo "Docker Desktop defaults to swap=0 in .wslconfig; set a size there. See docs/self-host.md." >&2
+  elif ((host_swap == 0)); then
+    echo "Warning: each computer is given ${requested_swap} of swap, but this host has none, so a" >&2
+    echo "desktop that outgrows RAM will thrash the disk instead of paging out. Set swap in .wslconfig." >&2
+  fi
+}
+
 # Compose defaults computers to restricted egress, which only works once the host
 # rules are in place. Install them where possible; otherwise record open explicitly
 # so computers keep working, and say what that leaves reachable.
@@ -391,6 +503,7 @@ fi
 
 validate_required_secrets
 warn_unpassed_settings
+warn_host_resources
 
 if [[ "$prepare_only" == true ]]; then
   echo "Doitx files are ready. Edit .env, then run: bash install-images.sh"

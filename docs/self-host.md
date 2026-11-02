@@ -109,6 +109,13 @@ stalls the desktop on I/O instead of merely slowing it down. The swap region mus
 backed by swap on the host: Docker Desktop defaults to `swap=0` in `.wslconfig`, so set a size
 there too.
 
+`install-images.sh` warns about both mistakes before it pulls anything: it compares the Docker
+host's RAM against the memory limits the Compose file declares, and it checks that a host swap
+region actually backs a non-zero `RAKAZO_COMPUTER_SWAP` — reading `SwapTotal` in `/proc/meminfo`
+on Linux and `swap=` in `.wslconfig` on Windows. Both are warnings, not failures, since the
+limits are ceilings rather than reservations; adjust Docker's memory, `RAKAZO_COMPUTER_MEMORY` or
+`RAKAZO_COMPUTER_SWAP` if one appears.
+
 ### API and worker memory
 
 Chat runs execute in the API container that receives the message, and routines and other
