@@ -48,10 +48,18 @@ STUB
   : >"$work/cwd/.env.images.example"
   printf 'POSTGRES_PASSWORD=p\nPOSTGRES_APP_PASSWORD=a\n%s\n' "$6" >"$work/cwd/.env"
   # Keep installer dependencies without exposing the host's iptables or curl.
+  # MSYS copies instead of linking unless winsymlinks is set, and a copied bash.exe
+  # cannot find its msys DLL once PATH points at the private bin, so require a real
+  # link and fall back to a wrapper script where the filesystem refuses symlinks.
   local command_name command_path
   for command_name in bash env cat grep awk sed sort openssl mktemp mv rm tail; do
     command_path="$(command -v "$command_name")" || fail "fixture requires $command_name"
-    ln -s "$command_path" "$work/bin/$command_name"
+    MSYS=winsymlinks:lnk ln -s "$command_path" "$work/bin/$command_name" 2>/dev/null
+    if [[ ! -L "$work/bin/$command_name" ]]; then
+      rm -f "$work/bin/$command_name"
+      printf '#!/bin/sh\nexec "%s" "$@"\n' "$command_path" >"$work/bin/$command_name"
+      chmod +x "$work/bin/$command_name"
+    fi
   done
   (
     cd "$work/cwd"

@@ -17,9 +17,12 @@ done
 # Verify both platforms before making any tag discoverable.
 manifest="$(docker buildx imagetools create --dry-run "${sources[@]}")"
 for arch in amd64 arm64; do
-  jq -e --arg arch "$arch" \
-    'any(.manifests[]; .platform.os == "linux" and .platform.architecture == $arch)' \
-    <<< "$manifest" >/dev/null || { echo "Image is missing linux/$arch." >&2; exit 1; }
+  node -e '
+    const [arch] = process.argv.slice(1);
+    const doc = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const present = (doc.manifests || []).some((m) => m.platform && m.platform.os === "linux" && m.platform.architecture === arch);
+    process.exit(present ? 0 : 1);
+  ' "$arch" <<< "$manifest" || { echo "Image is missing linux/$arch." >&2; exit 1; }
 done
 
 # A slow or delayed older main run may still publish its exact commit for deployment.

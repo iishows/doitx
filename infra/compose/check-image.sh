@@ -25,11 +25,15 @@ if [[ -f "${source}" ]]; then
 else
   # Check the platform's own manifest rather than the multi-platform list: the Docker image store
   # refuses to pull one list a second time for another platform. A single-platform image is used as is.
+  # JSON is parsed with node, already required by this repository, not jq, which the runners lack.
   if raw="$(docker buildx imagetools inspect --raw "${source}" 2>/dev/null)" &&
-    [[ "$(jq -r '.manifests | type' <<<"${raw}")" == array ]]; then
-    digest="$(jq -r --arg os "${platform%%/*}" --arg arch "${platform#*/}" \
-      'first(.manifests[] | select(.platform.os == $os and .platform.architecture == $arch) | .digest) // empty' \
-      <<<"${raw}")"
+    digest="$(node -e '
+      const [os, arch] = process.argv.slice(1);
+      const doc = JSON.parse(require("fs").readFileSync(0, "utf8"));
+      if (!Array.isArray(doc.manifests)) process.exit(1);
+      const hit = doc.manifests.find((m) => m.platform && m.platform.os === os && m.platform.architecture === arch);
+      if (hit && hit.digest) process.stdout.write(hit.digest);
+    ' "${platform%%/*}" "${platform#*/}" <<<"${raw}")"; then
     [[ -n "${digest}" ]] || { echo "${source} has no ${platform} image." >&2; exit 1; }
     repository="${source%@*}"
     [[ "${repository##*/}" != *:* ]] || repository="${repository%:*}"
