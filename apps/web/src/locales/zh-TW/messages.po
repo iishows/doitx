@@ -139,7 +139,7 @@ msgstr "{0} 彙整時數"
 
 #. placeholder {0}: bot.routines
 #. placeholder {1}: bot.mcpServers
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "{0} routines · {1} servers"
 msgstr ""
 
@@ -429,7 +429,7 @@ msgstr "什麼都做一點"
 msgid "A command's output"
 msgstr "命令的輸出"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "a name is taken, it is renamed"
 msgstr ""
 
@@ -719,7 +719,7 @@ msgstr "已有帳號？"
 #. placeholder {0}: preview.counts.sections
 #. placeholder {1}: preview.counts.skills
 #. placeholder {2}: preview.counts.connections
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Also adds {0} sections, {1} skills and {2} connections."
 msgstr ""
 
@@ -1086,7 +1086,7 @@ msgstr "機器人"
 msgid "Bots and browser automation"
 msgstr "機器人與瀏覽器自動化"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Bots with servers needing credentials will not run until you add them."
 msgstr ""
 
@@ -1160,7 +1160,6 @@ msgstr "無法讀取影像"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
-#: src/components/TeamConfigSettings.tsx
 #: src/components/VaultSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
@@ -1174,6 +1173,7 @@ msgstr "無法讀取影像"
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/shell/create-bot-dialog.tsx
 #: src/pages/shell/dialogs.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 #: src/pages/SpaceSettingOverrides.tsx
 msgid "Cancel"
 msgstr "取消"
@@ -2333,11 +2333,11 @@ msgid "Created"
 msgstr "已建立"
 
 #. placeholder {0}: created.length
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created {0} bots."
 msgstr ""
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created 1 bot."
 msgstr ""
 
@@ -2359,6 +2359,10 @@ msgstr "憑證已儲存"
 #: src/pages/PluginsOverlay.tsx
 msgid "Credentials are encrypted and never sent to the model."
 msgstr "憑證已加密，不會傳送給模型。"
+
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Credentials are never included; imported connections need authorising."
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Credentials: {names}"
@@ -2690,14 +2694,6 @@ msgstr "下載 {name}"
 msgid "Download CSV"
 msgstr "下載 CSV"
 
-#: src/components/TeamConfigSettings.tsx
-msgid "Download this workspace's bots, skills, sections and connections as a file, or build a workspace from one. Credentials are never included."
-msgstr ""
-
-#: src/components/TeamConfigSettings.tsx
-msgid "Download workspace"
-msgstr ""
-
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr "下載中…"
@@ -2901,6 +2897,10 @@ msgstr "匯出資料"
 msgid "Export this week's list from the CRM and drop it in the shared folder"
 msgstr "從 CRM 匯出本週名單並放到共享資料夾"
 
+#: src/pages/shell/shell-dialogs.tsx
+msgid "Export workspace configuration"
+msgstr ""
+
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "External conversation"
@@ -3037,7 +3037,7 @@ msgid "From {0}"
 msgstr "自 {0} 起"
 
 #. placeholder {0}: preview.sourceWorkspace
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "From {0}. Choose the bots to create."
 msgstr ""
 
@@ -3232,11 +3232,11 @@ msgid "Image upload area"
 msgstr "圖片上傳區域"
 
 #. placeholder {0}: ticked.size
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import {0} bots"
 msgstr ""
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import 1 bot"
 msgstr ""
 
@@ -3249,8 +3249,12 @@ msgstr "匯入代理程式"
 msgid "Import data"
 msgstr "匯入資料"
 
-#: src/components/TeamConfigSettings.tsx
-msgid "Import workspace"
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Import into {spaceName}"
+msgstr ""
+
+#: src/pages/shell/shell-dialogs.tsx
+msgid "Import workspace configuration"
 msgstr ""
 
 #: src/lib/ticket-status.ts
@@ -3827,7 +3831,7 @@ msgid "Model options"
 msgstr "模型選項"
 
 #. placeholder {0}: preview.droppedPreferences .map((item) => item.provider) .join(", ")
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Model preferences for {0} are skipped: connect those providers first."
 msgstr ""
 
@@ -3949,7 +3953,7 @@ msgstr "需要回覆"
 msgid "Needs an OAuth client ID"
 msgstr "需要 OAuth 用戶端 ID"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "needs credentials"
 msgstr ""
 
@@ -5792,7 +5796,7 @@ msgstr ""
 msgid "Testing…"
 msgstr "正在測試…"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "That file is not a workspace archive."
 msgstr ""
 
@@ -5839,11 +5843,11 @@ msgstr "螢幕連結已過期。"
 msgid "The selected memory provider is not available in this build."
 msgstr "所選記憶供應商在此版本中不可用。"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/shell-dialogs.tsx
 msgid "The workspace could not be downloaded."
 msgstr ""
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "The workspace could not be imported."
 msgstr ""
 
@@ -6510,10 +6514,6 @@ msgstr "可使用你的 ChatGPT 或 Claude 方案。"
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
 msgstr "工作空間"
-
-#: src/pages/SpaceSettingsPanel.tsx
-msgid "Workspace configuration"
-msgstr ""
 
 #: src/lib/billing.ts
 msgid "year"

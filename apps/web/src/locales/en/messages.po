@@ -138,7 +138,7 @@ msgstr "{0} rollup hours"
 
 #. placeholder {0}: bot.routines
 #. placeholder {1}: bot.mcpServers
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "{0} routines · {1} servers"
 msgstr "{0} routines · {1} servers"
 
@@ -428,7 +428,7 @@ msgstr "A bit of everything"
 msgid "A command's output"
 msgstr "A command's output"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "a name is taken, it is renamed"
 msgstr "a name is taken, it is renamed"
 
@@ -718,7 +718,7 @@ msgstr "Already have an account?"
 #. placeholder {0}: preview.counts.sections
 #. placeholder {1}: preview.counts.skills
 #. placeholder {2}: preview.counts.connections
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Also adds {0} sections, {1} skills and {2} connections."
 msgstr "Also adds {0} sections, {1} skills and {2} connections."
 
@@ -1085,7 +1085,7 @@ msgstr "Bots"
 msgid "Bots and browser automation"
 msgstr "Bots and browser automation"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Bots with servers needing credentials will not run until you add them."
 msgstr "Bots with servers needing credentials will not run until you add them."
 
@@ -1159,7 +1159,6 @@ msgstr "Can't read images"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
-#: src/components/TeamConfigSettings.tsx
 #: src/components/VaultSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
@@ -1173,6 +1172,7 @@ msgstr "Can't read images"
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/shell/create-bot-dialog.tsx
 #: src/pages/shell/dialogs.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 #: src/pages/SpaceSettingOverrides.tsx
 msgid "Cancel"
 msgstr "Cancel"
@@ -2332,11 +2332,11 @@ msgid "Created"
 msgstr "Created"
 
 #. placeholder {0}: created.length
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created {0} bots."
 msgstr "Created {0} bots."
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created 1 bot."
 msgstr "Created 1 bot."
 
@@ -2358,6 +2358,10 @@ msgstr "Credential saved"
 #: src/pages/PluginsOverlay.tsx
 msgid "Credentials are encrypted and never sent to the model."
 msgstr "Credentials are encrypted and never sent to the model."
+
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Credentials are never included; imported connections need authorising."
+msgstr "Credentials are never included; imported connections need authorising."
 
 #: src/pages/shell/import-status.ts
 msgid "Credentials: {names}"
@@ -2689,14 +2693,6 @@ msgstr "Download {name}"
 msgid "Download CSV"
 msgstr "Download CSV"
 
-#: src/components/TeamConfigSettings.tsx
-msgid "Download this workspace's bots, skills, sections and connections as a file, or build a workspace from one. Credentials are never included."
-msgstr "Download this workspace's bots, skills, sections and connections as a file, or build a workspace from one. Credentials are never included."
-
-#: src/components/TeamConfigSettings.tsx
-msgid "Download workspace"
-msgstr "Download workspace"
-
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr "Downloading…"
@@ -2900,6 +2896,10 @@ msgstr "Export data"
 msgid "Export this week's list from the CRM and drop it in the shared folder"
 msgstr "Export this week's list from the CRM and drop it in the shared folder"
 
+#: src/pages/shell/shell-dialogs.tsx
+msgid "Export workspace configuration"
+msgstr "Export workspace configuration"
+
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "External conversation"
@@ -3036,7 +3036,7 @@ msgid "From {0}"
 msgstr "From {0}"
 
 #. placeholder {0}: preview.sourceWorkspace
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "From {0}. Choose the bots to create."
 msgstr "From {0}. Choose the bots to create."
 
@@ -3231,11 +3231,11 @@ msgid "Image upload area"
 msgstr "Image upload area"
 
 #. placeholder {0}: ticked.size
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import {0} bots"
 msgstr "Import {0} bots"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import 1 bot"
 msgstr "Import 1 bot"
 
@@ -3248,9 +3248,13 @@ msgstr "Import an agent"
 msgid "Import data"
 msgstr "Import data"
 
-#: src/components/TeamConfigSettings.tsx
-msgid "Import workspace"
-msgstr "Import workspace"
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Import into {spaceName}"
+msgstr "Import into {spaceName}"
+
+#: src/pages/shell/shell-dialogs.tsx
+msgid "Import workspace configuration"
+msgstr "Import workspace configuration"
 
 #: src/lib/ticket-status.ts
 msgid "In progress"
@@ -3826,7 +3830,7 @@ msgid "Model options"
 msgstr "Model options"
 
 #. placeholder {0}: preview.droppedPreferences .map((item) => item.provider) .join(", ")
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Model preferences for {0} are skipped: connect those providers first."
 msgstr "Model preferences for {0} are skipped: connect those providers first."
 
@@ -3948,7 +3952,7 @@ msgstr "Needs an answer"
 msgid "Needs an OAuth client ID"
 msgstr "Needs an OAuth client ID"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "needs credentials"
 msgstr "needs credentials"
 
@@ -5791,7 +5795,7 @@ msgstr "Testing"
 msgid "Testing…"
 msgstr "Testing…"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "That file is not a workspace archive."
 msgstr "That file is not a workspace archive."
 
@@ -5838,11 +5842,11 @@ msgstr "The screen link expired."
 msgid "The selected memory provider is not available in this build."
 msgstr "The selected memory provider is not available in this build."
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/shell-dialogs.tsx
 msgid "The workspace could not be downloaded."
 msgstr "The workspace could not be downloaded."
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "The workspace could not be imported."
 msgstr "The workspace could not be imported."
 
@@ -6509,10 +6513,6 @@ msgstr "Works with your ChatGPT or Claude plan."
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
 msgstr "Workspace"
-
-#: src/pages/SpaceSettingsPanel.tsx
-msgid "Workspace configuration"
-msgstr "Workspace configuration"
 
 #: src/lib/billing.ts
 msgid "year"

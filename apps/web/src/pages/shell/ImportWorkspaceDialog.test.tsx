@@ -12,18 +12,15 @@ vi.mock("@lingui/react/macro", () => {
   return { useLingui: () => ({ t }), Trans: ({ children }: { children: ReactNode }) => children };
 });
 
-const teamConfigToken = vi.fn();
-const teamConfigPreview = vi.fn();
-const teamConfigCreate = vi.fn();
-vi.mock("../lib/rpc", () => ({
-  rpc: {
-    export: {
-      teamConfigToken: () => teamConfigToken(),
-      teamConfigPreview: (input: unknown) => teamConfigPreview(input),
-      teamConfigCreate: (input: unknown) => teamConfigCreate(input),
-    },
+const teamConfigPreview = vi.fn<(_input: unknown) => Promise<unknown>>(() => Promise.resolve());
+const teamConfigCreate = vi.fn<(_input: unknown) => Promise<unknown>>(() => Promise.resolve());
+const rpcForSpace = vi.fn((_spaceId: string) => ({
+  export: {
+    teamConfigPreview: (input: unknown) => teamConfigPreview(input),
+    teamConfigCreate: (input: unknown) => teamConfigCreate(input),
   },
 }));
+vi.mock("../../lib/rpc", () => ({ rpcForSpace: (spaceId: string) => rpcForSpace(spaceId) }));
 
 vi.mock("@rakazo/core", async (importOriginal) => ({
   ...(await importOriginal<typeof Core>()),
@@ -34,17 +31,11 @@ vi.mock("@rakazo/core", async (importOriginal) => ({
   }),
 }));
 
-vi.mock("./ConfirmIdentityDialog", () => ({
-  useIdentityConfirmation: () => ({
-    withIdentityConfirmation: (action: () => Promise<unknown>) => action(),
-    identityDialog: null,
-  }),
-}));
-
-import { TeamConfigSettings } from "./TeamConfigSettings";
+import { ImportWorkspaceDialog } from "./ImportWorkspaceDialog";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
+const done = vi.fn();
 
 const preview = {
   sourceWorkspace: "Marketing",
@@ -74,9 +65,10 @@ const preview = {
 };
 
 beforeEach(() => {
-  teamConfigToken.mockReset();
   teamConfigPreview.mockReset();
   teamConfigCreate.mockReset();
+  rpcForSpace.mockClear();
+  done.mockReset();
   i18n.load("en", {});
   i18n.activate("en");
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -94,13 +86,25 @@ async function render() {
   document.body.append(container);
   root = createRoot(container);
   await act(async () => {
-    root!.render(<TeamConfigSettings />);
+    root!.render(
+      <ImportWorkspaceDialog
+        spaceId="space-2"
+        spaceName="Target"
+        onClose={() => undefined}
+        onDone={done}
+      />,
+    );
   });
+}
+
+/** The dialog portals into `document.body`, so assertions read from there. */
+function view(): HTMLElement {
+  return document.body;
 }
 
 /** Hand the file input a file and wait for the read it triggers. */
 async function chooseFile() {
-  const input = container!.querySelector<HTMLInputElement>('[data-testid="team-config-file"]')!;
+  const input = view().querySelector<HTMLInputElement>('[data-testid="import-workspace-file"]')!;
   const file = new File(["zip"], "workspace.zip", { type: "application/zip" });
   Object.defineProperty(file, "arrayBuffer", { value: async () => new ArrayBuffer(4) });
   Object.defineProperty(input, "files", { value: [file], configurable: true });
@@ -109,41 +113,28 @@ async function chooseFile() {
   });
 }
 
-describe("TeamConfigSettings", () => {
-  it("downloads through a token, never a fetch", async () => {
-    teamConfigToken.mockResolvedValue({ token: "tok-1" });
-    const clicks: string[] = [];
-    const original = HTMLAnchorElement.prototype.click;
-    HTMLAnchorElement.prototype.click = function click(this: HTMLAnchorElement) {
-      clicks.push(this.href);
-    };
-    try {
-      await render();
-      const button = container!.querySelector<HTMLButtonElement>(
-        '[data-testid="team-config-export"]',
-      )!;
-      await act(async () => {
-        button.click();
-      });
-      expect(clicks[0]).toContain("/api/team-config/export?token=tok-1");
-    } finally {
-      HTMLAnchorElement.prototype.click = original;
-    }
-  });
-
-  it("shows each bot with its counts, and ticks them all by default", async () => {
+describe("ImportWorkspaceDialog", () => {
+  it("reads and previews into the space the menu belongs to", async () => {
     teamConfigPreview.mockResolvedValue(preview);
     await render();
     await chooseFile();
 
-    expect(container!.textContent).toContain("Chief of Staff");
-    expect(container!.textContent).toContain("Writer");
-    expect(container!.textContent).toContain("2 routines · 1 servers");
+    expect(rpcForSpace).toHaveBeenCalledWith("space-2");
+    expect(view().textContent).toContain("Chief of Staff");
+    expect(view().textContent).toContain("Writer");
+    expect(view().textContent).toContain("2 routines · 1 servers");
+  });
+
+  it("ticks every bot by default", async () => {
+    teamConfigPreview.mockResolvedValue(preview);
+    await render();
+    await chooseFile();
+
     expect(
-      container!.querySelector<HTMLInputElement>('[data-testid="team-config-bot-bot:chief"]')!
+      view().querySelector<HTMLInputElement>('[data-testid="import-workspace-bot-bot:chief"]')!
         .checked,
     ).toBe(true);
-    expect(container!.textContent).toContain("Import 2 bots");
+    expect(view().textContent).toContain("Import 2 bots");
   });
 
   it("sends only the bots left ticked", async () => {
@@ -152,14 +143,14 @@ describe("TeamConfigSettings", () => {
     await render();
     await chooseFile();
 
-    const chief = container!.querySelector<HTMLInputElement>(
-      '[data-testid="team-config-bot-bot:chief"]',
+    const chief = view().querySelector<HTMLInputElement>(
+      '[data-testid="import-workspace-bot-bot:chief"]',
     )!;
     await act(async () => {
       chief.click();
     });
-    const create = container!.querySelector<HTMLButtonElement>(
-      '[data-testid="team-config-create"]',
+    const create = view().querySelector<HTMLButtonElement>(
+      '[data-testid="import-workspace-create"]',
     )!;
     await act(async () => {
       create.click();
@@ -172,21 +163,21 @@ describe("TeamConfigSettings", () => {
       ],
       selection: { keys: ["bot:writer"] },
     });
-    expect(container!.textContent).toContain("Created 1 bot.");
+    expect(done).toHaveBeenCalledWith("Created 1 bot.");
   });
 
   it("names a dropped model preference rather than failing with it", async () => {
     teamConfigPreview.mockResolvedValue(preview);
     await render();
     await chooseFile();
-    expect(container!.textContent).toContain("anthropic");
+    expect(view().textContent).toContain("anthropic");
   });
 
   it("says a foreign file is not a workspace archive", async () => {
     teamConfigPreview.mockRejectedValue(new Error("not_an_archive"));
     await render();
     await chooseFile();
-    expect(container!.querySelector('[data-testid="team-config-error"]')?.textContent).toContain(
+    expect(view().querySelector('[data-testid="import-workspace-error"]')?.textContent).toContain(
       "not_an_archive",
     );
   });

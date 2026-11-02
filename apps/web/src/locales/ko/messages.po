@@ -138,7 +138,7 @@ msgstr ""
 
 #. placeholder {0}: bot.routines
 #. placeholder {1}: bot.mcpServers
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "{0} routines · {1} servers"
 msgstr ""
 
@@ -428,7 +428,7 @@ msgstr ""
 msgid "A command's output"
 msgstr "명령 출력"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "a name is taken, it is renamed"
 msgstr ""
 
@@ -718,7 +718,7 @@ msgstr "이미 계정이 있나요?"
 #. placeholder {0}: preview.counts.sections
 #. placeholder {1}: preview.counts.skills
 #. placeholder {2}: preview.counts.connections
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Also adds {0} sections, {1} skills and {2} connections."
 msgstr ""
 
@@ -1085,7 +1085,7 @@ msgstr ""
 msgid "Bots and browser automation"
 msgstr ""
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Bots with servers needing credentials will not run until you add them."
 msgstr ""
 
@@ -1159,7 +1159,6 @@ msgstr "이미지를 읽을 수 없음"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
-#: src/components/TeamConfigSettings.tsx
 #: src/components/VaultSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
@@ -1173,6 +1172,7 @@ msgstr "이미지를 읽을 수 없음"
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/shell/create-bot-dialog.tsx
 #: src/pages/shell/dialogs.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 #: src/pages/SpaceSettingOverrides.tsx
 msgid "Cancel"
 msgstr "취소"
@@ -2332,11 +2332,11 @@ msgid "Created"
 msgstr "생성됨"
 
 #. placeholder {0}: created.length
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created {0} bots."
 msgstr ""
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created 1 bot."
 msgstr ""
 
@@ -2358,6 +2358,10 @@ msgstr "인증 정보 저장됨"
 #: src/pages/PluginsOverlay.tsx
 msgid "Credentials are encrypted and never sent to the model."
 msgstr "인증 정보는 암호화되며 모델에 전송되지 않습니다."
+
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Credentials are never included; imported connections need authorising."
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Credentials: {names}"
@@ -2689,14 +2693,6 @@ msgstr "{name} 다운로드"
 msgid "Download CSV"
 msgstr "CSV 다운로드"
 
-#: src/components/TeamConfigSettings.tsx
-msgid "Download this workspace's bots, skills, sections and connections as a file, or build a workspace from one. Credentials are never included."
-msgstr ""
-
-#: src/components/TeamConfigSettings.tsx
-msgid "Download workspace"
-msgstr ""
-
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr ""
@@ -2900,6 +2896,10 @@ msgstr "데이터 내보내기"
 msgid "Export this week's list from the CRM and drop it in the shared folder"
 msgstr "CRM에서 이번 주 목록을 내려받아 공유 폴더에 넣기"
 
+#: src/pages/shell/shell-dialogs.tsx
+msgid "Export workspace configuration"
+msgstr ""
+
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "External conversation"
@@ -3036,7 +3036,7 @@ msgid "From {0}"
 msgstr ""
 
 #. placeholder {0}: preview.sourceWorkspace
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "From {0}. Choose the bots to create."
 msgstr ""
 
@@ -3231,11 +3231,11 @@ msgid "Image upload area"
 msgstr "이미지 업로드 영역"
 
 #. placeholder {0}: ticked.size
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import {0} bots"
 msgstr ""
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import 1 bot"
 msgstr ""
 
@@ -3248,8 +3248,12 @@ msgstr "에이전트 가져오기"
 msgid "Import data"
 msgstr "데이터 가져오기"
 
-#: src/components/TeamConfigSettings.tsx
-msgid "Import workspace"
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Import into {spaceName}"
+msgstr ""
+
+#: src/pages/shell/shell-dialogs.tsx
+msgid "Import workspace configuration"
 msgstr ""
 
 #: src/lib/ticket-status.ts
@@ -3826,7 +3830,7 @@ msgid "Model options"
 msgstr "모델 선택지"
 
 #. placeholder {0}: preview.droppedPreferences .map((item) => item.provider) .join(", ")
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Model preferences for {0} are skipped: connect those providers first."
 msgstr ""
 
@@ -3948,7 +3952,7 @@ msgstr ""
 msgid "Needs an OAuth client ID"
 msgstr "OAuth 클라이언트 ID가 필요합니다"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "needs credentials"
 msgstr ""
 
@@ -5791,7 +5795,7 @@ msgstr ""
 msgid "Testing…"
 msgstr "테스트 중…"
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "That file is not a workspace archive."
 msgstr ""
 
@@ -5838,11 +5842,11 @@ msgstr "화면 링크가 만료되었습니다."
 msgid "The selected memory provider is not available in this build."
 msgstr "선택한 기억 서비스는 현재 빌드에서 사용할 수 없습니다."
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/shell-dialogs.tsx
 msgid "The workspace could not be downloaded."
 msgstr ""
 
-#: src/components/TeamConfigSettings.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "The workspace could not be imported."
 msgstr ""
 
@@ -6508,10 +6512,6 @@ msgstr "ChatGPT 또는 Claude 요금제로 사용할 수 있습니다."
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
-msgstr ""
-
-#: src/pages/SpaceSettingsPanel.tsx
-msgid "Workspace configuration"
 msgstr ""
 
 #: src/lib/billing.ts

@@ -1,17 +1,22 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { Bot, BotSection, Group, Space } from "@rakazo/contracts";
+import { isIdentityConfirmationRequired } from "@rakazo/contracts";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  toast,
 } from "@rakazo/ui-web";
-import { Settings, Trash2 } from "lucide-react";
+import { Download, Settings, Trash2, Upload } from "lucide-react";
 import type { ComponentProps, RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useIdentityConfirmation } from "../../components/ConfirmIdentityDialog";
+import { downloadTeamConfig, issueTeamConfigToken } from "../../components/team-config-transfer";
 import type { Panel } from "../../lib/right-panel-state";
 import type { createSpaceRpc } from "../../lib/rpc";
 import { selectSpace } from "../../lib/rpc";
+import { errorText } from "../../lib/user-error";
 import { CommandPalette } from "./command-palette";
 import { isCommandPaletteHotkey } from "./command-palette-hotkey";
 import type { CreateBotDialogInput } from "./create-bot-dialog";
@@ -25,6 +30,7 @@ import {
   NewSpaceDialog,
   RenameBotSectionDialog,
 } from "./dialogs";
+import { ImportWorkspaceDialog } from "./ImportWorkspaceDialog";
 
 type ChatTarget = { kind: "bot"; chat: Bot } | { kind: "group"; chat: Group };
 type SectionTarget = { section: BotSection; spaceId: string };
@@ -34,6 +40,7 @@ export function useShellDialogs() {
   const [deleteTarget, setDeleteTarget] = useState<Bot | null>(null);
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<Group | null>(null);
   const [deleteSpaceTarget, setDeleteSpaceTarget] = useState<Space | null>(null);
+  const [importSpaceTarget, setImportSpaceTarget] = useState<Space | null>(null);
   const [spaceMenu, setSpaceMenu] = useState<{
     id: string;
     position: { x: number; y: number };
@@ -68,6 +75,8 @@ export function useShellDialogs() {
     setDeleteGroupTarget,
     deleteSpaceTarget,
     setDeleteSpaceTarget,
+    importSpaceTarget,
+    setImportSpaceTarget,
     spaceMenu,
     setSpaceMenu,
     spaceMenuAnchor,
@@ -135,6 +144,8 @@ export function ShellDialogs({
     setDeleteGroupTarget,
     deleteSpaceTarget,
     setDeleteSpaceTarget,
+    importSpaceTarget,
+    setImportSpaceTarget,
     spaceMenu,
     setSpaceMenu,
     closeSpaceMenu,
@@ -156,6 +167,19 @@ export function ShellDialogs({
   const spaceMenuTarget = spaceMenu
     ? (spaces.find((space) => space.id === spaceMenu.id) ?? null)
     : null;
+  const { withIdentityConfirmation, identityDialog } = useIdentityConfirmation();
+  // The download is a navigation, so it runs after the menu closes; the identity step is only
+  // asked for when the server says so, matching every other sensitive action in the shell.
+  function exportSpace(spaceId: string) {
+    void withIdentityConfirmation(async () => {
+      try {
+        downloadTeamConfig(await issueTeamConfigToken(spaceId));
+      } catch (err) {
+        if (isIdentityConfirmationRequired(err)) throw err;
+        toast.error(errorText(err, t`The workspace could not be downloaded.`));
+      }
+    }).catch(() => undefined);
+  }
   return (
     <>
       {spaceMenu ? (
@@ -192,6 +216,28 @@ export function ShellDialogs({
               >
                 <Settings />
                 {t`Settings`}
+              </DropdownMenuItem>
+            ) : null}
+            {spaceMenuTarget ? (
+              <DropdownMenuItem
+                onClick={() => {
+                  exportSpace(spaceMenuTarget.id);
+                  setSpaceMenu(null);
+                }}
+              >
+                <Download />
+                {t`Export workspace configuration`}
+              </DropdownMenuItem>
+            ) : null}
+            {spaceMenuTarget ? (
+              <DropdownMenuItem
+                onClick={() => {
+                  setImportSpaceTarget(spaceMenuTarget);
+                  setSpaceMenu(null);
+                }}
+              >
+                <Upload />
+                {t`Import workspace configuration`}
               </DropdownMenuItem>
             ) : null}
             {spaceMenuTarget?.canDelete ? (
@@ -359,6 +405,21 @@ export function ShellDialogs({
       ) : null}
 
       {deleteRoutineDialogProps ? <DeleteItemDialog {...deleteRoutineDialogProps} /> : null}
+
+      {importSpaceTarget ? (
+        <ImportWorkspaceDialog
+          spaceId={importSpaceTarget.id}
+          spaceName={importSpaceTarget.name}
+          onClose={() => setImportSpaceTarget(null)}
+          onDone={(summary) => {
+            setImportSpaceTarget(null);
+            toast.success(summary);
+            void refreshBots();
+          }}
+        />
+      ) : null}
+
+      {identityDialog}
     </>
   );
 }
