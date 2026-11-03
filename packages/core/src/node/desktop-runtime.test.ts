@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -85,31 +86,85 @@ const env = {
   portStart: 6100,
 };
 
+/** The shell to run, resolved against the real PATH (a test may replace PATH for the script). */
+function bashBinary(): string {
+  const extensions = process.platform === "win32" ? [".exe", ""] : [""];
+  for (const directory of (process.env.PATH ?? "").split(path.delimiter)) {
+    if (!directory) continue;
+    for (const extension of extensions) {
+      const candidate = path.join(directory, `bash${extension}`);
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return "bash";
+}
+
+/** The shell's own spelling of a path; on Windows MSYS renders it under /tmp or /c. */
+function posixPath(target: string): string {
+  if (process.platform !== "win32") return target;
+  const directory = spawnSync(
+    bashBinary(),
+    ["-c", 'cd "$1" && pwd', "bash", path.dirname(target)],
+    {
+      encoding: "utf8",
+    },
+  ).stdout.trim();
+  return path.posix.join(directory, path.basename(target));
+}
+
+/**
+ * Runs a POSIX script from a file, because a generated lifecycle script exceeds the Windows
+ * command-line length limit when passed through `bash -c`.
+ */
+function runScript(
+  script: string,
+  options: { args?: string[]; timeout?: number; env?: NodeJS.ProcessEnv } = {},
+) {
+  const directory = mkdtempSync(path.join(tmpdir(), "rk-script-"));
+  const file = path.join(directory, "run.sh");
+  writeFileSync(file, script);
+  const args = options.args ?? ["-eu"];
+  try {
+    return spawnSync(bashBinary(), [...args, posixPath(file)], {
+      encoding: "utf8",
+      timeout: options.timeout ?? 5000,
+      env: options.env,
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 function fixture() {
   const root = mkdtempSync(path.join(tmpdir(), "desktop-runtime-test-"));
   roots.push(root);
-  const run = (script: string, failLifecycle = false) =>
-    spawnSync(
-      "bash",
+  // The generated commands are POSIX shell, so substitute a POSIX view of this directory.
+  const rootShell = posixPath(root);
+  let scriptCount = 0;
+  const run = (script: string, failLifecycle = false) => {
+    // Run from a file: the generated scripts exceed the Windows command-line length limit.
+    const file = path.join(root, `script-${scriptCount++}.sh`);
+    writeFileSync(
+      file,
       [
-        "-eu",
-        "-c",
-        [
-          // Lifecycle processes are stubbed here; the opt-in Docker smoke runs the real commands.
-          "flock() { :; }",
-          `bash() { return ${failLifecycle ? 1 : 0}; }`,
-          script
-            .replaceAll("/tmp/rakazo/desktop-assignments", root)
-            .replaceAll("/tmp/rakazo", root),
-        ].join("\n"),
-      ],
-      { encoding: "utf8", timeout: 5000 },
+        // Lifecycle processes are stubbed here; the opt-in Docker smoke runs the real commands.
+        "flock() { :; }",
+        `bash() { return ${failLifecycle ? 1 : 0}; }`,
+        script
+          .replaceAll("/tmp/rakazo/desktop-assignments", rootShell)
+          .replaceAll("/tmp/rakazo", rootShell),
+      ].join("\n"),
     );
+    return spawnSync(bashBinary(), ["-eu", posixPath(file)], {
+      encoding: "utf8",
+      timeout: 5000,
+    });
+  };
   const ensure = (bot: string, lease = "run:1", fail = false) =>
     run(managedDesktopCommand(bot, lease, env, `view-${bot}`), fail);
   const release = (bot: string, lease = "run:1", fail = false) =>
     run(releaseDesktopCommand(bot, lease, env), fail);
-  return { root, run, ensure, release };
+  return { root, rootShell, run, ensure, release };
 }
 
 describe("shared Linux desktop lifecycle", () => {
@@ -195,26 +250,21 @@ describe("shared Linux desktop lifecycle", () => {
     expect(f.ensure("a").status).toBe(0);
     expect(readdirSync(f.root).some((name) => name.endsWith(".slot"))).toBe(true);
     const script = releaseDesktopCommand("a", "run:1", env)
-      .replaceAll("/tmp/rakazo/desktop-assignments", f.root)
-      .replaceAll("/tmp/rakazo", f.root);
-    const result = spawnSync(
-      "bash",
+      .replaceAll("/tmp/rakazo/desktop-assignments", f.rootShell)
+      .replaceAll("/tmp/rakazo", f.rootShell);
+    const result = runScript(
       [
-        "-eu",
-        "-c",
-        [
-          "calls=0",
-          "flock() {",
-          '  if [ "$1" = "-u" ]; then return 0; fi',
-          "  calls=$((calls + 1))",
-          '  if [ "$calls" -ge 3 ]; then echo "slot lock failed" >&2; return 1; fi',
-          "  return 0",
-          "}",
-          "bash() { return 0; }",
-          script,
-        ].join("\n"),
-      ],
-      { encoding: "utf8", timeout: 5000 },
+        "calls=0",
+        "flock() {",
+        '  if [ "$1" = "-u" ]; then return 0; fi',
+        "  calls=$((calls + 1))",
+        '  if [ "$calls" -ge 3 ]; then echo "slot lock failed" >&2; return 1; fi',
+        "  return 0",
+        "}",
+        "bash() { return 0; }",
+        script,
+      ].join("\n"),
+      { timeout: 5000 },
     );
     expect(result.status).not.toBe(0);
     expect(result.stdout).toContain("RAKAZO_DESKTOP_RELEASED=");
@@ -225,21 +275,16 @@ describe("shared Linux desktop lifecycle", () => {
     const f = fixture();
     expect(f.ensure("a").status).toBe(0);
     const script = releaseDesktopCommand("a", "run:1", env)
-      .replaceAll("/tmp/rakazo/desktop-assignments", f.root)
-      .replaceAll("/tmp/rakazo", f.root);
-    const result = spawnSync(
-      "bash",
+      .replaceAll("/tmp/rakazo/desktop-assignments", f.rootShell)
+      .replaceAll("/tmp/rakazo", f.rootShell);
+    const result = runScript(
       [
-        "-eu",
-        "-c",
-        [
-          "flock() { :; }",
-          "bash() { return 0; }",
-          "rm() { echo 'slot remove failed' >&2; return 1; }",
-          script,
-        ].join("\n"),
-      ],
-      { encoding: "utf8", timeout: 5000 },
+        "flock() { :; }",
+        "bash() { return 0; }",
+        "rm() { echo 'slot remove failed' >&2; return 1; }",
+        script,
+      ].join("\n"),
+      { timeout: 5000 },
     );
     expect(result.status).not.toBe(0);
     expect(result.stdout).toContain("RAKAZO_DESKTOP_RELEASED=");
@@ -309,10 +354,11 @@ describe("shared Linux desktop lifecycle", () => {
     expect(lines[execAt]).toContain("--restore-last-session");
   });
 
-  it.each([false, true])(
+  // The control route is a Unix-domain socket, which has no Windows equivalent.
+  it.skipIf(process.platform !== "linux").each([false, true])(
     "repairs an empty control route or fails if publication fails (failPublish=%s)",
     async (failPublish) => {
-      const root = mkdtempSync("/tmp/rk-control-");
+      const root = mkdtempSync(path.join(tmpdir(), "rk-control-"));
       roots.push(root);
       mkdirSync(path.join(root, "sockets"));
       mkdirSync(path.join(root, "desktop-targets"));
@@ -333,22 +379,18 @@ describe("shared Linux desktop lifecycle", () => {
           ...screenPorts(0),
           controlPort: String(address.port),
         })
-          .replaceAll("/tmp/rakazo", root)
+          .replaceAll("/tmp/rakazo", posixPath(root))
           .replaceAll("/usr/share/novnc", root);
-        const result = spawnSync(
-          "bash",
+        const result = runScript(
           [
-            "-c",
-            [
-              ...(failPublish ? ["mv() { return 1; }"] : []),
-              "pgrep() { return 0; }",
-              "pkill() { echo unexpected-stop >&2; return 1; }",
-              "flock() { :; }",
-              "command() { echo /fake/websockify; }",
-              script,
-            ].join("\n"),
-          ],
-          { encoding: "utf8", timeout: 5000 },
+            ...(failPublish ? ["mv() { return 1; }"] : []),
+            "pgrep() { return 0; }",
+            "pkill() { echo unexpected-stop >&2; return 1; }",
+            "flock() { :; }",
+            "command() { echo /fake/websockify; }",
+            script,
+          ].join("\n"),
+          { timeout: 5000 },
         );
         expect(result.status, result.stderr).toBe(failPublish ? 1 : 0);
         expect(result.stderr).not.toContain("unexpected-stop");
@@ -364,22 +406,21 @@ describe("shared Linux desktop lifecycle", () => {
   );
 
   it("fails without publishing a token when the input server cannot start", () => {
-    const root = mkdtempSync("/tmp/rk-control-");
+    const root = mkdtempSync(path.join(tmpdir(), "rk-control-"));
     roots.push(root);
-    const script = interactiveScreenCommand(true, "human").replaceAll("/tmp/rakazo", root);
-    const result = spawnSync(
-      "bash",
+    const script = interactiveScreenCommand(true, "human").replaceAll(
+      "/tmp/rakazo",
+      posixPath(root),
+    );
+    const result = runScript(
       [
-        "-c",
-        [
-          "nohup() { return 1; }",
-          "pgrep() { return 1; }",
-          "pkill() { :; }",
-          "sleep() { :; }",
-          script,
-        ].join("\n"),
-      ],
-      { encoding: "utf8", timeout: 5000 },
+        "nohup() { return 1; }",
+        "pgrep() { return 1; }",
+        "pkill() { :; }",
+        "sleep() { :; }",
+        script,
+      ].join("\n"),
+      { timeout: 5000 },
     );
     expect(result.status).not.toBe(0);
     expect(() => readFileSync(path.join(root, "control-token-1"))).toThrow();
@@ -405,7 +446,10 @@ describe("shared Linux desktop lifecycle", () => {
         interactiveScreenCommand(false, "token", screenPorts(1, environment)),
         stopExtraScreenCommand(1, "bot's id", environment),
       ]) {
-        const result = spawnSync("bash", ["-n", "-c", command], { encoding: "utf8" });
+        // A long generated command exceeds the Windows command-line limit, so check a file.
+        const checkFile = path.join(mkdtempSync(path.join(tmpdir(), "rk-shell-check-")), "run.sh");
+        writeFileSync(checkFile, command);
+        const result = spawnSync(bashBinary(), ["-n", checkFile], { encoding: "utf8" });
         expect(result.stderr).toBe("");
         expect(result.status).toBe(0);
       }
@@ -430,18 +474,13 @@ describe("shared Linux desktop lifecycle", () => {
     for (const display of ["019", "19", "20", "22", "99999", "invalid"])
       writeFileSync(path.join(f.root, `browser-profile-${display}`), "fixture");
     const record = path.join(f.root, "stopped");
-    const result = spawnSync(
-      "bash",
+    const result = runScript(
       [
-        "-eu",
-        "-c",
-        [
-          "pkill() { :; }; sleep() { :; }",
-          `bash() { printf '%s\\n' "$5" >>${shellQuote(record)}; }`,
-          resetDesktopRuntimeCommand(env).replaceAll("/tmp/rakazo", f.root),
-        ].join("\n"),
-      ],
-      { encoding: "utf8", timeout: 5000 },
+        "pkill() { :; }; sleep() { :; }",
+        `bash() { printf '%s\\n' "$5" >>${shellQuote(record)}; }`,
+        resetDesktopRuntimeCommand(env).replaceAll("/tmp/rakazo", f.rootShell),
+      ].join("\n"),
+      { timeout: 5000 },
     );
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(record, "utf8")).toBe("0\n2\n");
@@ -576,10 +615,9 @@ describe("shared Linux desktop lifecycle", () => {
           homeDir: home,
           workspaceDir: home,
           browserProfilesDir: profiles,
-        }).replaceAll("/tmp/rakazo", path.join(root, "runtime"));
+        }).replaceAll("/tmp/rakazo", posixPath(path.join(root, "runtime")));
         waitForReady(joinedReady);
-        const result = spawnSync("bash", ["-eu", "-c", command], {
-          encoding: "utf8",
+        const result = runScript(command, {
           timeout: 20_000,
           env: {
             ...process.env,

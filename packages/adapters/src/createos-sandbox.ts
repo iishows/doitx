@@ -82,7 +82,24 @@ const CREATEOS_SANDBOX_PATH = /^\/v1\/sandboxes\/([^/?]+)([^?]*)/;
  * processes cannot assign the same session to different displays.
  */
 export const CREATEOS_SCREEN_MAP_SCRIPT = `
-import fcntl, json, os, sys
+import json, os, sys
+
+try:
+    import fcntl
+except ImportError:  # Windows, where this script also runs for local checks.
+    fcntl = None
+
+def lock_exclusive(handle):
+    if fcntl is not None:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        return
+    # msvcrt locks a byte range, so give the fresh lock file one byte to hold.
+    import msvcrt
+    handle.seek(0)
+    handle.write("\\0")
+    handle.flush()
+    handle.seek(0)
+    msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
 
 def write_map(path, data):
     temporary = path + ".tmp"
@@ -93,7 +110,7 @@ def write_map(path, data):
 op, key, screen_id, path = sys.argv[2:6]
 os.makedirs(os.path.dirname(path), exist_ok=True)
 with open(path + ".lock", "a", encoding="utf-8") as lock:
-    fcntl.flock(lock, fcntl.LOCK_EX)
+    lock_exclusive(lock)
     try:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)

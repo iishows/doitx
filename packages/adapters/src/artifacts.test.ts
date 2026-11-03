@@ -26,25 +26,30 @@ describe("LocalArtifactStore", () => {
     );
 
     const info = await stat(path.join(root, "artifacts", "space-1", stored.id));
-    expect(info.mode & 0o777).toBe(0o600);
+    // Windows has no POSIX mode bits; the owner-only bit is a Linux-host guarantee.
+    if (process.platform !== "win32") expect(info.mode & 0o777).toBe(0o600);
   });
 
-  it("does not follow a replacement symlink when reading an artifact", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "rakazo-artifacts-"));
-    dirs.push(root);
-    const store = new LocalArtifactStore(root);
-    const stored = await store.put(
-      { name: "private.txt", mimeType: "text/plain", bytes: new TextEncoder().encode("private") },
-      context,
-    );
-    const file = path.join(root, "artifacts", "space-1", stored.id);
-    const target = path.join(root, "outside.txt");
-    await writeFile(target, "outside");
-    await rm(file);
-    await symlink(target, file);
+  // Replacing a file with a symlink and refusing to follow it needs POSIX link semantics.
+  it.skipIf(process.platform === "win32")(
+    "does not follow a replacement symlink when reading an artifact",
+    async () => {
+      const root = await mkdtemp(path.join(tmpdir(), "rakazo-artifacts-"));
+      dirs.push(root);
+      const store = new LocalArtifactStore(root);
+      const stored = await store.put(
+        { name: "private.txt", mimeType: "text/plain", bytes: new TextEncoder().encode("private") },
+        context,
+      );
+      const file = path.join(root, "artifacts", "space-1", stored.id);
+      const target = path.join(root, "outside.txt");
+      await writeFile(target, "outside");
+      await rm(file);
+      await symlink(target, file);
 
-    await expect(store.get(stored.id, context)).rejects.toThrow();
-  });
+      await expect(store.get(stored.id, context)).rejects.toThrow();
+    },
+  );
 });
 
 /** A key ring over in-memory keys; `withWrites` gives another ring over the same keys. */
@@ -159,7 +164,7 @@ describe("LocalArtifactStore with content keys", () => {
       abandoned: 0,
     });
     expect((await readFile(file)).toString()).not.toContain("before encryption");
-    expect((await stat(file)).mode & 0o777).toBe(0o600);
+    if (process.platform !== "win32") expect((await stat(file)).mode & 0o777).toBe(0o600);
     expect(await read()).toBe("before encryption");
 
     await keys.rotate("space-1");

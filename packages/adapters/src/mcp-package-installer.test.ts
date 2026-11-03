@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import { chmod, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { hostname, tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   defaultMcpPackagesRoot,
@@ -91,7 +91,7 @@ describe("defaultMcpPackagesRoot", () => {
     const data = await mkdtemp(join(tmpdir(), "rakazo-data-"));
     try {
       expect(defaultMcpPackagesRoot({ MCP_PACKAGES_DIR: "/srv/pkgs", DATA_DIR: data })).toBe(
-        "/srv/pkgs",
+        resolve("/srv/pkgs"),
       );
       expect(defaultMcpPackagesRoot({ DATA_DIR: data })).toBe(join(data, "mcp-packages"));
       expect(defaultMcpPackagesRoot({ DATA_DIR: join(data, "missing") })).toBe(
@@ -141,10 +141,17 @@ describe("ensureMcpPackage", () => {
   beforeEach(async () => {
     work = await mkdtemp(join(tmpdir(), "rakazo-mcp-installer-"));
     root = join(work, "packages");
-    npm = join(work, "fake-npm");
+    const script = join(work, "fake-npm");
     log = join(work, "npm.log");
-    await writeFile(npm, FAKE_NPM);
-    await chmod(npm, 0o755);
+    await writeFile(script, FAKE_NPM);
+    await chmod(script, 0o755);
+    if (process.platform === "win32") {
+      // Windows runs npm through a .cmd shim; a shebang file cannot be spawned directly.
+      npm = `${script}.cmd`;
+      await writeFile(npm, `@node "${script}" %*\r\n`);
+    } else {
+      npm = script;
+    }
   });
 
   afterEach(async () => {
@@ -222,8 +229,13 @@ describe("ensureMcpPackage", () => {
       },
     });
     expect(isInstalledMcpBin(first)).toBe(true);
-    expect(first.binPath).toMatch(/node_modules\/@demo\/server\/bin\/server\.js$/);
-    expect(execFileSync(first.binPath, { encoding: "utf8" })).toContain("ran @demo/server");
+    expect(
+      first.binPath.endsWith(join("node_modules", "@demo", "server", "bin", "server.js")),
+    ).toBe(true);
+    // Run the installed bin through node: a shebang script is not executable by itself on Windows.
+    expect(execFileSync(process.execPath, [first.binPath], { encoding: "utf8" })).toContain(
+      "ran @demo/server",
+    );
 
     const second = await ensureMcpPackage("@demo/server@1.0.0", {
       ...options(),
@@ -260,7 +272,9 @@ describe("ensureMcpPackage", () => {
     expect(await leftovers()).toEqual([]);
 
     const bin = await ensureMcpPackage("server@2.0.0", options());
-    expect(execFileSync(bin.binPath, { encoding: "utf8" })).toContain("ran server");
+    expect(execFileSync(process.execPath, [bin.binPath], { encoding: "utf8" })).toContain(
+      "ran server",
+    );
   });
 
   it("reports npm's output when the install fails and cleans up", async () => {
@@ -330,7 +344,9 @@ describe("ensureMcpPackage", () => {
       "server@5.0.0",
       options({ NPM_CONFIG_FAKE_DELAY_MS: "300" }),
     );
-    expect(execFileSync(bin.binPath, { encoding: "utf8" })).toContain("ran server");
+    expect(execFileSync(process.execPath, [bin.binPath], { encoding: "utf8" })).toContain(
+      "ran server",
+    );
     expect(await runs()).toHaveLength(1);
   });
 
@@ -360,9 +376,9 @@ describe("ensureMcpPackage", () => {
       ...options({ NPM_CONFIG_FAKE_BIN: bins }),
       binName: "alpha",
     });
-    expect(named.binPath).toMatch(/multi\/a\.js$/);
+    expect(named.binPath.endsWith(join("multi", "a.js"))).toBe(true);
     const own = await ensureMcpPackage("multi@1.0.0", options({ NPM_CONFIG_FAKE_BIN: bins }));
-    expect(own.binPath).toMatch(/multi\/m\.js$/);
+    expect(own.binPath.endsWith(join("multi", "m.js"))).toBe(true);
     await expect(
       ensureMcpPackage("multi@1.0.0", {
         ...options({ NPM_CONFIG_FAKE_BIN: bins }),
@@ -373,12 +389,12 @@ describe("ensureMcpPackage", () => {
       "solo@1.0.0",
       options({ NPM_CONFIG_FAKE_BIN: '"cli.js"' }),
     );
-    expect(single.binPath).toMatch(/solo\/cli\.js$/);
+    expect(single.binPath.endsWith(join("solo", "cli.js"))).toBe(true);
     const aliased = await ensureMcpPackage(
       "aliased@1.0.0",
       options({ NPM_CONFIG_FAKE_BIN: JSON.stringify({ "srv-a": "s.js", "srv-b": "s.js" }) }),
     );
-    expect(aliased.binPath).toMatch(/aliased\/s\.js$/);
+    expect(aliased.binPath.endsWith(join("aliased", "s.js"))).toBe(true);
   });
 
   it("refuses specs that are not registry packages", async () => {
@@ -395,11 +411,17 @@ describe("ensureMcpPackage", () => {
     await writeFile(join(fixture, "bin", "x.js"), "#!/usr/bin/env node\nconsole.log('fixture');\n");
     const tarball = join(
       work,
-      execFileSync("npm", ["pack", "--silent", "--pack-destination", work], {
-        cwd: fixture,
-        encoding: "utf8",
-        env: { ...process.env, NPM_CONFIG_CACHE: join(work, "npm-cache") },
-      }).trim(),
+      execFileSync(
+        process.platform === "win32" ? "npm.cmd" : "npm",
+        ["pack", "--silent", "--pack-destination", work],
+        {
+          cwd: fixture,
+          encoding: "utf8",
+          env: { ...process.env, NPM_CONFIG_CACHE: join(work, "npm-cache") },
+          // npm is a .cmd shim on Windows, which Node can only run through a shell.
+          shell: process.platform === "win32",
+        },
+      ).trim(),
     );
 
     const bin = await ensureMcpPackage("fixture-mcp@1.0.0", {
@@ -407,7 +429,9 @@ describe("ensureMcpPackage", () => {
       installTarget: tarball,
       env: { NPM_CONFIG_OFFLINE: "true", NPM_CONFIG_CACHE: join(work, "npm-cache") },
     });
-    expect(execFileSync(bin.binPath, { encoding: "utf8" }).trim()).toBe("fixture");
+    expect(execFileSync(process.execPath, [bin.binPath], { encoding: "utf8" }).trim()).toBe(
+      "fixture",
+    );
     expect(
       existsSync(
         join(

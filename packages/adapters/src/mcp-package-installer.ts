@@ -424,13 +424,18 @@ function runNpmInstall(plan: InstallPlan, prefix: string): Promise<void> {
       output = (output + chunk.toString("utf8")).slice(-OUTPUT_TAIL_CHARS * 2);
     };
     let child: ChildProcess;
+    // npm ships as a .cmd shim on Windows, and Node can only run one through a shell.
+    const npmCommand =
+      process.platform === "win32" && plan.npmCommand === "npm" ? "npm.cmd" : plan.npmCommand;
+    const windowsShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(npmCommand);
     try {
-      child = spawn(plan.npmCommand, args, {
+      child = spawn(npmCommand, args, {
         env: installEnvironment(plan.env),
         stdio: ["ignore", "pipe", "pipe"],
         // Own process group, so a timeout also stops install scripts npm started.
         detached: process.platform !== "win32",
         windowsHide: true,
+        shell: windowsShim,
       });
     } catch (error) {
       reject(error);
@@ -465,8 +470,17 @@ function runNpmInstall(plan: InstallPlan, prefix: string): Promise<void> {
 
 function killTree(child: ChildProcess): void {
   try {
-    if (child.pid && process.platform !== "win32") process.kill(-child.pid, "SIGKILL");
-    else child.kill("SIGKILL");
+    if (!child.pid) return;
+    if (process.platform !== "win32") {
+      process.kill(-child.pid, "SIGKILL");
+      return;
+    }
+    // A .cmd shim runs npm as a grandchild, so killing the shell alone leaves it running.
+    const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    killer.on("error", () => child.kill("SIGKILL"));
   } catch {
     child.kill("SIGKILL");
   }

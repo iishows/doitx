@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import type {
   AdapterContext,
@@ -38,6 +38,11 @@ async function readHead(handle: FileHandle): Promise<Buffer> {
 /** Opens a file for reading, or returns undefined if it no longer exists. */
 async function openExisting(file: string): Promise<FileHandle | undefined> {
   try {
+    // Windows has no O_NOFOLLOW; inspect the link itself so a swapped symlink is refused there.
+    if (!constants.O_NOFOLLOW) {
+      const info = await lstat(file);
+      if (info.isSymbolicLink()) throw new Error("artifact path is a symbolic link");
+    }
     return await open(file, constants.O_RDONLY | O_NOFOLLOW);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
@@ -219,6 +224,7 @@ export class LocalArtifactStore implements ArtifactStore {
     const source = await openExisting(file);
     if (!source) return "unchanged";
     const temp = `${file}.sealing-${randomUUID()}`;
+    let sourceClosed = false;
     try {
       const head = await readHead(source);
       const sealed = isSealedArtifact(head);
@@ -244,10 +250,13 @@ export class LocalArtifactStore implements ArtifactStore {
       // check and the rename remains, and a file restored there is encrypted and has
       // no database row pointing at it.
       if ((await source.stat()).nlink === 0) return "unchanged";
+      // Windows cannot replace a file that still has an open handle, so close ours first.
+      await source.close();
+      sourceClosed = true;
       await rename(temp, file);
       return "rewritten";
     } finally {
-      await source.close();
+      if (!sourceClosed) await source.close();
       await rm(temp, { force: true });
     }
   }

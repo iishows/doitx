@@ -5,6 +5,19 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { BROWSER_POLICY, PREPARE_LINUX_DESKTOP } from "./linux-desktop.js";
 
+/** The shell to run, resolved against the real PATH: Windows has no /bin/sh. */
+function shBinary(): string {
+  const extensions = process.platform === "win32" ? [".exe", ""] : [""];
+  for (const directory of (process.env.PATH ?? "").split(path.delimiter)) {
+    if (!directory) continue;
+    for (const extension of extensions) {
+      const candidate = path.join(directory, `sh${extension}`);
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return process.platform === "win32" ? "sh" : "/bin/sh";
+}
+
 function prepareDesktop({ repairExitCode = 0, installExitCode = 0, broken = true } = {}) {
   const bin = mkdtempSync(path.join(tmpdir(), "rakazo-prepare-"));
   try {
@@ -50,7 +63,7 @@ fi
       "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
       fontPath,
     );
-    const result = spawnSync("/bin/sh", ["-c", prepare], {
+    const result = spawnSync(shBinary(), ["-c", prepare], {
       env: { PATH: bin },
       encoding: "utf8",
     });

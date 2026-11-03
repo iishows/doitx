@@ -70,20 +70,24 @@ function connect(socket: string) {
 }
 
 describe("terminal server", () => {
-  it("runs a shell in the workspace and applies resize frames", async () => {
-    const { root, socket } = await startServer();
-    const { client, waitFor } = connect(socket);
-    client.write(encodeTerminalResize(123, 45));
-    // Split one frame across writes: framing must survive arbitrary stream chunking.
-    const frame = encodeTerminalInput("pwd; stty size; echo done-$((20 + 22))\n");
-    client.write(frame.subarray(0, 3));
-    client.write(frame.subarray(3));
-    const output = await waitFor(/done-42/);
-    expect(output).toContain(root);
-    expect(output).toContain("45 123");
-  });
+  // The terminal is served over a Unix-domain socket, which Windows does not provide.
+  it.skipIf(process.platform === "win32")(
+    "runs a shell in the workspace and applies resize frames",
+    async () => {
+      const { root, socket } = await startServer();
+      const { client, waitFor } = connect(socket);
+      client.write(encodeTerminalResize(123, 45));
+      // Split one frame across writes: framing must survive arbitrary stream chunking.
+      const frame = encodeTerminalInput("pwd; stty size; echo done-$((20 + 22))\n");
+      client.write(frame.subarray(0, 3));
+      client.write(frame.subarray(3));
+      const output = await waitFor(/done-42/);
+      expect(output).toContain(root);
+      expect(output).toContain("45 123");
+    },
+  );
 
-  it("gives each connection its own shell", async () => {
+  it.skipIf(process.platform === "win32")("gives each connection its own shell", async () => {
     const { socket } = await startServer();
     const first = connect(socket);
     const second = connect(socket);

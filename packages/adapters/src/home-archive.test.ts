@@ -81,7 +81,9 @@ describe("home archive", () => {
     await unpackHome(packHome(source), dest);
 
     expect(await tree(dest)).toEqual(await tree(source));
-    expect((await stat(path.join(dest, "run.sh"))).mode & 0o777).toBe(0o755);
+    // Windows has no POSIX mode bits; the executable bit is a Linux-host guarantee.
+    if (process.platform !== "win32")
+      expect((await stat(path.join(dest, "run.sh"))).mode & 0o777).toBe(0o755);
   });
 
   it("copies links that stay in the home and leaves out the rest", async () => {
@@ -104,7 +106,8 @@ describe("home archive", () => {
     expect(bytes.includes(Buffer.from("host secret"))).toBe(false);
   });
 
-  it.skipIf(process.getuid?.() === 0)(
+  // Windows has no POSIX mode bits, so chmod cannot make a file unreadable there.
+  it.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     "fails instead of leaving out a file it cannot read",
     async () => {
       const source = await tempDir();
@@ -166,6 +169,7 @@ describe("home archive", () => {
     const dest = path.join(await tempDir(), "home");
     await mkdir(dest);
     await unpackHome(once(archive(entry(2, "locked", "x", 0o4000 | 0o000))), dest);
-    expect((await stat(path.join(dest, "locked"))).mode & 0o7777).toBe(0o600);
+    if (process.platform !== "win32")
+      expect((await stat(path.join(dest, "locked"))).mode & 0o7777).toBe(0o600);
   });
 });

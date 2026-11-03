@@ -194,85 +194,95 @@ describe.each([
     await provider.destroy(replacement, context);
   });
 
-  it("surfaces injected lifecycle and transfer failures and remains retryable", async () => {
-    const provider = await makeProvider();
-    const faulted = faultOnce(provider, [
-      "provision",
-      "prepare",
-      "importWorkspace",
-      "exportWorkspace",
-    ]);
-    const request = { botId: "faults", homePath: "/unused" };
+  // The executable flag lives in POSIX mode bits, which Windows does not have.
+  it.skipIf(process.platform === "win32")(
+    "surfaces injected lifecycle and transfer failures and remains retryable",
+    async () => {
+      const provider = await makeProvider();
+      const faulted = faultOnce(provider, [
+        "provision",
+        "prepare",
+        "importWorkspace",
+        "exportWorkspace",
+      ]);
+      const request = { botId: "faults", homePath: "/unused" };
 
-    await expect(faulted.provision(request, context)).rejects.toThrow("injected provision failure");
-    const computer = await faulted.provision(request, context);
-    expect(computer.fresh).toBe(true);
-    await expect(faulted.prepare(computer, context)).rejects.toThrow("injected prepare failure");
-    await faulted.prepare(computer, context);
+      await expect(faulted.provision(request, context)).rejects.toThrow(
+        "injected provision failure",
+      );
+      const computer = await faulted.provision(request, context);
+      expect(computer.fresh).toBe(true);
+      await expect(faulted.prepare(computer, context)).rejects.toThrow("injected prepare failure");
+      await faulted.prepare(computer, context);
 
-    const file = {
-      path: "retry.bin",
-      content: Uint8Array.from([0, 255, 128, 1]),
-      executable: true,
-    };
-    await expect(faulted.importWorkspace(computer, portableFiles([file]), context)).rejects.toThrow(
-      "injected importWorkspace failure",
-    );
-    await faulted.importWorkspace(computer, portableFiles([file]), context);
+      const file = {
+        path: "retry.bin",
+        content: Uint8Array.from([0, 255, 128, 1]),
+        executable: true,
+      };
+      await expect(
+        faulted.importWorkspace(computer, portableFiles([file]), context),
+      ).rejects.toThrow("injected importWorkspace failure");
+      await faulted.importWorkspace(computer, portableFiles([file]), context);
 
-    await expect(collect(faulted.exportWorkspace(computer, context))).rejects.toThrow(
-      "injected exportWorkspace failure",
-    );
-    const exported = await collect(faulted.exportWorkspace(computer, context));
-    expect(exported).toEqual([file]);
-  });
+      await expect(collect(faulted.exportWorkspace(computer, context))).rejects.toThrow(
+        "injected exportWorkspace failure",
+      );
+      const exported = await collect(faulted.exportWorkspace(computer, context));
+      expect(exported).toEqual([file]);
+    },
+  );
 });
 
 describe("portable workspace transfer", () => {
-  it("preserves binary bytes and executable metadata across every provider pairing", async () => {
-    const sourceProviders = await providerSet("source");
-    const targetProviders = await providerSet("target");
-    const binary = Uint8Array.from([0, 255, 1, 128, 2, 127]);
+  // The executable flag lives in POSIX mode bits, which Windows does not have.
+  it.skipIf(process.platform === "win32")(
+    "preserves binary bytes and executable metadata across every provider pairing",
+    async () => {
+      const sourceProviders = await providerSet("source");
+      const targetProviders = await providerSet("target");
+      const binary = Uint8Array.from([0, 255, 1, 128, 2, 127]);
 
-    for (const [sourceName, source] of sourceProviders) {
-      const sourceComputer = await provisionPrepared(
-        source,
-        {
-          botId: `source-${sourceName}`,
-          homePath: "/unused",
-        },
-        context,
-      );
-      await source.writeFile(
-        sourceComputer,
-        { path: "bin/tool", content: binary, executable: true },
-        context,
-      );
-      const exported = await collect(source.exportWorkspace(sourceComputer, context));
-
-      for (const [targetName, target] of targetProviders) {
-        const targetComputer = await provisionPrepared(
-          target,
+      for (const [sourceName, source] of sourceProviders) {
+        const sourceComputer = await provisionPrepared(
+          source,
           {
-            botId: `${sourceName}-to-${targetName}`,
+            botId: `source-${sourceName}`,
             homePath: "/unused",
           },
           context,
         );
-        await target.importWorkspace(targetComputer, portableFiles(exported), context);
+        await source.writeFile(
+          sourceComputer,
+          { path: "bin/tool", content: binary, executable: true },
+          context,
+        );
+        const exported = await collect(source.exportWorkspace(sourceComputer, context));
 
-        expect(await target.readFile(targetComputer, "bin/tool", context)).toEqual(binary);
-        expect(await target.listFiles(targetComputer, "bin", context)).toEqual([
-          {
-            path: "bin/tool",
-            kind: "file",
-            size: binary.byteLength,
-            executable: true,
-          },
-        ]);
+        for (const [targetName, target] of targetProviders) {
+          const targetComputer = await provisionPrepared(
+            target,
+            {
+              botId: `${sourceName}-to-${targetName}`,
+              homePath: "/unused",
+            },
+            context,
+          );
+          await target.importWorkspace(targetComputer, portableFiles(exported), context);
+
+          expect(await target.readFile(targetComputer, "bin/tool", context)).toEqual(binary);
+          expect(await target.listFiles(targetComputer, "bin", context)).toEqual([
+            {
+              path: "bin/tool",
+              kind: "file",
+              size: binary.byteLength,
+              executable: true,
+            },
+          ]);
+        }
       }
-    }
-  });
+    },
+  );
 });
 
 type FaultableMethod = "provision" | "prepare" | "importWorkspace" | "exportWorkspace";

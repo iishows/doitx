@@ -1,5 +1,5 @@
 import { execFile, execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type * as TimersPromises from "node:timers/promises";
@@ -112,22 +112,6 @@ function shellArgs(command: string): string[] {
 }
 
 /** Inverse of shellQuote, including the '"'"' encoding of an embedded single quote. */
-function unshellQuote(quoted: string): string {
-  let value = "";
-  let index = 1;
-  while (index < quoted.length) {
-    if (quoted.startsWith(`'"'"'`, index)) {
-      value += "'";
-      index += `'"'"'`.length;
-      continue;
-    }
-    if (quoted[index] === "'") return value;
-    value += quoted[index];
-    index += 1;
-  }
-  throw new Error("unterminated shell quote");
-}
-
 /** Route-driven CreateOS control-plane double. Exec replies are keyed off the shell command. */
 function createosFixture(
   options: {
@@ -437,8 +421,18 @@ describe("CreateOSSandboxProvider", () => {
       expect(command).toContain('flag = "--user-data-dir=" + profile');
       expect(command).toContain('while [ "$attempt" -lt 2 ]');
       expect(command).toContain("signal.SIGTERM");
-      const quoted = command.slice(command.lastIndexOf("'-lc' ") + "'-lc' ".length);
-      execFileSync("bash", ["-n", "-c", unshellQuote(quoted)]);
+      // The whole launch line is shell; checking it covers the inner -lc script too.
+      // Written to a file: a long script exceeds the Windows command-line length limit.
+      const checkFile = path.join(
+        mkdtempSync(path.join(tmpdir(), "rakazo-shell-check-")),
+        "launch.sh",
+      );
+      writeFileSync(checkFile, command);
+      try {
+        execFileSync("bash", ["-n", checkFile]);
+      } finally {
+        rmSync(path.dirname(checkFile), { recursive: true, force: true });
+      }
     }
     for (const command of commands) {
       expect(command).not.toContain("/.browser-profiles/chromium'");

@@ -744,53 +744,56 @@ describe("Railway computers", () => {
     }
   });
 
-  it("satisfies the shared workspace contract through the Railway SDK", async () => {
-    const directory = await mkdtemp(path.join(tmpdir(), "rakazo-railway-contract-"));
-    const localPath = (filePath: string) => filePath.replace("/home/rakazo", directory);
-    sandbox.files.write.mockImplementation(
-      async (filePath: string, content: Uint8Array, options?: { mode: number }) => {
-        await mkdir(path.dirname(localPath(filePath)), { recursive: true });
-        await writeFile(localPath(filePath), content, options);
-      },
-    );
-    sandbox.files.read.mockImplementation(
-      async (filePath: string) => new Uint8Array(await readFile(localPath(filePath))),
-    );
-    sandbox.files.list.mockImplementation(async (filePath: string) =>
-      Promise.all(
-        (await readdir(localPath(filePath))).map(async (name) => {
-          const entry = await stat(path.join(localPath(filePath), name));
-          return { name, isDir: entry.isDirectory(), size: entry.size, mode: entry.mode };
-        }),
-      ),
-    );
-    sandbox.exec.mockImplementation(async (command: string) => {
-      if (
-        command.includes("find . -type f -print0") ||
-        command.startsWith("'echo'") ||
-        command.startsWith("chmod ")
-      ) {
-        const result = await promisify(execFile)("bash", [
-          "-c",
-          command.replaceAll("/home/rakazo", directory),
-        ]);
-        return { ...result, exitCode: 0 };
+  it.skipIf(process.platform === "win32")(
+    "satisfies the shared workspace contract through the Railway SDK",
+    async () => {
+      const directory = await mkdtemp(path.join(tmpdir(), "rakazo-railway-contract-"));
+      const localPath = (filePath: string) => filePath.replace("/home/rakazo", directory);
+      sandbox.files.write.mockImplementation(
+        async (filePath: string, content: Uint8Array, options?: { mode: number }) => {
+          await mkdir(path.dirname(localPath(filePath)), { recursive: true });
+          await writeFile(localPath(filePath), content, options);
+        },
+      );
+      sandbox.files.read.mockImplementation(
+        async (filePath: string) => new Uint8Array(await readFile(localPath(filePath))),
+      );
+      sandbox.files.list.mockImplementation(async (filePath: string) =>
+        Promise.all(
+          (await readdir(localPath(filePath))).map(async (name) => {
+            const entry = await stat(path.join(localPath(filePath), name));
+            return { name, isDir: entry.isDirectory(), size: entry.size, mode: entry.mode };
+          }),
+        ),
+      );
+      sandbox.exec.mockImplementation(async (command: string) => {
+        if (
+          command.includes("find . -type f -print0") ||
+          command.startsWith("'echo'") ||
+          command.startsWith("chmod ")
+        ) {
+          const result = await promisify(execFile)("bash", [
+            "-c",
+            command.replaceAll("/home/rakazo", directory),
+          ]);
+          return { ...result, exitCode: 0 };
+        }
+        return {
+          exitCode: 0,
+          stdout: command.includes("RAKAZO_DESKTOP=")
+            ? "RAKAZO_DESKTOP=0:test-token"
+            : command.includes("CURSOR")
+              ? "aW1hZ2U=\nCURSOR X=1 Y=2"
+              : "",
+        };
+      });
+      try {
+        await assertSandboxWorkspaceContract(provider, computer, ctx);
+      } finally {
+        await rm(directory, { recursive: true, force: true });
       }
-      return {
-        exitCode: 0,
-        stdout: command.includes("RAKAZO_DESKTOP=")
-          ? "RAKAZO_DESKTOP=0:test-token"
-          : command.includes("CURSOR")
-            ? "aW1hZ2U=\nCURSOR X=1 Y=2"
-            : "",
-      };
-    });
-    try {
-      await assertSandboxWorkspaceContract(provider, computer, ctx);
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
+    },
+  );
 
   it("reuses an existing computer without marking its workspace fresh", async () => {
     expect(
@@ -928,42 +931,45 @@ describe("Railway computers", () => {
     expect(sandbox.files.read).not.toHaveBeenCalled();
   });
 
-  it("exports regular binary files without following links or reading FIFOs", async () => {
-    const directory = await mkdtemp(path.join(tmpdir(), "rakazo-railway-"));
-    const stopBrowsers = vi.spyOn(LinuxDesktop.prototype, "stopBrowsers").mockResolvedValue();
-    try {
-      await mkdir(path.join(directory, "bin"));
-      const content = Uint8Array.from([0, 255, 128]);
-      await writeFile(path.join(directory, "bin/tool"), content, { mode: 0o700 });
-      await writeFile(path.join(directory, "note"), "saved", { mode: 0o600 });
-      await symlink("bin", path.join(directory, "linked-bin"));
-      await promisify(execFile)("mkfifo", [path.join(directory, "pipe")]);
-      sandbox.exec.mockImplementation(async (command: string) => {
-        const result = await promisify(execFile)("bash", [
-          "-c",
-          command.replaceAll("/home/rakazo", directory),
-        ]);
-        return { ...result, exitCode: 0, timedOut: false };
-      });
-      sandbox.files.read.mockImplementation(
-        async (filePath: string) =>
-          new Uint8Array(await readFile(filePath.replace("/home/rakazo", directory))),
-      );
-      const exported = [];
-      for await (const file of provider.exportWorkspace(computer, ctx)) exported.push(file);
-      expect(exported).toEqual(
-        expect.arrayContaining([
-          { path: "bin/tool", content, executable: true },
-          { path: "note", content: new TextEncoder().encode("saved"), executable: false },
-        ]),
-      );
-      expect(exported).toHaveLength(2);
-      expect(Sandbox.connect).toHaveBeenCalledTimes(2);
-    } finally {
-      stopBrowsers.mockRestore();
-      await rm(directory, { recursive: true, force: true });
-    }
-  });
+  it.skipIf(process.platform === "win32")(
+    "exports regular binary files without following links or reading FIFOs",
+    async () => {
+      const directory = await mkdtemp(path.join(tmpdir(), "rakazo-railway-"));
+      const stopBrowsers = vi.spyOn(LinuxDesktop.prototype, "stopBrowsers").mockResolvedValue();
+      try {
+        await mkdir(path.join(directory, "bin"));
+        const content = Uint8Array.from([0, 255, 128]);
+        await writeFile(path.join(directory, "bin/tool"), content, { mode: 0o700 });
+        await writeFile(path.join(directory, "note"), "saved", { mode: 0o600 });
+        await symlink("bin", path.join(directory, "linked-bin"));
+        await promisify(execFile)("mkfifo", [path.join(directory, "pipe")]);
+        sandbox.exec.mockImplementation(async (command: string) => {
+          const result = await promisify(execFile)("bash", [
+            "-c",
+            command.replaceAll("/home/rakazo", directory),
+          ]);
+          return { ...result, exitCode: 0, timedOut: false };
+        });
+        sandbox.files.read.mockImplementation(
+          async (filePath: string) =>
+            new Uint8Array(await readFile(filePath.replace("/home/rakazo", directory))),
+        );
+        const exported = [];
+        for await (const file of provider.exportWorkspace(computer, ctx)) exported.push(file);
+        expect(exported).toEqual(
+          expect.arrayContaining([
+            { path: "bin/tool", content, executable: true },
+            { path: "note", content: new TextEncoder().encode("saved"), executable: false },
+          ]),
+        );
+        expect(exported).toHaveLength(2);
+        expect(Sandbox.connect).toHaveBeenCalledTimes(2);
+      } finally {
+        stopBrowsers.mockRestore();
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("restores binary files and permissions over one connection", async () => {
     const stopBrowsers = vi.spyOn(LinuxDesktop.prototype, "stopBrowsers").mockResolvedValue();

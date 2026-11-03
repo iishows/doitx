@@ -754,14 +754,18 @@ export function managedDesktopCommand(
     'index=$(sed -n "1p" "$slot" 2>/dev/null || true)',
     'view_token=$(sed -n "3p" "$slot" 2>/dev/null || true)',
     'if [ -z "$index" ]; then',
-    `  index=$(python3 -c ${shellQuote(`import pathlib, sys
+    `  index=$(python3 -c ${shellQuote(`import os, pathlib, sys, tempfile
 used = set()
 for slot in pathlib.Path(sys.argv[1]).glob("*.slot"):
     try:
         with slot.open() as source: used.add(int(source.readline()))
     except ValueError: pass
 # A damaged assignment must not make a live display available to another bot.
-for marker in pathlib.Path("/tmp/rakazo").glob("browser-profile-*"):
+root = "/tmp/rakazo"
+# Windows has no /tmp; map it to the temp directory these commands are exercised in.
+if os.name == "nt" and root.startswith("/tmp/"):
+    root = os.path.join(tempfile.gettempdir(), *root[len("/tmp/"):].split("/"))
+for marker in pathlib.Path(root).glob("browser-profile-*"):
     display = marker.name.rsplit("-", 1)[-1]
     if display.isascii() and display.isdigit(): used.add(int(display) - ${env.displayStart})
 index = 0
