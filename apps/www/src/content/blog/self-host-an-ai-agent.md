@@ -102,7 +102,7 @@ If you want to set the public URL, the image tag, or an optional provider before
 
 `SANDBOX_PROVIDER` defaults to `docker`. The images Compose file runs a sandbox supervisor on the internal network and pulls the computer image. Signup and local Docker computers work without an E2B account. The published-images stack requires `SANDBOX_SUPERVISOR_TOKEN` for every provider. Leave it empty and Compose fails closed rather than starting a supervisor with no token.
 
-Open `http://127.0.0.1:5173`. The first registered user becomes the deployment owner. Connect a model in the app, or set `OPENROUTER_API_KEY` before startup. Local Docker computers are on by default.
+Open `http://127.0.0.1:5173`. The first registered user becomes the deployment owner. Connect a model in the app, or set `RAKAZO_DOITX_API_KEY` before startup. Local Docker computers are on by default.
 
 The image pull is the variable part. A fast link and a warm cache finish sooner than a laptop on a slow network pulling the app, the computer image, and Postgres for the first time. Treat "10 minutes" as a description of how small the installer is, then look at your own pull.
 
@@ -119,7 +119,7 @@ The bot keeps its own conversations, memory, routines, and history. You manage i
 
 ## Choose a model
 
-Supported connections include OpenAI, Anthropic, Google, OpenRouter, and Vercel AI Gateway. An OpenAI-compatible endpoint works, as does a local model server such as Ollama, LM Studio, llama.cpp, or MLX. Each bot can use a different model, so a cheap model can triage and another model can write.
+A deployment offers two providers: the Doitx router at router.doitx.ai and a local OpenAI-compatible server the operator runs. Each person connects their own key, and each bot can use a different model, so a cheap model can triage and another model can write.
 
 The model control sits in the bot's advanced settings. The menu lists models for credentials that are actually connected. The shot uses a fictional OpenAI credential and two catalog ids. It is not a recommendation of a vendor, and it is not your key.
 

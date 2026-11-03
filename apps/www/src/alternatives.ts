@@ -208,7 +208,7 @@ export const ALTERNATIVES: readonly Alternative[] = [
       {
         topic: "Model",
         rakazo:
-          "Bring your own model credentials. Multiple providers are supported, including a custom model server.",
+          "The Doitx router, or a local OpenAI-compatible server the operator runs. Each person connects their own key.",
         other: "Muse Spark, which Meta's launch post describes as the model for this agent.",
       },
       {
@@ -306,7 +306,7 @@ export const ALTERNATIVES: readonly Alternative[] = [
       {
         topic: "Model",
         rakazo:
-          "Bring your own model credentials. Multiple providers are supported, including a custom model server.",
+          "The Doitx router, or a local OpenAI-compatible server the operator runs. Each person connects their own key.",
         other: "GPT-6 Astra, according to OpenAI's announcement.",
       },
       {
@@ -511,7 +511,7 @@ export const ALTERNATIVES: readonly Alternative[] = [
       {
         topic: "Model",
         rakazo:
-          "Bring your own model credentials. Multiple providers are supported, including a custom model server. Each bot can use a different model.",
+          "The Doitx router, or a local OpenAI-compatible server the operator runs. Each person connects their own key, and each bot can use a different model.",
         other:
           "You choose a provider with `hermes model`. The quickstart lists many, including Nous Portal, OpenAI, Anthropic, OpenRouter, Google, a custom OpenAI-compatible endpoint, and local servers such as Ollama and LM Studio. It says a model needs at least 64,000 tokens of context.",
       },
@@ -587,7 +587,7 @@ export const ALTERNATIVES: readonly Alternative[] = [
     otherName: "Claude Duet",
     intro: [
       "Claude Duet is Anthropic's proactive personal agent, released as a research preview on October 21, 2026. You message it like a person. It sends a morning brief, checks your connected accounts, and works on a cloud computer Anthropic runs.",
-      "Doitx is open source software for persistent AI teammates. You run it, you choose the model, and you can have more than one bot. Doitx can also sign in with your Claude Pro or Max subscription.",
+      "Doitx is open source software for persistent AI teammates. You run it, you choose the model, and you can have more than one bot. Models come from the Doitx router or a local endpoint the operator runs.",
     ],
     rows: [
       {
@@ -611,7 +611,7 @@ export const ALTERNATIVES: readonly Alternative[] = [
       {
         topic: "Model",
         rakazo:
-          "Bring your own model credentials, including Claude Pro/Max sign-in, other providers, and a local server. Each bot can use a different model.",
+          "The Doitx router, or a local OpenAI-compatible server the operator runs. Each person connects their own key, and each bot can use a different model.",
         other: "Claude Opus 5.5. The help center says you cannot choose a model.",
       },
       {
@@ -638,9 +638,9 @@ export const ALTERNATIVES: readonly Alternative[] = [
     ],
     faq: [
       {
-        question: "Can Doitx use my Claude subscription?",
+        question: "Which models can Doitx use?",
         answer:
-          "Yes. Sign in with Claude Pro or Max, or bring an Anthropic key. Claude is one model choice, and each bot can use a different one.",
+          "The deployment offers two providers: the Doitx router at router.doitx.ai and a local OpenAI-compatible server the operator runs. Each person connects their own key, and each bot can use a different model.",
       },
       {
         question: "Is Claude Duet open source or self-hosted?",
@@ -701,7 +701,7 @@ export const ALTERNATIVES: readonly Alternative[] = [
       {
         topic: "Model",
         rakazo:
-          "Bring your own model credentials. Multiple providers are supported, including a custom model server. Each bot can use a different model.",
+          "The Doitx router, or a local OpenAI-compatible server the operator runs. Each person connects their own key, and each bot can use a different model.",
         other:
           "The launch article says Hark is training models. The security page says Hark prioritizes its own models, and that models from vetted third parties keep no data. The terms do not name a public model you can swap. They say Hark may train on what you submit unless you opt out, though feedback and material flagged for safety review can still be used.",
       },

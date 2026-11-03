@@ -78,7 +78,7 @@ From `.env.images.example` (images installer). Leave blank if unused:
 
 | Key(s) | When needed |
 | --- | --- |
-| `OPENROUTER_API_KEY` | Deployment-wide OpenRouter models |
+| `RAKAZO_DOITX_API_KEY` | Deployment-wide Doitx router key, when the deployment provides one for its users |
 | `TYPESAFE_API_KEY` | Optional TypeSafe Jev Auto Review verifier (`RAKAZO_AUTO_REVIEW_PROVIDER=jev`) |
 | `COMPOSIO_API_KEY` | Composio managed catalog |
 | `E2B_API_KEY` / `DAYTONA_API_KEY` / `BOAT_API_KEY` | Remote computers when `SANDBOX_PROVIDER` is not `docker` |

@@ -3,7 +3,7 @@ import { SITE_DESCRIPTION } from "../site";
 import { CLAUDE_CHATGPT_SUBSCRIPTION_FAQ } from "../subscription-faq";
 import type { Locale } from "./locales";
 
-export const HOME_MODEL_PROVIDERS = ["Claude", "ChatGPT", "OpenRouter", "Grok", "Ollama", "LM Studio"];
+export const HOME_MODEL_PROVIDERS = ["Doitx Router", "Local models"];
 
 export const HOME_CHANNELS = [
   { id: "slack", name: "Slack", selfHosted: false },
@@ -964,14 +964,14 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
       items: [
         CLAUDE_CHATGPT_SUBSCRIPTION_FAQ,
         {
-          question: "Do I need an API key if I already pay for Claude or ChatGPT?",
+          question: "Do I need an API key?",
           answer:
-            "No. Sign in with Claude Pro/Max or ChatGPT Plus/Pro and that subscription covers the model. An API key is the other path, for Anthropic, OpenAI, OpenRouter, or Grok. Doitx does not pay either way.",
+            "Yes. The key connects the Doitx router, or the local model server the operator runs. A Claude or ChatGPT subscription cannot be used instead.",
         },
         {
           question: "Can I run a local model?",
           answer:
-            "Yes. Point a bot at a local OpenAI-compatible server such as Ollama or LM Studio. Each bot can use a different model.",
+            "Yes, when the operator runs a local server. Each bot can use a different model from either provider.",
         },
         {
           question: "What does the hosted plan include?",
@@ -1114,17 +1114,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Kann ich mein Claude Pro/Max- oder ChatGPT Plus/Pro-Abo nutzen?",
           answer:
-            "Ja — melde dich mit diesem Abo an, oder nutze einen API-Key, OpenRouter oder einen lokalen OpenAI-kompatiblen Server (Ollama, LM Studio usw.). Doitx zahlt die Modellrechnung nicht.",
+            "Nein. Eine Bereitstellung bietet zwei Modellanbieter: den Doitx-Router unter router.doitx.ai und einen lokalen OpenAI-kompatiblen Server, den der Betreiber ausführt. Jede Person verbindet ihren eigenen Schlüssel. Doitx zahlt die Modellrechnung nicht.",
         },
         {
           question: "Brauche ich einen API-Key, wenn ich schon für Claude oder ChatGPT zahle?",
           answer:
-            "Nein. Melde dich mit Claude Pro/Max oder ChatGPT Plus/Pro an. Dieses Abo deckt das Modell ab. Ein API-Key ist der andere Weg, für Anthropic, OpenAI, OpenRouter oder Grok. Doitx zahlt so oder so nicht.",
+            "Ja. Der Schlüssel verbindet den Doitx-Router oder den lokalen Modellserver des Betreibers. Ein Claude- oder ChatGPT-Abo lässt sich nicht stattdessen verwenden.",
         },
         {
           question: "Kann ich ein lokales Modell nutzen?",
           answer:
-            "Ja. Richte einen Bot auf einen lokalen OpenAI-kompatiblen Server wie Ollama oder LM Studio. Jeder Bot kann ein anderes Modell nutzen.",
+            "Ja, wenn dein Betreiber einen lokalen Server ausführt. Jeder Bot kann ein anderes Modell eines der beiden Anbieter nutzen.",
         },
         {
           question: "Was ist im gehosteten Plan enthalten?",
@@ -1266,17 +1266,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Claude Pro/Max 또는 ChatGPT Plus/Pro 구독을 쓸 수 있나요?",
           answer:
-            "네 — 그 구독으로 로그인하거나, API 키, OpenRouter, 로컬 OpenAI 호환 서버(Ollama, LM Studio 등)를 사용하세요. 모델 요금은 Doitx가 내지 않습니다.",
+            "아니요. 배포 환경은 두 가지 모델 제공자를 제공합니다: router.doitx.ai의 Doitx 라우터와 운영자가 실행하는 로컬 OpenAI 호환 서버입니다. 각 사용자는 본인의 키를 연결합니다. 모델 요금은 Doitx가 내지 않습니다.",
         },
         {
           question: "이미 Claude나 ChatGPT를 결제 중이면 API 키가 필요한가요?",
           answer:
-            "아니요. Claude Pro/Max 또는 ChatGPT Plus/Pro로 로그인하면 그 구독이 모델을 부담합니다. API 키는 Anthropic, OpenAI, OpenRouter, Grok을 쓰는 다른 경로입니다. 어느 쪽이든 Doitx가 요금을 내지 않습니다.",
+            "네. 이 키로 Doitx 라우터 또는 운영자의 로컬 모델 서버에 연결합니다. Claude나 ChatGPT 구독으로 대신할 수는 없습니다.",
         },
         {
           question: "로컬 모델을 쓸 수 있나요?",
           answer:
-            "네. Ollama나 LM Studio 같은 로컬 OpenAI 호환 서버에 봇을 연결하세요. 봇마다 다른 모델을 쓸 수 있습니다.",
+            "네, 운영자가 로컬 서버를 실행하는 경우 가능합니다. 봇마다 두 제공자 중 다른 모델을 쓸 수 있습니다.",
         },
         {
           question: "호스팅 플랜에는 무엇이 포함되나요?",
@@ -1418,17 +1418,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "可以用我的 Claude Pro/Max 或 ChatGPT Plus/Pro 订阅吗？",
           answer:
-            "可以 — 用该订阅登录，或使用 API 密钥、OpenRouter，或本地的 OpenAI 兼容服务（Ollama、LM Studio 等）。模型费用不由 Doitx 支付。",
+            "不可以。部署只提供两个模型服务：router.doitx.ai 上的 Doitx 路由，以及运维方自建的本地 OpenAI 兼容服务。每位用户连接自己的密钥。模型费用不由 Doitx 支付。",
         },
         {
           question: "已经在为 Claude 或 ChatGPT 付费，还需要 API 密钥吗？",
           answer:
-            "不需要。用 Claude Pro/Max 或 ChatGPT Plus/Pro 登录，由该订阅承担模型费用。API 密钥是另一条路，用于 Anthropic、OpenAI、OpenRouter 或 Grok。两种方式都不是 Doitx 付费。",
+            "需要。密钥用于连接 Doitx 路由或运维方的本地模型服务。不能改用 Claude 或 ChatGPT 订阅。",
         },
         {
           question: "可以用本地模型吗？",
           answer:
-            "可以。把 Bot 指向 Ollama 或 LM Studio 这类本地 OpenAI 兼容服务。每个 Bot 可以使用不同的模型。",
+            "可以，前提是运维方运行了本地服务。每个 Bot 可以在两个服务中选用不同的模型。",
         },
         {
           question: "托管套餐包含什么？",
@@ -1571,17 +1571,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Claude Pro/Max や ChatGPT Plus/Pro のサブスクリプションを使えますか？",
           answer:
-            "はい。そのサブスクリプションでサインインするか、API キー、OpenRouter、ローカルの OpenAI 互換サーバー（Ollama、LM Studio など）を使えます。モデルの利用料を Doitx が支払うことはありません。",
+            "いいえ。デプロイでは 2 つのモデルプロバイダーを利用できます。router.doitx.ai の Doitx ルーターと、運営者が実行するローカルの OpenAI 互換サーバーです。利用者はそれぞれ自分のキーを接続します。モデルの利用料を Doitx が支払うことはありません。",
         },
         {
           question: "Claude や ChatGPT にすでに課金している場合、API キーは必要ですか？",
           answer:
-            "いいえ。Claude Pro/Max または ChatGPT Plus/Pro でサインインすれば、そのサブスクリプションでモデルを利用できます。もう一つの方法は API キーで、Anthropic、OpenAI、OpenRouter、Grok に対応しています。どちらの場合も、Doitx が料金を支払うことはありません。",
+            "はい。そのキーで Doitx ルーター、または運営者のローカルモデルサーバーに接続します。Claude や ChatGPT のサブスクリプションで代用することはできません。",
         },
         {
           question: "ローカルモデルを使えますか？",
           answer:
-            "はい。Ollama や LM Studio などのローカルの OpenAI 互換サーバーにボットを接続できます。ボットごとに別のモデルを使えます。",
+            "はい。運営者がローカルサーバーを実行している場合に使えます。ボットごとに 2 つのプロバイダーのどちらかのモデルを選べます。",
         },
         {
           question: "ホスト型プランには何が含まれますか？",
@@ -1724,17 +1724,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "¿Puedo usar mi suscripción a Claude Pro/Max o ChatGPT Plus/Pro?",
           answer:
-            "Sí — inicia sesión con esa suscripción, o usa una clave de API, OpenRouter o un servidor local compatible con OpenAI (Ollama, LM Studio, etc.). Doitx no paga la factura del modelo.",
+            "No. Un despliegue ofrece dos proveedores de modelos: el router de Doitx en router.doitx.ai y un servidor local compatible con OpenAI que ejecuta el operador. Cada persona conecta su propia clave. Doitx no paga la factura del modelo.",
         },
         {
           question: "¿Necesito una clave de API si ya pago Claude o ChatGPT?",
           answer:
-            "No. Inicia sesión con Claude Pro/Max o ChatGPT Plus/Pro y esa suscripción cubre el modelo. Una clave de API es la otra opción, para Anthropic, OpenAI, OpenRouter o Grok. Doitx no paga en ningún caso.",
+            "Sí. La clave conecta el router de Doitx o el servidor local del operador. No se puede usar en su lugar una suscripción de Claude o ChatGPT.",
         },
         {
           question: "¿Puedo usar un modelo local?",
           answer:
-            "Sí. Conecta un bot a un servidor local compatible con OpenAI, como Ollama o LM Studio. Cada bot puede usar un modelo distinto.",
+            "Sí, si tu operador ejecuta un servidor local. Cada bot puede usar un modelo distinto de cualquiera de los dos proveedores.",
         },
         {
           question: "¿Qué incluye el plan alojado?",
@@ -1877,17 +1877,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Puis-je utiliser mon abonnement Claude Pro/Max ou ChatGPT Plus/Pro ?",
           answer:
-            "Oui — connectez-vous avec cet abonnement, ou utilisez une clé API, OpenRouter ou un serveur local compatible OpenAI (Ollama, LM Studio, etc.). Doitx ne paie pas la facture du modèle.",
+            "Non. Un déploiement propose deux fournisseurs de modèles : le routeur Doitx sur router.doitx.ai et un serveur local compatible OpenAI exploité par l'opérateur. Chaque personne connecte sa propre clé. Doitx ne paie pas la facture du modèle.",
         },
         {
           question: "Ai-je besoin d’une clé API si je paie déjà Claude ou ChatGPT ?",
           answer:
-            "Non. Connectez-vous avec Claude Pro/Max ou ChatGPT Plus/Pro et cet abonnement couvre le modèle. Une clé API est l’autre option, pour Anthropic, OpenAI, OpenRouter ou Grok. Doitx ne paie dans aucun des cas.",
+            "Oui. La clé connecte le routeur Doitx ou le serveur de modèles local de l’opérateur. Un abonnement Claude ou ChatGPT ne peut pas la remplacer.",
         },
         {
           question: "Puis-je utiliser un modèle local ?",
           answer:
-            "Oui. Reliez un bot à un serveur local compatible OpenAI comme Ollama ou LM Studio. Chaque bot peut utiliser un modèle différent.",
+            "Oui, si votre opérateur exploite un serveur local. Chaque bot peut utiliser un modèle différent de l’un des deux fournisseurs.",
         },
         {
           question: "Que comprend l’offre hébergée ?",
@@ -2030,17 +2030,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Posso usar minha assinatura do Claude Pro/Max ou ChatGPT Plus/Pro?",
           answer:
-            "Sim — entre com essa assinatura, ou use uma chave de API, OpenRouter ou um servidor local compatível com OpenAI (Ollama, LM Studio etc.). O Doitx não paga a conta do modelo.",
+            "Não. Uma implantação oferece dois provedores de modelo: o roteador Doitx em router.doitx.ai e um servidor local compatível com OpenAI executado pelo operador. Cada pessoa conecta a própria chave. O Doitx não paga a conta do modelo.",
         },
         {
           question: "Preciso de uma chave de API se já pago pelo Claude ou ChatGPT?",
           answer:
-            "Não. Entre com Claude Pro/Max ou ChatGPT Plus/Pro e essa assinatura cobre o modelo. A chave de API é o outro caminho, para Anthropic, OpenAI, OpenRouter ou Grok. O Doitx não paga em nenhum dos casos.",
+            "Sim. A chave conecta o roteador Doitx ou o servidor de modelos local do operador. Uma assinatura do Claude ou ChatGPT não pode ser usada no lugar.",
         },
         {
           question: "Posso usar um modelo local?",
           answer:
-            "Sim. Aponte um bot para um servidor local compatível com OpenAI, como Ollama ou LM Studio. Cada bot pode usar um modelo diferente.",
+            "Sim, se o seu operador executar um servidor local. Cada bot pode usar um modelo diferente de qualquer um dos dois provedores.",
         },
         {
           question: "O que o plano hospedado inclui?",
@@ -2183,17 +2183,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Kan ik mijn Claude Pro/Max- of ChatGPT Plus/Pro-abonnement gebruiken?",
           answer:
-            "Ja — log in met dat abonnement, of gebruik een API-key, OpenRouter of een lokale OpenAI-compatibele server (Ollama, LM Studio enz.). Doitx betaalt de modelrekening niet.",
+            "Nee. Een deployment biedt twee modelproviders: de Doitx-router op router.doitx.ai en een lokale OpenAI-compatibele server die de beheerder draait. Iedereen verbindt zijn eigen sleutel. Doitx betaalt de modelrekening niet.",
         },
         {
           question: "Heb ik een API-key nodig als ik al voor Claude of ChatGPT betaal?",
           answer:
-            "Nee. Log in met Claude Pro/Max of ChatGPT Plus/Pro en dat abonnement dekt het model. Een API-key is de andere route, voor Anthropic, OpenAI, OpenRouter of Grok. Doitx betaalt in geen van beide gevallen.",
+            "Ja. De key verbindt de Doitx-router of de lokale modelserver van de beheerder. Een Claude- of ChatGPT-abonnement kan daarvoor niet in de plaats komen.",
         },
         {
           question: "Kan ik een lokaal model draaien?",
           answer:
-            "Ja. Laat een bot naar een lokale OpenAI-compatibele server wijzen, zoals Ollama of LM Studio. Elke bot kan een ander model gebruiken.",
+            "Ja, als je beheerder een lokale server draait. Elke bot kan een ander model van een van beide providers gebruiken.",
         },
         {
           question: "Wat zit er in het gehoste abonnement?",
@@ -2336,17 +2336,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Можно ли использовать подписку Claude Pro/Max или ChatGPT Plus/Pro?",
           answer:
-            "Да — войдите с этой подпиской или используйте API-ключ, OpenRouter или локальный OpenAI-совместимый сервер (Ollama, LM Studio и т. д.). Doitx не оплачивает счёт за модель.",
+            "Нет. Развёртывание предлагает двух провайдеров моделей: роутер Doitx на router.doitx.ai и локальный сервер, совместимый с OpenAI, который запускает оператор. Каждый пользователь подключает свой ключ. Doitx не оплачивает счёт за модель.",
         },
         {
           question: "Нужен ли API-ключ, если я уже плачу за Claude или ChatGPT?",
           answer:
-            "Нет. Войдите с Claude Pro/Max или ChatGPT Plus/Pro, и эта подписка покроет модель. API-ключ — другой путь: для Anthropic, OpenAI, OpenRouter или Grok. В любом случае Doitx не платит.",
+            "Да. Ключ подключает роутер Doitx или локальный сервер моделей оператора. Подписка Claude или ChatGPT вместо него не подойдёт.",
         },
         {
           question: "Можно ли запустить локальную модель?",
           answer:
-            "Да. Направьте бота на локальный OpenAI-совместимый сервер, например Ollama или LM Studio. Каждый бот может использовать свою модель.",
+            "Да, если оператор запускает локальный сервер. Каждый бот может использовать свою модель у любого из двух провайдеров.",
         },
         {
           question: "Что входит в облачный тариф?",
@@ -2489,17 +2489,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "Claude Pro/Max veya ChatGPT Plus/Pro aboneliğimi kullanabilir miyim?",
           answer:
-            "Evet — bu abonelikle giriş yapın ya da bir API anahtarı, OpenRouter veya yerel bir OpenAI uyumlu sunucu (Ollama, LM Studio vb.) kullanın. Model faturasını Doitx ödemez.",
+            "Hayır. Bir kurulum iki model sağlayıcı sunar: router.doitx.ai üzerindeki Doitx yönlendiricisi ve operatörün çalıştırdığı yerel OpenAI uyumlu sunucu. Herkes kendi anahtarını bağlar. Model faturasını Doitx ödemez.",
         },
         {
           question: "Claude veya ChatGPT için zaten ödeme yapıyorsam API anahtarına ihtiyacım var mı?",
           answer:
-            "Hayır. Claude Pro/Max veya ChatGPT Plus/Pro ile giriş yapın; model bu abonelikle karşılanır. Diğer yol Anthropic, OpenAI, OpenRouter veya Grok için bir API anahtarıdır. Her iki durumda da Doitx ödeme yapmaz.",
+            "Evet. Anahtar, Doitx yönlendiricisine veya operatörün yerel model sunucusuna bağlanır. Claude veya ChatGPT aboneliği bunun yerine kullanılamaz.",
         },
         {
           question: "Yerel bir model çalıştırabilir miyim?",
           answer:
-            "Evet. Bir botu Ollama veya LM Studio gibi yerel bir OpenAI uyumlu sunucuya yönlendirin. Her bot farklı bir model kullanabilir.",
+            "Evet, operatörünüz yerel bir sunucu çalıştırıyorsa. Her bot iki sağlayıcıdan farklı bir model kullanabilir.",
         },
         {
           question: "Barındırılan plana neler dahil?",
@@ -2642,17 +2642,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "אפשר להשתמש במנוי Claude Pro/Max או ChatGPT Plus/Pro שלי?",
           answer:
-            "כן — אפשר להתחבר עם המנוי הזה, או להשתמש במפתח API, ב-OpenRouter או בשרת מקומי תואם OpenAI (Ollama, LM Studio וכו'). Doitx לא משלמת את חשבון המודל.",
+            "לא. פריסה מציעה שני ספקי מודלים: נתב Doitx בכתובת router.doitx.ai ושרת מקומי תואם OpenAI שהמפעיל מריץ. כל משתמש מחבר מפתח משלו. Doitx לא משלמת את חשבון המודל.",
         },
         {
           question: "צריך מפתח API אם כבר יש לי מנוי בתשלום ל-Claude או ל-ChatGPT?",
           answer:
-            "לא. מתחברים עם Claude Pro/Max או ChatGPT Plus/Pro, והמנוי הזה מכסה את המודל. מפתח API הוא הדרך השנייה, עבור Anthropic, OpenAI, OpenRouter או Grok. בכל מקרה, Doitx לא משלמת.",
+            "כן. המפתח מחבר את נתב Doitx או את שרת המודלים המקומי של המפעיל. אי אפשר להשתמש במקומו במנוי Claude או ChatGPT.",
         },
         {
           question: "אפשר להריץ מודל מקומי?",
           answer:
-            "כן. מכוונים בוט לשרת מקומי תואם OpenAI כמו Ollama או LM Studio. כל בוט יכול להשתמש במודל אחר.",
+            "כן, אם המפעיל מריץ שרת מקומי. כל בוט יכול להשתמש במודל אחר מאחד משני הספקים.",
         },
         {
           question: "מה כולל המסלול המנוהל?",
@@ -2795,17 +2795,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "क्या मेरा Claude Pro/Max या ChatGPT Plus/Pro सब्सक्रिप्शन इस्तेमाल हो सकता है?",
           answer:
-            "हाँ — उसी सब्सक्रिप्शन से साइन इन करें, या API कुंजी, OpenRouter या कोई लोकल OpenAI-संगत सर्वर (Ollama, LM Studio आदि) इस्तेमाल करें। मॉडल का बिल Doitx नहीं भरता।",
+            "नहीं। एक डिप्लॉयमेंट दो मॉडल प्रोवाइडर देता है: router.doitx.ai पर Doitx राउटर, और ऑपरेटर द्वारा चलाया गया लोकल OpenAI-संगत सर्वर। हर व्यक्ति अपनी कुंजी जोड़ता है। मॉडल का बिल Doitx नहीं भरता।",
         },
         {
           question: "अगर Claude या ChatGPT का पेड सब्सक्रिप्शन पहले से है, तो क्या API कुंजी चाहिए?",
           answer:
-            "नहीं। Claude Pro/Max या ChatGPT Plus/Pro से साइन इन करें, और वही सब्सक्रिप्शन मॉडल का खर्च उठाता है। API कुंजी दूसरा रास्ता है, Anthropic, OpenAI, OpenRouter या Grok के लिए। दोनों में से किसी भी तरीके में Doitx भुगतान नहीं करता।",
+            "हाँ। यह कुंजी Doitx राउटर या ऑपरेटर के लोकल मॉडल सर्वर से जोड़ती है। इसकी जगह Claude या ChatGPT सब्सक्रिप्शन नहीं ली जा सकती।",
         },
         {
           question: "क्या लोकल मॉडल चलाया जा सकता है?",
           answer:
-            "हाँ। बॉट को Ollama या LM Studio जैसे किसी लोकल OpenAI-संगत सर्वर से जोड़ें। हर बॉट अलग मॉडल इस्तेमाल कर सकता है।",
+            "हाँ, अगर आपका ऑपरेटर लोकल सर्वर चलाता है। हर बॉट दोनों प्रोवाइडर में से अलग मॉडल इस्तेमाल कर सकता है।",
         },
         {
           question: "होस्टेड प्लान में क्या शामिल है?",
@@ -2947,17 +2947,17 @@ const HOME_COPY: Record<Locale, HomeCopy> = {
         {
           question: "可以用我的 Claude Pro/Max 或 ChatGPT Plus/Pro 訂閱嗎？",
           answer:
-            "可以 — 用該訂閱登入，或使用 API 金鑰、OpenRouter，或本機的 OpenAI 相容伺服器（Ollama、LM Studio 等）。模型費用不由 Doitx 支付。",
+            "不可以。部署只提供兩個模型服務：router.doitx.ai 上的 Doitx 路由，以及維運方自建的本地 OpenAI 相容服務。每位使用者連接自己的金鑰。模型費用不由 Doitx 支付。",
         },
         {
           question: "已經付費使用 Claude 或 ChatGPT，還需要 API 金鑰嗎？",
           answer:
-            "不需要。用 Claude Pro/Max 或 ChatGPT Plus/Pro 登入，模型費用由該訂閱涵蓋。API 金鑰是另一種方式，適用於 Anthropic、OpenAI、OpenRouter 或 Grok。無論哪種方式，Doitx 都不會付費。",
+            "需要。金鑰用於連接 Doitx 路由或維運方的本地模型服務。不能改用 Claude 或 ChatGPT 訂閱。",
         },
         {
           question: "可以執行本機模型嗎？",
           answer:
-            "可以。將機器人指向 Ollama 或 LM Studio 等本機 OpenAI 相容伺服器。每個機器人都可以使用不同的模型。",
+            "可以，前提是維運方執行了本地服務。每個機器人可以在兩個服務中選用不同的模型。",
         },
         {
           question: "託管方案包含哪些內容？",

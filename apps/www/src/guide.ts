@@ -79,7 +79,7 @@ export const SELF_HOST_FAQS: readonly FaqItem[] = [
   {
     question: "How do model choice and cost work?",
     answer:
-      "You connect your own model keys, or a local or OpenAI-compatible model server, and you can pick a different model per bot. The open source software has no seat fee. You pay the model and computer providers you use. Local Docker computers are the default and do not need a hosted sandbox account.",
+      "Each person connects their own key for one of the deployment's two model providers: the Doitx router or a local endpoint the operator runs. You can pick a different model per bot. The open source software has no seat fee. You pay the model and computer providers you use. Local Docker computers are the default and do not need a hosted sandbox account.",
   },
   {
     question: "Is hosted Doitx available?",
@@ -142,7 +142,7 @@ export const OPENCLAW_FAQS: readonly FaqItem[] = [
   {
     question: "Can I choose my own model with either one?",
     answer:
-      "Yes. Doitx supports OpenAI, Anthropic, Google, OpenRouter, Vercel AI Gateway, an OpenAI-compatible endpoint, and a local model server, with a choice per bot. OpenClaw documents Anthropic, OpenAI, Google, and other providers, including self-hosted OpenAI-compatible and Anthropic-compatible endpoints, plus failover.",
+      "Yes. A Doitx deployment offers two model providers: the Doitx router at router.doitx.ai and a local OpenAI-compatible endpoint the operator runs. Each person connects their own key, and each bot can use a different model. OpenClaw documents Anthropic, OpenAI, Google, and other providers, including self-hosted OpenAI-compatible and Anthropic-compatible endpoints, plus failover.",
   },
   {
     question: "Does either project charge for the software?",
@@ -195,7 +195,7 @@ export const COMPARISON_ROWS: readonly ComparisonRow[] = [
   {
     aspect: "Models",
     rakazo:
-      "Bring your own keys for OpenAI, Anthropic, Google, OpenRouter, or Vercel AI Gateway. OpenAI-compatible endpoints and a local model server (Ollama, LM Studio, llama.cpp, or MLX) are supported. Each bot can use a different model.",
+      "The Doitx router, plus a local OpenAI-compatible endpoint the operator runs. Each person connects their own key, and each bot can use a different model.",
     openclaw:
       "Many providers, including Anthropic, OpenAI, and Google, plus OAuth for some subscriptions such as OpenAI Codex. Self-hosted endpoints include vLLM, SGLang, Ollama, llama.cpp, LM Studio, and other OpenAI-compatible or Anthropic-compatible servers, with failover.",
   },
@@ -274,7 +274,7 @@ Postgres, bot files, browser profiles, and the audit log stay on the deployment 
 
 ### Model choice
 
-Connect OpenAI, Anthropic, Google, OpenRouter, or Vercel AI Gateway. You can also use an OpenAI-compatible endpoint or a local model server such as Ollama, LM Studio, llama.cpp, or MLX. Each bot can use a different model.
+Connect the Doitx router, or a local model server the operator runs. Each person brings their own key, and each bot can use a different model.
 
 ### Cost control
 
@@ -307,7 +307,7 @@ ${PUBLISHED_IMAGES_INSTALL}
 
 The installer downloads the Compose file and \`.env.images.example\`, creates \`.env\` with random secrets, and starts Doitx. It keeps an existing \`.env\` when you run it again. The default image tag is \`edge\` (builds from the main branch, \`linux/amd64\` and \`linux/arm64\`).
 
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173) and create an account. The first registered user becomes the deployment owner. Connect a model in the app, or set \`OPENROUTER_API_KEY\` before startup. Local Docker computers are on by default.
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173) and create an account. The first registered user becomes the deployment owner. Connect a model in the app, or set \`RAKAZO_DOITX_API_KEY\` before startup. Local Docker computers are on by default.
 
 For an agent-assisted install, use the [setup prompt](${SETUP_PROMPT_URL}).
 
