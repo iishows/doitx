@@ -31,7 +31,8 @@ for (const entry of entries) {
         name: "external-node-modules",
         setup(builder) {
           builder.onResolve({ filter: /^[^./]/ }, async (args) => {
-            if (args.pluginData?.inner) return undefined;
+            // A Windows entry path starts with its drive letter and would match above.
+            if (args.kind === "entry-point" || args.pluginData?.inner) return undefined;
             if (args.path.startsWith("node:") || builtins.has(args.path)) {
               return { path: args.path, external: true };
             }

@@ -905,11 +905,18 @@ async function* streamLocalCommand(
     wake = undefined;
     notify?.();
   };
+  let terminating: { code: number; message: string } | undefined;
   const terminate = (message: string, code: number) => {
+    if (settled) return;
+    terminating = { code, message };
     tree.kill();
     child.stdout?.destroy();
     child.stderr?.destroy();
-    finish(code, message);
+    // A killed process keeps its working directory locked until it actually exits on
+    // Windows, so report only once it is gone and the caller can remove that directory.
+    // The fallback covers a process the OS never reaps.
+    const fallback = setTimeout(() => finish(code, message), 2_000);
+    fallback.unref?.();
   };
   const abort = () => terminate("command aborted", 130);
   const timeout = setTimeout(
@@ -939,7 +946,7 @@ async function* streamLocalCommand(
     }
   });
   child.on("close", (code) => {
-    finish(code ?? 0);
+    finish(terminating?.code ?? code ?? 0, terminating?.message);
   });
   if (signal.aborted) abort();
   try {

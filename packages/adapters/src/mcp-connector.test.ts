@@ -2513,10 +2513,13 @@ describe("MCP connector stdio credential files", () => {
     const [launch] = launches;
     const file = launch?.files.MAIL_CREDENTIALS;
     expect(launch?.env.MAIL_REGION).toBe("eu");
-    expect(launch?.env.MAIL_CREDENTIALS).toMatch(/\/MAIL_CREDENTIALS$/);
-    expect(file?.dir.startsWith(`${credentialRoot}/rakazo-mcp-`)).toBe(true);
-    expect(file?.dirMode).toBe(0o700);
-    expect(file?.mode).toBe(0o600);
+    expect(launch?.env.MAIL_CREDENTIALS).toMatch(/[\\/]MAIL_CREDENTIALS$/);
+    expect(file?.dir.startsWith(join(credentialRoot, "rakazo-mcp-"))).toBe(true);
+    // Windows has no POSIX mode bits; owner-only permissions are a Linux-host guarantee.
+    if (process.platform !== "win32") {
+      expect(file?.dirMode).toBe(0o700);
+      expect(file?.mode).toBe(0o600);
+    }
     expect(JSON.parse(file?.content ?? "")).toEqual({
       token: "access-1",
       expiry: expect.any(Number),

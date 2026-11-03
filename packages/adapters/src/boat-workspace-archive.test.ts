@@ -16,6 +16,24 @@ function gnu(tool: string): boolean {
 const gnuTools = gnu("find") && gnu("tar");
 const root = process.getuid?.() === 0;
 
+/** The shell's own spelling of a path; on Windows MSYS renders it under /c or /tmp. */
+function posixPath(target: string): string {
+  if (process.platform !== "win32") return target;
+  const directory = spawnSync("bash", ["-c", 'cd "$1" && pwd', "bash", path.dirname(target)], {
+    encoding: "utf8",
+  }).stdout.trim();
+  return path.posix.join(directory, path.basename(target));
+}
+
+/**
+ * PATH holding `dir` first. On Windows it stays Windows-spelled: the OS needs that form to
+ * find `bash`, and MSYS converts the whole variable for the shell it starts.
+ */
+function shellPath(dir: string): string {
+  const delimiter = process.platform === "win32" ? ";" : ":";
+  return `${dir}${delimiter}${process.env.PATH ?? ""}`;
+}
+
 const temporary: string[] = [];
 
 afterEach(async () => {
@@ -43,8 +61,11 @@ function archiveScript(
   options: { tarWrapper?: string; limits?: WorkspaceExportLimits } = {},
 ) {
   const env = { ...process.env };
-  if (options.tarWrapper) env.PATH = `${options.tarWrapper}:${env.PATH}`;
-  const script = archiveBoatWorkspaceCommand(archive, { workspace: home, limits: options.limits });
+  if (options.tarWrapper) env.PATH = shellPath(options.tarWrapper);
+  const script = archiveBoatWorkspaceCommand(posixPath(archive), {
+    workspace: posixPath(home),
+    limits: options.limits,
+  });
   return spawnSync("bash", ["-c", script], {
     encoding: "utf8",
     env,
@@ -66,7 +87,9 @@ describe.skipIf(!gnuTools)("Boat workspace archive script", () => {
     const { dir, home, put, archive } = await workspace();
     await put("notes.txt", "notes");
     await put("bin/tool", "#!/bin/sh\n", 0o755);
-    await put("with space/new\nline.md", "odd");
+    // Windows file names cannot contain a line break.
+    const lineBreakName = "with space/new\nline.md";
+    if (process.platform !== "win32") await put(lineBreakName, "odd");
     await put("unicode/café 🙂.txt", "unicode");
     await put("-rf", "dash");
     await put("--checkpoint-action=exec=touch PWNED", "option");
@@ -83,7 +106,7 @@ describe.skipIf(!gnuTools)("Boat workspace archive script", () => {
     const result = archiveScript(home, archive);
 
     expect(result.status).toBe(0);
-    expect(await read(archive)).toEqual([
+    const expected: [string, string, boolean][] = [
       ["--checkpoint-action=exec=touch PWNED", "option", false],
       ["-rf", "dash", false],
       [".browser-profiles/chrome/Default/Cookies", "cookies", false],
@@ -91,8 +114,9 @@ describe.skipIf(!gnuTools)("Boat workspace archive script", () => {
       ["hard-link.txt", "notes", false],
       ["notes.txt", "notes", false],
       ["unicode/café 🙂.txt", "unicode", false],
-      ["with space/new\nline.md", "odd", false],
-    ]);
+    ];
+    if (process.platform !== "win32") expected.push([lineBreakName, "odd", false]);
+    expect(await read(archive)).toEqual(expected);
     // The script leaves only the archive, which the adapter removes after downloading it.
     expect(execFileSync("ls", ["-A", dir], { encoding: "utf8" }).split("\n").sort()).toEqual(
       ["", "rakazo-home", "workspace.tar.gz"].sort(),
@@ -139,11 +163,15 @@ describe.skipIf(!gnuTools)("Boat workspace archive script", () => {
     expect(execFileSync("ls", ["-A", dir], { encoding: "utf8" }).trim()).toBe("rakazo-home");
   });
 
-  it.skipIf(root)("fails on a file it cannot read instead of leaving it out", async () => {
-    const { home, put, archive } = await workspace();
-    await put("kept.txt", "kept");
-    await put("secret.txt", "secret", 0o000);
+  // Winning the permission check with chmod needs POSIX mode bits; Windows has none.
+  it.skipIf(root || process.platform === "win32")(
+    "fails on a file it cannot read instead of leaving it out",
+    async () => {
+      const { home, put, archive } = await workspace();
+      await put("kept.txt", "kept");
+      await put("secret.txt", "secret", 0o000);
 
-    expect(archiveScript(home, archive).status).toBe(3);
-  });
+      expect(archiveScript(home, archive).status).toBe(3);
+    },
+  );
 });

@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 const { implementationLoaded, sdkLoaded } = vi.hoisted(() => ({
@@ -62,8 +63,9 @@ describe("Lark lazy loading", () => {
   it("forbids static SDK value imports and keeps implementation imports inside the Lark boundary", () => {
     const root = new URL("../../../", import.meta.url);
     for (const dir of ["packages", "apps"]) {
-      const base = new URL(`${dir}/`, root);
-      for (const file of sourceFiles(base.pathname)) {
+      // A file URL's pathname is /D:/... on Windows, which is not a readable path.
+      const base = fileURLToPath(new URL(`${dir}/`, root));
+      for (const file of sourceFiles(base)) {
         if (
           !/\.[cm]?[jt]sx?$/.test(file) ||
           file.includes("node_modules") ||
@@ -72,7 +74,7 @@ describe("Lark lazy loading", () => {
           file.includes(".test.")
         )
           continue;
-        const source = readFileSync(join(base.pathname, file), "utf8");
+        const source = readFileSync(join(base, file), "utf8");
         expect(
           source.match(/import\s+(?!type\b)(?:[^;]*?from\s*)?["']@larksuiteoapi\/node-sdk["']/g),
           `${dir}/${file}`,
@@ -91,7 +93,8 @@ describe("Lark lazy loading", () => {
 function* sourceFiles(directory: string, prefix = ""): Generator<string> {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     if (["node_modules", "dist", "generated", ".next", ".expo"].includes(entry.name)) continue;
-    const path = join(prefix, entry.name);
+    // Relative paths use "/" on every host, so the filters above match on Windows too.
+    const path = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isDirectory()) yield* sourceFiles(join(directory, entry.name), path);
     else if (entry.isFile()) yield path;
   }

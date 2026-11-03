@@ -18,12 +18,25 @@ function shBinary(): string {
   return process.platform === "win32" ? "sh" : "/bin/sh";
 }
 
+/** The shell's own spelling of a path; on Windows MSYS renders it under /c or /tmp. */
+function posixPath(target: string): string {
+  if (process.platform !== "win32") return target;
+  const directory = spawnSync(shBinary(), ["-c", 'cd "$1" && pwd', "sh", path.dirname(target)], {
+    encoding: "utf8",
+  }).stdout.trim();
+  return path.posix.join(directory, path.basename(target));
+}
+
 function prepareDesktop({ repairExitCode = 0, installExitCode = 0, broken = true } = {}) {
   const bin = mkdtempSync(path.join(tmpdir(), "rakazo-prepare-"));
   try {
     const calls = path.join(bin, "calls");
     const repaired = path.join(bin, "repaired");
     const installed = path.join(bin, "installed");
+    // These paths are embedded in the POSIX script, so give the shell its own spelling.
+    const shellCalls = posixPath(calls);
+    const shellRepaired = posixPath(repaired);
+    const shellInstalled = posixPath(installed);
     if (!broken) writeFileSync(repaired, "");
     const fakes = {
       id: "#!/bin/sh\necho 1000\n",
@@ -31,7 +44,7 @@ function prepareDesktop({ repairExitCode = 0, installExitCode = 0, broken = true
       sudo: '#!/bin/sh\n[ "$1" = -n ] && shift\n[ "$1" = sh ] && exit 0\nexec "$@"\n',
       env: '#!/bin/sh\nshift\nexec "$@"\n',
       "apt-get": `#!/bin/sh
-echo "$*" >> ${JSON.stringify(calls)}
+echo "$*" >> ${JSON.stringify(shellCalls)}
 case " $* " in
   *" update "*) exit 0 ;;
 esac
@@ -39,15 +52,15 @@ case " $* " in *" --no-remove "*) ;; *) exit 99 ;; esac
 case " $* " in
   *" --fix-broken "*)
     [ ${repairExitCode} -eq 0 ] || exit ${repairExitCode}
-    : > ${JSON.stringify(repaired)}
+    : > ${JSON.stringify(shellRepaired)}
     exit 0 ;;
 esac
-if [ ! -e ${JSON.stringify(repaired)} ]; then
+if [ ! -e ${JSON.stringify(shellRepaired)} ]; then
   echo "E: Unmet dependencies. Try 'apt --fix-broken install'." >&2
   exit 100
 fi
 [ ${installExitCode} -eq 0 ] || exit ${installExitCode}
-: > ${JSON.stringify(installed)}
+: > ${JSON.stringify(shellInstalled)}
 `,
     };
     for (const [name, script] of Object.entries(fakes)) {
@@ -61,7 +74,7 @@ fi
     writeFileSync(fontPath, "");
     const prepare = PREPARE_LINUX_DESKTOP.replaceAll(
       "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
-      fontPath,
+      posixPath(fontPath),
     );
     const result = spawnSync(shBinary(), ["-c", prepare], {
       env: { PATH: bin },
@@ -126,7 +139,7 @@ describe("provider desktop preparation", () => {
     ]) {
       expect(PREPARE_LINUX_DESKTOP).toContain(dir);
     }
-    execFileSync("sh", ["-n", "-c", PREPARE_LINUX_DESKTOP]);
+    execFileSync(shBinary(), ["-n", "-c", PREPARE_LINUX_DESKTOP]);
   });
 
   it("still prepares the desktop when only the emoji font cannot be installed", () => {
@@ -139,7 +152,7 @@ describe("provider desktop preparation", () => {
         // biome-ignore lint/suspicious/noTemplateCurlyInString: shell parameter expansion
         env: '#!/bin/sh\nwhile [ "${1#*=}" != "$1" ]; do shift; done\nexec "$@"\n',
         // A broken package manager: installs fail, as on images with unmet dependencies.
-        "apt-get": `#!/bin/sh\necho "$*" >> ${JSON.stringify(calls)}\ncase "$*" in *fonts-noto-color-emoji*) exit 100;; esac\n`,
+        "apt-get": `#!/bin/sh\necho "$*" >> ${JSON.stringify(posixPath(calls))}\ncase "$*" in *fonts-noto-color-emoji*) exit 100;; esac\n`,
       };
       for (const tool of [
         "python3",
@@ -163,9 +176,9 @@ describe("provider desktop preparation", () => {
       // The host may have the font installed; point the check at a file that never exists.
       const prepare = PREPARE_LINUX_DESKTOP.replaceAll(
         "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
-        path.join(bin, "NotoColorEmoji.ttf"),
+        posixPath(path.join(bin, "NotoColorEmoji.ttf")),
       );
-      const result = spawnSync("/bin/sh", ["-c", prepare], {
+      const result = spawnSync(shBinary(), ["-c", prepare], {
         env: { PATH: bin },
         encoding: "utf8",
       });
@@ -185,13 +198,13 @@ describe("provider desktop preparation", () => {
       const fakes = {
         id: "#!/bin/sh\necho 1000\n",
         sudo: '#!/bin/sh\n[ "$1" = -n ] && shift\nexec "$@"\n',
-        "apt-get": `#!/bin/sh\necho "$*" >> ${JSON.stringify(calls)}\n[ "$1" != update ]\n`,
+        "apt-get": `#!/bin/sh\necho "$*" >> ${JSON.stringify(posixPath(calls))}\n[ "$1" != update ]\n`,
       };
       for (const [name, script] of Object.entries(fakes)) {
         writeFileSync(path.join(bin, name), script);
         chmodSync(path.join(bin, name), 0o755);
       }
-      const result = spawnSync("/bin/sh", ["-c", PREPARE_LINUX_DESKTOP], {
+      const result = spawnSync(shBinary(), ["-c", PREPARE_LINUX_DESKTOP], {
         env: { PATH: bin },
         encoding: "utf8",
       });

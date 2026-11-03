@@ -1,5 +1,5 @@
-import { execFile } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { execFile, execFileSync } from "node:child_process";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -29,10 +29,12 @@ function fakeTools() {
     '#!/bin/sh\nfor i in 1 2 3 4 5; do head -c 100 /dev/zero | tr "\\0" "$DISPLAY_CHAR" >> "$2"; sleep 0.05; done\n',
   );
   writeFileSync(path.join(bin, "xdotool"), "#!/bin/sh\necho X=12\necho Y=34\n");
-  // Wraps at 76 columns like GNU base64, whatever the host's base64 does.
+  // Wraps at 76 columns like GNU base64, whatever the host's base64 does. Call the host's
+  // base64 by path: a Windows-style PATH is not searchable inside an already-running shell.
+  const realBase64 = execFileSync("sh", ["-c", "command -v base64"], { encoding: "utf8" }).trim();
   writeFileSync(
     path.join(bin, "base64"),
-    `#!/bin/sh\nPATH=${JSON.stringify(process.env.PATH)} base64 "$@" | tr -d "\\n" | fold -w 76\n`,
+    `#!/bin/sh\n${JSON.stringify(realBase64)} "$@" | tr -d "\\n" | fold -w 76\n`,
   );
   for (const tool of ["scrot", "xdotool", "base64"]) chmodSync(path.join(bin, tool), 0o755);
   return bin;
@@ -43,12 +45,18 @@ describe("observing an extra display", () => {
     const bin = fakeTools();
     // A display number no other test uses, so only this test's files are counted.
     const displayNumber = 90_000 + process.pid;
-    const owned = () =>
-      readdirSync("/tmp/rakazo").filter((name) => name.startsWith(`observe-${displayNumber}-`));
-    mkdirSync("/tmp/rakazo", { recursive: true });
+    // Ask the same shell that writes the temporary files where /tmp points on this host.
+    const owned = async () => {
+      const { stdout } = await run("sh", ["-c", "ls /tmp/rakazo 2>/dev/null || true"]);
+      return stdout.split("\n").filter((name) => name.startsWith(`observe-${displayNumber}-`));
+    };
     const observe = (char: string) =>
       run("sh", ["-c", observeExtraDisplayCommand({ display: ":7", displayNumber })], {
-        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, DISPLAY_CHAR: char },
+        env: {
+          ...process.env,
+          PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}`,
+          DISPLAY_CHAR: char,
+        },
       });
     const outputs = await Promise.all([observe("a"), observe("b")]);
     for (const [index, char] of ["a", "b"].entries()) {
@@ -56,7 +64,7 @@ describe("observing an extra display", () => {
       expect(Buffer.from(observed.image).toString()).toBe(char.repeat(500));
       expect(observed.cursor).toEqual({ x: 12, y: 34 });
     }
-    expect(owned()).toEqual([]);
+    expect(await owned()).toEqual([]);
   });
 });
 

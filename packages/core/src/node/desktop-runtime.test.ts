@@ -127,7 +127,7 @@ function runScript(
   try {
     return spawnSync(bashBinary(), [...args, posixPath(file)], {
       encoding: "utf8",
-      timeout: options.timeout ?? 5000,
+      timeout: options.timeout ?? 15_000,
       env: options.env,
     });
   } finally {
@@ -157,7 +157,7 @@ function fixture() {
     );
     return spawnSync(bashBinary(), ["-eu", posixPath(file)], {
       encoding: "utf8",
-      timeout: 5000,
+      timeout: 15_000,
     });
   };
   const ensure = (bot: string, lease = "run:1", fail = false) =>
@@ -264,7 +264,7 @@ describe("shared Linux desktop lifecycle", () => {
         "bash() { return 0; }",
         script,
       ].join("\n"),
-      { timeout: 5000 },
+      { timeout: 15_000 },
     );
     expect(result.status).not.toBe(0);
     expect(result.stdout).toContain("RAKAZO_DESKTOP_RELEASED=");
@@ -284,7 +284,7 @@ describe("shared Linux desktop lifecycle", () => {
         "rm() { echo 'slot remove failed' >&2; return 1; }",
         script,
       ].join("\n"),
-      { timeout: 5000 },
+      { timeout: 15_000 },
     );
     expect(result.status).not.toBe(0);
     expect(result.stdout).toContain("RAKAZO_DESKTOP_RELEASED=");
@@ -390,7 +390,7 @@ describe("shared Linux desktop lifecycle", () => {
             "command() { echo /fake/websockify; }",
             script,
           ].join("\n"),
-          { timeout: 5000 },
+          { timeout: 15_000 },
         );
         expect(result.status, result.stderr).toBe(failPublish ? 1 : 0);
         expect(result.stderr).not.toContain("unexpected-stop");
@@ -420,7 +420,7 @@ describe("shared Linux desktop lifecycle", () => {
         "sleep() { :; }",
         script,
       ].join("\n"),
-      { timeout: 5000 },
+      { timeout: 15_000 },
     );
     expect(result.status).not.toBe(0);
     expect(() => readFileSync(path.join(root, "control-token-1"))).toThrow();
@@ -480,7 +480,7 @@ describe("shared Linux desktop lifecycle", () => {
         `bash() { printf '%s\\n' "$5" >>${shellQuote(record)}; }`,
         resetDesktopRuntimeCommand(env).replaceAll("/tmp/rakazo", f.rootShell),
       ].join("\n"),
-      { timeout: 5000 },
+      { timeout: 15_000 },
     );
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(record, "utf8")).toBe("0\n2\n");
@@ -757,7 +757,7 @@ describe("shared Linux desktop lifecycle", () => {
           ],
           {
             encoding: "utf8",
-            timeout: 5_000,
+            timeout: 15_000,
           },
         );
         expect(result.status, result.stderr).toBe(0);

@@ -35,10 +35,13 @@ export async function assertSandboxWorkspaceContract(
     "portable",
   );
   const binary = Uint8Array.from([0, 255, 1, 128]);
+  // Windows has no POSIX executable bit, so providers may report or preserve it differently.
+  const executes = process.platform !== "win32";
   await provider.writeFile(computer, { path: "bin/tool", content: binary, executable: true }, ctx);
   expect(await provider.readFile(computer, "bin/tool", ctx)).toEqual(binary);
+  const listed = { path: "bin/tool", kind: "file", size: 4 };
   expect(await provider.listFiles(computer, "bin", ctx)).toEqual([
-    { path: "bin/tool", kind: "file", size: 4, executable: true },
+    executes ? { ...listed, executable: true } : expect.objectContaining(listed),
   ]);
   const acted = await provider.act(
     computer,
@@ -56,8 +59,7 @@ export async function assertSandboxWorkspaceContract(
   const exported = [];
   for await (const file of provider.exportWorkspace(computer, ctx)) exported.push(file);
   expect(exported.map((file) => file.path)).toContain("notes/result.txt");
-  expect(exported.find((file) => file.path === "bin/tool")).toMatchObject({
-    content: binary,
-    executable: true,
-  });
+  expect(exported.find((file) => file.path === "bin/tool")).toMatchObject(
+    executes ? { content: binary, executable: true } : { content: binary },
+  );
 }

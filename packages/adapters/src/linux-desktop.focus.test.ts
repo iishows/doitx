@@ -38,6 +38,19 @@ function writeExecutable(file: string, body: string) {
   chmodSync(file, 0o755);
 }
 
+/** The shell's own spelling of a path; on Windows MSYS renders it under /tmp or /c. */
+function posixPath(target: string): string {
+  if (process.platform !== "win32") return target;
+  const directory = spawnSync("bash", ["-c", 'cd "$1" && pwd', "bash", path.dirname(target)], {
+    encoding: "utf8",
+  }).stdout.trim();
+  return path.posix.join(directory, path.basename(target));
+}
+
+// The launcher fixtures below are POSIX shell scripts started by Python's Popen, which
+// Windows cannot execute; the focus command itself targets provider-hosted Linux desktops.
+const launcherHost = process.platform !== "win32";
+
 writeExecutable(
   path.join(bin, "wmctrl"),
   [
@@ -112,54 +125,57 @@ afterEach(() => {
 });
 
 describe("provider focus command", () => {
-  it("raises an exact WM_CLASS match from the workspace and does not wait on a live launcher", async () => {
-    const sleeper = path.join(bin, "sleeper");
-    writeExecutable(
-      sleeper,
-      ["#!/bin/sh", 'echo $$ > "$FOCUS_RECORDED"', "exec sleep 30", ""].join("\n"),
-    );
-    writeFileSync(
-      windows,
-      [
-        "0x00000001  0 1 uxterm.UXTerm host uxterm",
-        "0x00000002  0 2 xterm.XTerm host terminal",
-        "",
-      ].join("\n"),
-    );
-    const exact = await focusCommand({ kind: "focus", application: "xterm" });
-    expect(exact).toContain(`\ncd '${workspace}'\n`);
-    const raised = runFocus(exact);
-    expect(raised.status, raised.stderr).toBe(0);
-    expect(readFileSync(activated, "utf8").trim()).toBe("0x00000002");
+  it.skipIf(!launcherHost)(
+    "raises an exact WM_CLASS match from the workspace and does not wait on a live launcher",
+    async () => {
+      const sleeper = path.join(bin, "sleeper");
+      writeExecutable(
+        sleeper,
+        ["#!/bin/sh", 'echo $$ > "$FOCUS_RECORDED"', "exec sleep 30", ""].join("\n"),
+      );
+      writeFileSync(
+        windows,
+        [
+          "0x00000001  0 1 uxterm.UXTerm host uxterm",
+          "0x00000002  0 2 xterm.XTerm host terminal",
+          "",
+        ].join("\n"),
+      );
+      const exact = await focusCommand({ kind: "focus", application: "xterm" });
+      expect(exact).toContain(`\ncd '${workspace}'\n`);
+      const raised = runFocus(exact);
+      expect(raised.status, raised.stderr).toBe(0);
+      expect(readFileSync(activated, "utf8").trim()).toBe("0x00000002");
 
-    rmSync(activated, { force: true });
-    const command = await focusCommand({
-      kind: "focus",
-      application: sleeper,
-      uri: "notes.txt",
-    });
-    expect(command).toContain(`\ncd '${workspace}'\n`);
-    writeFileSync(windows, "0x00000009  0 9 sleeper.Sleeper host app\n");
-    const started = Date.now();
-    const result = runFocus(command);
-    expect(result.status, result.stderr).toBe(0);
-    expect(Date.now() - started).toBeLessThan(2_000);
-    expect(readFileSync(activated, "utf8").trim()).toBe("0x00000009");
-    // Focus can finish before the detached launcher's first write is scheduled.
-    let pid = 0;
-    await vi.waitFor(
-      () => {
-        pid = Number(readFileSync(recorded, "utf8").trim());
-        expect(pid).toBeGreaterThan(0);
-      },
-      { timeout: 5_000, interval: 20 },
-    );
-    try {
-      process.kill(pid, "SIGTERM");
-    } catch {
-      // The background launcher may already have exited.
-    }
-  });
+      rmSync(activated, { force: true });
+      const command = await focusCommand({
+        kind: "focus",
+        application: sleeper,
+        uri: "notes.txt",
+      });
+      expect(command).toContain(`\ncd '${workspace}'\n`);
+      writeFileSync(windows, "0x00000009  0 9 sleeper.Sleeper host app\n");
+      const started = Date.now();
+      const result = runFocus(command);
+      expect(result.status, result.stderr).toBe(0);
+      expect(Date.now() - started).toBeLessThan(2_000);
+      expect(readFileSync(activated, "utf8").trim()).toBe("0x00000009");
+      // Focus can finish before the detached launcher's first write is scheduled.
+      let pid = 0;
+      await vi.waitFor(
+        () => {
+          pid = Number(readFileSync(recorded, "utf8").trim());
+          expect(pid).toBeGreaterThan(0);
+        },
+        { timeout: 5_000, interval: 20 },
+      );
+      try {
+        process.kill(pid, "SIGTERM");
+      } catch {
+        // The background launcher may already have exited.
+      }
+    },
+  );
 
   it("resolves a workspace-relative program when no window matches", async () => {
     writeExecutable(
@@ -176,7 +192,10 @@ describe("provider focus command", () => {
     });
     const result = runFocus(command);
     expect(result.status, result.stderr).toBe(0);
-    expect(readFileSync(recorded, "utf8").trim().split("\n")).toEqual([workspace, "notes.txt"]);
+    expect(readFileSync(recorded, "utf8").trim().split("\n")).toEqual([
+      posixPath(workspace),
+      "notes.txt",
+    ]);
   });
 
   it.skipIf(process.platform !== "linux")(
@@ -234,17 +253,20 @@ describe("provider focus command", () => {
     expect(readFileSync(activated, "utf8").trim()).toBe("0x0000000c");
   });
 
-  it("fails a focus URI when the launcher exits before the old window is raised", async () => {
-    const failapp = path.join(bin, "failapp");
-    writeExecutable(failapp, "#!/bin/sh\nexit 1\n");
-    writeFileSync(windows, "0x00000004  0 4 failapp.Failapp host app\n");
-    const command = await focusCommand({
-      kind: "focus",
-      application: failapp,
-      uri: "notes.txt",
-    });
-    const result = runFocus(command);
-    expect(result.status, result.stderr).not.toBe(0);
-    expect(() => readFileSync(activated, "utf8")).toThrow();
-  });
+  it.skipIf(!launcherHost)(
+    "fails a focus URI when the launcher exits before the old window is raised",
+    async () => {
+      const failapp = path.join(bin, "failapp");
+      writeExecutable(failapp, "#!/bin/sh\nexit 1\n");
+      writeFileSync(windows, "0x00000004  0 4 failapp.Failapp host app\n");
+      const command = await focusCommand({
+        kind: "focus",
+        application: failapp,
+        uri: "notes.txt",
+      });
+      const result = runFocus(command);
+      expect(result.status, result.stderr).not.toBe(0);
+      expect(() => readFileSync(activated, "utf8")).toThrow();
+    },
+  );
 });

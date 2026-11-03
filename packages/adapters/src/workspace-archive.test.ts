@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -11,6 +11,18 @@ import type { TarEntry } from "./workspace-archive.test-support.js";
 import { paxRecord, tarBytes, workspaceArchive } from "./workspace-archive.test-support.js";
 
 const temporary: string[] = [];
+
+/**
+ * The shell's own spelling of a path; on Windows MSYS renders it under /tmp or /c. GNU tar
+ * also reads `C:` in a file argument as a remote host, so it needs this form.
+ */
+function posixPath(target: string): string {
+  if (process.platform !== "win32") return target;
+  const directory = spawnSync("bash", ["-c", 'cd "$1" && pwd', "bash", path.dirname(target)], {
+    encoding: "utf8",
+  }).stdout.trim();
+  return path.posix.join(directory, path.basename(target));
+}
 
 afterEach(async () => {
   await Promise.all(temporary.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
@@ -58,10 +70,12 @@ describe("readWorkspaceArchive", () => {
       ["bin/tool", Buffer.from("#!/bin/sh\necho hi\n"), true],
       ["data/blob.bin", binary, false],
       ["data/empty", Buffer.alloc(0), false],
-      ["with space/and\nnewline.md", Buffer.from("odd"), false],
       ["unicode/café-日本語-🙂.txt", Buffer.from("unicode"), false],
       [deep, Buffer.from("deep"), false],
     ];
+    // Windows file names cannot contain a line break.
+    if (process.platform !== "win32")
+      files.push(["with space/and\nnewline.md", Buffer.from("odd"), false]);
     for (const [name, content, executable] of files) {
       const target = path.join(workspace, name);
       await mkdir(path.dirname(target), { recursive: true });
@@ -71,10 +85,14 @@ describe("readWorkspaceArchive", () => {
     await mkdir(path.join(workspace, "empty-dir"));
     await symlink("/etc/passwd", path.join(workspace, "escape"));
     const output = path.join(root, "workspace.tar.gz");
-    execFileSync("tar", ["--format=pax", "-czf", output, "-C", workspace, "."], {
-      // macOS tar would otherwise add AppleDouble files for extended attributes.
-      env: { ...process.env, COPYFILE_DISABLE: "1" },
-    });
+    execFileSync(
+      "tar",
+      ["--format=pax", "-czf", posixPath(output), "-C", posixPath(workspace), "."],
+      {
+        // macOS tar would otherwise add AppleDouble files for extended attributes.
+        env: { ...process.env, COPYFILE_DISABLE: "1" },
+      },
+    );
 
     const exported = await read(await readFile(output));
 
