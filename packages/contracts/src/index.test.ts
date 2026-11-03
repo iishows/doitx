@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  CLOUDFLARE_AI_GATEWAY_CONFIG_MESSAGE,
-  CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
   CreateBotInput,
   CreateGroupInput,
   CreateRoutineInput,
   canReactToThreadMessage,
+  DOITX_PROVIDER_ID,
+  LOCAL_PROVIDER_ID,
+  MANAGED_MODEL_PROVIDER_IDS,
+  MANAGED_MODEL_PROVIDER_MESSAGE,
   McpServerConfigInput,
   MessageBlock,
   ModelConnectInputSchema,
@@ -33,8 +35,8 @@ describe("contracts", () => {
 
   it("bounds the count and length of compatible model selections", () => {
     const input = {
-      provider: "openai-compatible",
-      baseUrl: "http://localhost:8000/v1",
+      provider: "local",
+      apiKey: "fixture-key-123",
       modelId: "default",
     };
     expect(
@@ -97,8 +99,8 @@ describe("contracts", () => {
 
   it("rejects maxTokens larger than contextWindow on model connect", () => {
     const invalid = ModelConnectInputSchema.safeParse({
-      provider: "openai-compatible",
-      baseUrl: "http://localhost:8000/v1",
+      provider: "local",
+      apiKey: "fixture-key-123",
       modelId: "arbitrary-model",
       maxTokens: 131072,
       contextWindow: 1,
@@ -109,8 +111,8 @@ describe("contracts", () => {
     }
 
     const valid = ModelConnectInputSchema.safeParse({
-      provider: "openai-compatible",
-      baseUrl: "http://localhost:8000/v1",
+      provider: "local",
+      apiKey: "fixture-key-123",
       modelId: "arbitrary-model",
       maxTokens: 8192,
       contextWindow: 32768,
@@ -118,91 +120,61 @@ describe("contracts", () => {
     expect(valid.success).toBe(true);
   });
 
-  it("validates Workers AI account routing without requiring a gateway", () => {
-    const provider = "cloudflare-workers-ai";
-    expect(
-      ModelConnectInputSchema.safeParse({
-        provider,
-        accountId: "account-fixture",
-        apiKey: "fixture-key",
-      }).success,
-    ).toBe(true);
-    expect(ModelConnectInputSchema.safeParse({ provider, maxTokens: 2048 }).success).toBe(true);
-    for (const accountId of ["", "../account", "account/other", "a".repeat(65)]) {
-      expect(ModelConnectInputSchema.safeParse({ provider, accountId }).success).toBe(false);
+  it("only accepts the deployment's two model providers", () => {
+    for (const provider of MANAGED_MODEL_PROVIDER_IDS) {
+      expect(
+        ModelConnectInputSchema.safeParse({ provider, apiKey: "fixture-key-123" }).success,
+      ).toBe(true);
+    }
+    expect([...MANAGED_MODEL_PROVIDER_IDS]).toEqual([LOCAL_PROVIDER_ID, DOITX_PROVIDER_ID]);
+    for (const provider of ["openai", "anthropic", "openrouter", "cloudflare-workers-ai"]) {
+      const result = ModelConnectInputSchema.safeParse({ provider, apiKey: "fixture-key-123" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((issue) => issue.path[0] === "provider")).toBe(true);
+        // The refusal is derived from the set, so it lists exactly those ids.
+        expect(
+          result.error.issues.some((issue) => issue.message === MANAGED_MODEL_PROVIDER_MESSAGE),
+        ).toBe(true);
+      }
+    }
+    for (const provider of MANAGED_MODEL_PROVIDER_IDS) {
+      expect(MANAGED_MODEL_PROVIDER_MESSAGE).toContain(provider);
     }
   });
 
-  it("validates each Cloudflare routing id and allows an update to send only one", () => {
-    const provider = CLOUDFLARE_AI_GATEWAY_PROVIDER_ID;
-    expect(
-      ModelConnectInputSchema.safeParse({
-        provider,
-        apiKey: "cf-test-key-value",
-      }).success,
-    ).toBe(true);
-    expect(
-      ModelConnectInputSchema.safeParse({
-        provider,
-        maxTokens: 1024,
-        accountId: "acct9999",
-      }).success,
-    ).toBe(true);
-    expect(
-      ModelConnectInputSchema.safeParse({
-        provider,
-        maxTokens: 1024,
-        gatewayId: "gateway-2",
-      }).success,
-    ).toBe(true);
-    const unsafeAccount = ModelConnectInputSchema.safeParse({
-      provider,
-      apiKey: "cf-test-key-value",
-      accountId: "../account",
-      gatewayId: "gateway-1",
+  it("rejects a user-chosen endpoint or headers on a model connection", () => {
+    const withUrl = ModelConnectInputSchema.safeParse({
+      provider: "doitx",
+      apiKey: "fixture-key-123",
+      baseUrl: "https://example.com/v1",
     });
-    expect(unsafeAccount.success).toBe(false);
-    if (!unsafeAccount.success) {
-      expect(unsafeAccount.error.issues.some((issue) => issue.path[0] === "accountId")).toBe(true);
-      expect(
-        unsafeAccount.error.issues.some(
-          (issue) => issue.message === CLOUDFLARE_AI_GATEWAY_CONFIG_MESSAGE,
-        ),
-      ).toBe(true);
+    expect(withUrl.success).toBe(false);
+    if (!withUrl.success) {
+      expect(withUrl.error.issues.some((issue) => issue.path[0] === "baseUrl")).toBe(true);
     }
-    const unsafeGateway = ModelConnectInputSchema.safeParse({
-      provider,
-      maxTokens: 1024,
-      gatewayId: "gateway/1",
+    const withHeaders = ModelConnectInputSchema.safeParse({
+      provider: "doitx",
+      apiKey: "fixture-key-123",
+      headers: { "x-session": "secret" },
     });
-    expect(unsafeGateway.success).toBe(false);
-    if (!unsafeGateway.success) {
-      expect(unsafeGateway.error.issues.some((issue) => issue.path[0] === "gatewayId")).toBe(true);
+    expect(withHeaders.success).toBe(false);
+    if (!withHeaders.success) {
+      expect(withHeaders.error.issues.some((issue) => issue.path[0] === "headers")).toBe(true);
     }
-    expect(
-      ModelConnectInputSchema.safeParse({
-        provider,
-        apiKey: "cf-test-key-value",
-        accountId: "acct1234",
-        gatewayId: "gateway-1",
-      }).success,
-    ).toBe(true);
-    expect(
-      ModelConnectInputSchema.safeParse({ provider: "openai", apiKey: "sk-test-key-123" }).success,
-    ).toBe(true);
   });
 
   it("lets a built-in connection update maxTokens without a new API key", () => {
-    expect(
-      ModelConnectInputSchema.safeParse({ provider: "anthropic", maxTokens: 8192 }).success,
-    ).toBe(true);
-    expect(
-      ModelConnectInputSchema.safeParse({ provider: "anthropic", maxTokens: null }).success,
-    ).toBe(true);
-    expect(ModelConnectInputSchema.safeParse({ provider: "anthropic" }).success).toBe(false);
-    expect(
-      ModelConnectInputSchema.safeParse({ provider: "anthropic", apiKey: "short" }).success,
-    ).toBe(false);
+    expect(ModelConnectInputSchema.safeParse({ provider: "local", maxTokens: 8192 }).success).toBe(
+      true,
+    );
+    expect(ModelConnectInputSchema.safeParse({ provider: "local", maxTokens: null }).success).toBe(
+      true,
+    );
+    expect(ModelConnectInputSchema.safeParse({ provider: "local" }).success).toBe(false);
+    expect(ModelConnectInputSchema.safeParse({ provider: "local", apiKey: "short" }).success).toBe(
+      false,
+    );
   });
 
   it("accepts optional persisted duration only on valid steps blocks", () => {
@@ -522,24 +494,15 @@ describe("contracts", () => {
   });
 });
 
-describe("compatible connection headers", () => {
-  const input = {
-    provider: "openai-compatible",
-    baseUrl: "https://example.invalid/v1",
-    modelId: "test",
-  };
-  it("retains trimmed header names", () => {
-    expect(
-      ModelConnectInputSchema.parse({ ...input, headers: { " x-session ": "secret" } }),
-    ).toHaveProperty("headers", { "x-session": "secret" });
-  });
-});
-
 it("retains legacy unknown-field stripping for model connections", () => {
   expect(
-    ModelConnectInputSchema.parse({ provider: "test", apiKey: "fake-key", futureOption: true }),
+    ModelConnectInputSchema.parse({
+      provider: "doitx",
+      apiKey: "fake-key",
+      futureOption: true,
+    }),
   ).toEqual({
-    provider: "test",
+    provider: "doitx",
     apiKey: "fake-key",
   });
 });

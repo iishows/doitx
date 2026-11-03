@@ -21,7 +21,7 @@ export function localVisionModelIds(): ReadonlySet<string> {
   return declaredVisionModelIds(LOCAL_VISION_MODELS_ENV);
 }
 
-const DEFAULT_BASE_URL = "http://127.0.0.1:11434/v1";
+const DEFAULT_BASE_URL = "http://127.0.0.1:3456/v1";
 const DEFAULT_CONTEXT_WINDOW = 32_768;
 const DEFAULT_MAX_TOKENS = 4_096;
 
@@ -90,7 +90,7 @@ export function localProvider(): Provider | undefined {
   if (!ids.length) return undefined;
   return createProvider({
     id: LOCAL_PROVIDER_ID,
-    name: "Local (Ollama / LM Studio)",
+    name: "Local (self-hosted endpoint)",
     baseUrl: localBaseUrl(),
     auth: {
       apiKey: {

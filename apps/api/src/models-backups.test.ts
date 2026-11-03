@@ -7,6 +7,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { RouterDeps } from "./router.js";
 import { createRouter } from "./router.js";
 
+// The deployment declares its own models now, so the fixtures use those.
+vi.stubEnv("RAKAZO_LOCAL_MODELS", "fixture-model,fixture-backup");
+vi.stubEnv("RAKAZO_DOITX_MODELS", "doitx-model");
+
 const owner: Actor = {
   userId: "user-one",
   spaceId: "space-one",
@@ -23,12 +27,14 @@ function setup(
     compatible?: { enabledModelIds: string[]; defaultModel: string };
     /** Spaces whose member keeps their own models instead of the account's. */
     overrides?: Array<{ userId: string; spaceId: string }>;
+    /** The connection's provider; the decision-model tests need its own vendor. */
+    provider?: string;
   } = {},
 ) {
   const credential = {
     id: "credential-one",
     userId: owner.userId,
-    provider: options.compatible ? "openai-compatible" : "openrouter",
+    provider: options.compatible ? "openai-compatible" : (options.provider ?? "local"),
     label: "fixture",
     secretId: "secret-one",
     createdAt: new Date(0),
@@ -167,7 +173,7 @@ function setup(
     },
     env: {
       agentRuntime: "pi",
-      defaultProvider: "openrouter",
+      defaultProvider: "local",
       defaultModel: "unused-test-model",
       webOrigin: "http://127.0.0.1:5173",
       screenProxySecret: "fixture-secret",
@@ -202,30 +208,8 @@ function setup(
 }
 
 const availableModel = listPiCatalog().find(
-  (entry) => entry.provider === "openrouter" && !entry.placeholder,
+  (entry) => entry.provider === "local" && entry.id === "fixture-model",
 )!;
-
-describe("model catalog offered to pickers", () => {
-  it("leaves out models agents cannot run but keeps one the account saved", async () => {
-    const { call, prisma } = setup();
-    const saved = "openai/gpt-5.5-pro:batch";
-    vi.mocked(prisma.bot.findMany).mockResolvedValue([
-      { modelProvider: "openrouter", modelId: saved },
-    ] as never);
-
-    const { response } = await call("models/list", null);
-
-    expect(response?.status).toBe(200);
-    const { json } = (await response!.json()) as {
-      json: Array<{ provider: string; id: string }>;
-    };
-    const openrouter = json.filter((entry) => entry.provider === "openrouter");
-    expect(
-      openrouter.filter((entry) => entry.id.endsWith(":batch")).map((entry) => entry.id),
-    ).toEqual([saved]);
-    expect(openrouter.some((entry) => entry.id === "anthropic/claude-haiku-5.5")).toBe(true);
-  });
-});
 
 describe("model backup settings API", () => {
   it("rejects a compatible catalog placeholder outside the enabled list", async () => {
@@ -242,15 +226,15 @@ describe("model backup settings API", () => {
   it("reads the member's account list, ignoring stale Space copies and other users", async () => {
     const { call, prisma } = setup({
       existing: [
-        { userId: "user-one", provider: "openrouter", modelId: "first", position: 0 },
+        { userId: "user-one", provider: "local", modelId: "first", position: 0 },
         {
           userId: "user-one",
           spaceId: "space-one",
-          provider: "openrouter",
+          provider: "local",
           modelId: "stale-space-copy",
           position: 0,
         },
-        { userId: "user-two", provider: "openrouter", modelId: "other-user", position: 0 },
+        { userId: "user-two", provider: "local", modelId: "other-user", position: 0 },
       ],
     });
 
@@ -258,7 +242,7 @@ describe("model backup settings API", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      json: [{ provider: "openrouter", modelId: "first" }],
+      json: [{ provider: "local", modelId: "first" }],
     });
     expect(prisma.userModelRoleChoice.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId: owner.userId, role: "main" } }),
@@ -269,11 +253,11 @@ describe("model backup settings API", () => {
     const { call, rows } = setup({
       overrides: [{ userId: owner.userId, spaceId: owner.spaceId }],
       existing: [
-        { userId: owner.userId, provider: "openrouter", modelId: "account", position: 0 },
+        { userId: owner.userId, provider: "local", modelId: "account", position: 0 },
         {
           userId: owner.userId,
           spaceId: owner.spaceId,
-          provider: "openrouter",
+          provider: "local",
           modelId: "space-own",
           position: 0,
         },
@@ -282,7 +266,7 @@ describe("model backup settings API", () => {
 
     const legacy = await call("models/backups", null);
     expect((await legacy.response.json()).json).toEqual([
-      { provider: "openrouter", modelId: "space-own" },
+      { provider: "local", modelId: "space-own" },
     ]);
     const account = await call("models/role", { role: "main", scope: "account" });
     expect((await account.response.json()).json.backups).toEqual([
@@ -365,7 +349,7 @@ describe("model backup settings API", () => {
 
   it("rejects a known catalog model when its provider is disconnected without replacing saved backups", async () => {
     const disconnectedModel = listPiCatalog().find(
-      (entry) => entry.provider === "anthropic" && !entry.placeholder,
+      (entry) => entry.provider === "doitx" && !entry.placeholder,
     )!;
     const existing = {
       userId: owner.userId,
@@ -426,7 +410,7 @@ describe("model backup settings API", () => {
       spaceId: "space-two",
       email: "two@rakazo.test",
     };
-    const kept = { userId: owner.userId, provider: "openrouter", modelId: "keep", position: 0 };
+    const kept = { userId: owner.userId, provider: "local", modelId: "keep", position: 0 };
     const { rows, call, userModelRoleChoice } = setup({ actor, existing: [kept] });
 
     await call("models/setBackups", []);
@@ -441,7 +425,7 @@ describe("model backup settings API", () => {
 describe("Space model overrides", () => {
   it("starts a Space's own models from the account's and drops them when it follows again", async () => {
     const { call, rows } = setup({
-      existing: [{ userId: owner.userId, provider: "openrouter", modelId: "account", position: 0 }],
+      existing: [{ userId: owner.userId, provider: "local", modelId: "account", position: 0 }],
     });
     const overrides = async () =>
       (await (await call("spaceSettings/overrides", null)).response.json()).json;
@@ -463,14 +447,14 @@ describe("Space model overrides", () => {
     expect(await overrides()).toEqual([]);
     const legacy = await call("models/backups", null);
     expect((await legacy.response.json()).json).toEqual([
-      { provider: "openrouter", modelId: "account" },
+      { provider: "local", modelId: "account" },
     ]);
   });
 });
 
 describe("role-based model settings API", () => {
   it("accepts a decision model pinned to the provider's only connection", async () => {
-    const { call } = setup();
+    const { call } = setup({ provider: "openrouter" });
     const primary = {
       provider: "openrouter",
       modelId: "typesafe/jev-1.14",
@@ -481,7 +465,27 @@ describe("role-based model settings API", () => {
     expect((await response.json()).json.primary).toMatchObject(primary);
   });
   it("stores approval choices independently of main backups using the existing connection", async () => {
-    const { call, rows, prisma } = setup();
+    const { call, rows, prisma } = setup({ provider: "openrouter" });
+    // The approval list mixes the decision model with a deployment model on its own connection.
+    const connection = (id: string, provider: string) => ({
+      id,
+      userId: owner.userId,
+      provider,
+      label: id,
+      secretId: `${id}-secret`,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    });
+    Object.assign(prisma.userModelCredential, {
+      findMany: vi.fn(async ({ where }: { where: { userId: string; provider?: string } }) =>
+        where.userId === owner.userId
+          ? [
+              connection("credential-one", "openrouter"),
+              connection("credential-local", "local"),
+            ].filter((entry) => !where.provider || where.provider === entry.provider)
+          : [],
+      ),
+    });
     const primary = { provider: "openrouter", modelId: "typesafe/jev-1.14" };
     const { response } = await call("models/setRole", {
       role: "approval",
@@ -540,7 +544,7 @@ describe("role-based model settings API", () => {
         ? {
             id: where.id,
             userId: owner.userId,
-            provider: "openrouter",
+            provider: "local",
             label: where.id,
             secretId: `${where.id}-secret`,
             createdAt: new Date(0),
@@ -582,7 +586,7 @@ describe("role-based model settings API", () => {
     const connection = (id: string) => ({
       id,
       userId: owner.userId,
-      provider: "openrouter",
+      provider: "local",
       label: id,
       secretId: `${id}-secret`,
       createdAt: new Date(0),
@@ -623,35 +627,6 @@ describe("role-based model settings API", () => {
       serves.mockRestore();
     }
   });
-  it("keeps the main model's effort when a list save repeats its primary", async () => {
-    const { call, prisma, roles } = setup();
-    const [thinking, other] = listPiCatalog().filter(
-      (entry) =>
-        entry.provider === "openrouter" &&
-        !entry.placeholder &&
-        entry.thinkingLevels?.includes("high"),
-    );
-    const primary = { provider: thinking!.provider, modelId: thinking!.id };
-    const first = await call("models/setRole", {
-      role: "main",
-      primary: { ...primary, thinkingLevel: "high" },
-    });
-    expect(first.response.status).toBe(200);
-    const preferences = prisma.userModelPreference as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    preferences.upsert.mockClear();
-
-    const backups = [{ provider: other!.provider, modelId: other!.id }];
-    const { response } = await call("models/setRole", { role: "main", primary, backups });
-    expect(response.status).toBe(200);
-
-    expect((await response.json()).json.primary).toEqual({ ...primary, thinkingLevel: "high" });
-    expect(roles()[0]).toMatchObject({ position: 0, thinkingLevel: "high" });
-    // The main model lives only in its role; the connection's own choice is untouched.
-    expect(preferences.upsert).not.toHaveBeenCalled();
-  });
-
   it("serves a compatible main model from the connection that enables it", async () => {
     // Connection A owns the model; model B is enabled only on connection B.
     const { call, prisma, roles } = setup({
@@ -714,8 +689,8 @@ describe("role-based model settings API", () => {
 });
 
 it("lets a deployment-managed model lead the main model like any other purpose", async () => {
-  vi.stubEnv("PI_DEFAULT_PROVIDER", "openrouter");
-  vi.stubEnv("OPENROUTER_API_KEY", "fake-hosted-key");
+  vi.stubEnv("PI_DEFAULT_PROVIDER", "local");
+  vi.stubEnv("RAKAZO_LOCAL_MODELS_API_KEY", "fake-deployment-key");
   try {
     const { call, prisma, roles } = setup({ credits: true });
     const primary = { provider: availableModel.provider, modelId: availableModel.id };

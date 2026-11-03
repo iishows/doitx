@@ -4,10 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 import type { ThreadTarget } from "./thread-target.js";
 import { sendThreadMessage } from "./thread-target.js";
 
+// The deployment declares its own models; only the vision one can read images.
+vi.stubEnv("RAKAZO_LOCAL_MODELS", "vision-model,text-model");
+vi.stubEnv("RAKAZO_LOCAL_VISION_MODELS", "vision-model");
+
 // Exercise the shared production send entrypoint with an owned stored image.
 // No model transport or credential material is needed to reject known text-only input.
 function fixture(group = false) {
-  const model = { modelProvider: "openrouter", modelId: "deepseek/deepseek-v4-pro" };
+  const model = { modelProvider: "local", modelId: "text-model" };
   const tx = {
     secret: { findFirst: vi.fn().mockResolvedValue({ id: "secret-1", ciphertext: "synthetic" }) },
     $queryRaw: vi.fn().mockResolvedValue([{ id: "group-1" }]),
@@ -38,7 +42,7 @@ function fixture(group = false) {
     userModelCredential: {
       findFirst: vi.fn().mockResolvedValue({
         id: "credential-1",
-        provider: "openrouter",
+        provider: "local",
         secretId: "secret-1",
         supportsImages: false,
       }),
@@ -227,50 +231,6 @@ describe("current image send admission", () => {
     },
   );
 
-  it("keeps a bundled Codex model's images when the account omits input modalities", async () => {
-    const { tx, send } = fixture();
-    tx.bot.findFirst.mockResolvedValue({
-      id: "bot-1",
-      modelProvider: "openai-codex",
-      modelId: "gpt-6.1-sol",
-    });
-    tx.userModelCredential.findFirst.mockResolvedValue({
-      id: "credential-1",
-      provider: "openai-codex",
-      secretId: "secret-1",
-      defaultModel: "gpt-6.1-sol",
-    });
-    const read = vi.fn(async () => [
-      {
-        slug: "gpt-6.1-sol",
-        reasoningEfforts: [],
-        supportsFastTier: false,
-      },
-    ]);
-    await expect(
-      send({
-        deployment: null,
-        secrets: {
-          load: vi.fn(async () =>
-            JSON.stringify({
-              type: "oauth",
-              access: "access-token",
-              refresh: "refresh-token",
-              expires: Date.now() + 3_600_000,
-              accountId: "acct-live",
-            }),
-          ),
-        },
-        codexCatalog: { read },
-      }),
-    ).resolves.toMatchObject({ runId: "run-1" });
-    expect(read).toHaveBeenCalledWith(
-      "user-1",
-      expect.objectContaining({ accountId: "acct-live" }),
-      { waitMs: 0 },
-    );
-  });
-
   it("asks to configure image input for a legacy custom connection that never set it", async () => {
     const { tx, send } = fixture();
     tx.bot.findFirst.mockResolvedValue({
@@ -315,8 +275,8 @@ describe("current image send admission", () => {
     const { tx, send, enqueue } = fixture(true);
     tx.bot.findFirst.mockImplementation(async ({ where }: { where: { id: string } }) => ({
       id: where.id,
-      modelProvider: "openrouter",
-      modelId: where.id === "bot-1" ? "openai/gpt-4o" : "deepseek/deepseek-v4-pro",
+      modelProvider: "local",
+      modelId: where.id === "bot-1" ? "vision-model" : "text-model",
     }));
     await expect(send()).rejects.toMatchObject({ code: "CONFLICT" });
     expect(tx.bot.findFirst).toHaveBeenCalledTimes(2);
@@ -342,8 +302,8 @@ describe("current image send admission", () => {
     const { tx, send } = fixture();
     tx.bot.findFirst.mockResolvedValue({
       id: "bot-1",
-      modelProvider: "openrouter",
-      modelId: "openai/gpt-4o",
+      modelProvider: "local",
+      modelId: "vision-model",
     });
     tx.run.findMany.mockResolvedValue([
       {
@@ -351,8 +311,8 @@ describe("current image send admission", () => {
         taskId: "task-active",
         status: "running",
         trigger: "user",
-        modelProvider: "openrouter",
-        modelId: "deepseek/deepseek-v4-pro",
+        modelProvider: "local",
+        modelId: "text-model",
         modelPinned: false,
       },
     ] as never);
@@ -428,8 +388,8 @@ describe("current image send admission", () => {
     tx.message.findFirst.mockResolvedValue({ id: "ask-1", role: "bot", blocks: [] } as never);
     tx.bot.findFirst.mockResolvedValue({
       id: "bot-1",
-      modelProvider: "openrouter",
-      modelId: "openai/gpt-4o",
+      modelProvider: "local",
+      modelId: "vision-model",
     });
     tx.run.findMany.mockResolvedValue([
       {
@@ -437,8 +397,8 @@ describe("current image send admission", () => {
         taskId: "task-waiting",
         status: "waiting_input",
         trigger: "routine",
-        modelProvider: "openrouter",
-        modelId: "deepseek/deepseek-v4-pro",
+        modelProvider: "local",
+        modelId: "text-model",
         modelPinned: true,
       },
     ] as never);
@@ -450,8 +410,8 @@ describe("current image send admission", () => {
     const { tx, send } = fixture();
     tx.bot.findFirst.mockResolvedValue({
       id: "bot-1",
-      modelProvider: "openrouter",
-      modelId: "openai/gpt-4o",
+      modelProvider: "local",
+      modelId: "vision-model",
     });
     tx.run.findMany
       .mockResolvedValueOnce([
@@ -460,8 +420,8 @@ describe("current image send admission", () => {
           taskId: "obsolete-task",
           status: "waiting_input",
           trigger: "routine",
-          modelProvider: "openrouter",
-          modelId: "deepseek/deepseek-v4-pro",
+          modelProvider: "local",
+          modelId: "text-model",
           modelPinned: true,
         },
       ] as never)
@@ -473,7 +433,7 @@ describe("current image send admission", () => {
     const { tx, send } = fixture();
     tx.bot.findFirst.mockResolvedValue({
       id: "bot-1",
-      modelProvider: "openrouter",
+      modelProvider: "local",
       modelId: "fixture/future-model",
     });
     await expect(send()).rejects.toMatchObject({
@@ -486,14 +446,14 @@ describe("current image send admission", () => {
     tx.bot.findFirst.mockResolvedValue({ id: "bot-1", modelProvider: null, modelId: null });
     // The deployment default can see images; the main model chosen by the member cannot.
     tx.deploymentSettings.findUnique.mockResolvedValue({
-      defaultModelProvider: "openrouter",
-      defaultModelId: "openai/gpt-4o",
+      defaultModelProvider: "local",
+      defaultModelId: "vision-model",
     });
     tx.userModelRoleChoice.findMany.mockResolvedValue([
       {
         position: 0,
-        provider: "openrouter",
-        modelId: "deepseek/deepseek-v4-pro",
+        provider: "local",
+        modelId: "text-model",
         thinkingLevel: null,
       },
     ]);

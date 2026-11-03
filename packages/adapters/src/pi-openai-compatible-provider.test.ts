@@ -69,13 +69,18 @@ describe("model connect", () => {
       kind: "api_key",
       cacheCapabilities,
     });
-    expect(
-      ModelConnectInputSchema.safeParse({
-        provider: "fixture",
-        apiKey: "fake-api-key",
-        cacheCapabilities: { ...cacheCapabilities, retentionMode: "forever" },
-      }).success,
-    ).toBe(false);
+    const rejected = ModelConnectInputSchema.safeParse({
+      provider: "doitx",
+      apiKey: "fake-api-key",
+      cacheCapabilities: { ...cacheCapabilities, retentionMode: "forever" },
+    });
+    expect(rejected.success).toBe(false);
+    if (!rejected.success) {
+      // Pin the reason, so an unrelated rejection cannot stand in for this one.
+      expect(rejected.error.issues.some((issue) => issue.path[0] === "cacheCapabilities")).toBe(
+        true,
+      );
+    }
   });
   it("stores generic limits with hosted credentials and preserves them when rotating the key", () => {
     const plaintext = connectAsOwner({
@@ -102,21 +107,25 @@ describe("model connect", () => {
     });
   });
   it("rejects invalid configured limits at the shared contract", () => {
-    expect(
-      ModelConnectInputSchema.safeParse({
-        provider: "fixture",
-        apiKey: "fake-api-key",
-        contextWindow: 2048,
-        maxTokens: 2048,
-      }).success,
-    ).toBe(false);
-    expect(
-      ModelConnectInputSchema.safeParse({
-        provider: "fixture",
-        apiKey: "fake-api-key",
-        contextWindow: -1,
-      }).success,
-    ).toBe(false);
+    const noInputRoom = ModelConnectInputSchema.safeParse({
+      provider: "local",
+      apiKey: "fake-api-key",
+      contextWindow: 2048,
+      maxTokens: 2048,
+    });
+    expect(noInputRoom.success).toBe(false);
+    if (!noInputRoom.success) {
+      expect(noInputRoom.error.issues.some((issue) => issue.path[0] === "maxTokens")).toBe(true);
+    }
+    const outOfRange = ModelConnectInputSchema.safeParse({
+      provider: "local",
+      apiKey: "fake-api-key",
+      contextWindow: -1,
+    });
+    expect(outOfRange.success).toBe(false);
+    if (!outOfRange.success) {
+      expect(outOfRange.error.issues.some((issue) => issue.path[0] === "contextWindow")).toBe(true);
+    }
   });
   it("serializes keyless openai-compatible credentials", () => {
     const plaintext = connectAsOwner({
@@ -938,12 +947,12 @@ describe("openai-compatible provider", () => {
     ).rejects.toMatchObject({ name: "AbortError" });
   });
 
-  it("lists openai-compatible in the catalog even without RAKAZO_LOCAL_MODELS", () => {
+  it("never lists the retired openai-compatible provider in the catalog", () => {
     delete process.env.RAKAZO_LOCAL_MODELS;
     const entries = listPiCatalog().filter(
       (entry) => entry.provider === OPENAI_COMPATIBLE_PROVIDER_ID,
     );
-    expect(entries.length).toBeGreaterThan(0);
+    expect(entries).toHaveLength(0);
   });
 });
 

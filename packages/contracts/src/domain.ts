@@ -1526,10 +1526,34 @@ export function modelChoiceListSchema<T extends z.ZodType<ModelBackupChoice>>(ch
 }
 export const ModelBackupListSchema = modelChoiceListSchema(ModelBackupChoiceSchema);
 
+/**
+ * A self-hosted OpenAI-compatible server the user points at by URL. Used by the
+ * speech/voice connection; the model connection no longer accepts a custom address.
+ */
 export const OPENAI_COMPATIBLE_PROVIDER_ID = "openai-compatible";
 
 /** The deployment-configured OpenAI-compatible endpoint, offered as one managed provider. */
 export const LOCAL_PROVIDER_ID = "local";
+
+/** The Doitx router (router.doitx.ai), offered as the managed remote provider. */
+export const DOITX_PROVIDER_ID = "doitx";
+
+/**
+ * The only providers a deployment offers for models. Both endpoints are decided
+ * by the deployment, so a connection names one of these and nothing else.
+ */
+export const MANAGED_MODEL_PROVIDER_IDS: ReadonlySet<string> = new Set([
+  LOCAL_PROVIDER_ID,
+  DOITX_PROVIDER_ID,
+]);
+
+/**
+ * The refusal for a connection naming a provider this deployment does not offer.
+ * Derived from {@link MANAGED_MODEL_PROVIDER_IDS} so the wording cannot drift from the check.
+ */
+export const MANAGED_MODEL_PROVIDER_MESSAGE = `This deployment only offers these model providers: ${[
+  ...MANAGED_MODEL_PROVIDER_IDS,
+].join(", ")}`;
 
 export const MAX_ENABLED_MODEL_IDS = 500;
 
@@ -1572,6 +1596,28 @@ export const ModelConnectInputSchema = z
       .optional(),
   })
   .superRefine((value, ctx) => {
+    if (!MANAGED_MODEL_PROVIDER_IDS.has(value.provider)) {
+      ctx.addIssue({
+        code: "custom",
+        message: MANAGED_MODEL_PROVIDER_MESSAGE,
+        path: ["provider"],
+      });
+    }
+    // Both endpoints are deployment decisions, so a connection never names its own.
+    if (value.baseUrl?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Custom endpoints are not configurable",
+        path: ["baseUrl"],
+      });
+    }
+    if (value.headers && Object.keys(value.headers).length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Custom headers are not configurable",
+        path: ["headers"],
+      });
+    }
     if (!modelOutputLeavesInputRoom(value.maxTokens, value.contextWindow)) {
       ctx.addIssue({
         code: "custom",
@@ -1598,23 +1644,6 @@ export const ModelConnectInputSchema = z
           path: ["gatewayId"],
         });
       }
-    }
-    if (value.provider === OPENAI_COMPATIBLE_PROVIDER_ID) {
-      if (!value.baseUrl?.trim()) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Base URL is required for OpenAI-compatible models",
-          path: ["baseUrl"],
-        });
-      }
-      if (!value.modelId?.trim()) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Model id is required for OpenAI-compatible models",
-          path: ["modelId"],
-        });
-      }
-      return;
     }
     const apiKey = value.apiKey?.trim() ?? "";
     if (apiKey.length > 0 && apiKey.length < 8) {

@@ -99,7 +99,10 @@ export function defaultCatalogModelId(
   const authByProvider: Partial<Record<string, ModelCredentialAuthKind>> =
     authKind === "disconnected" ? {} : { [provider]: authKind };
   const entries = offeredCatalog(listAvailablePiCatalog(authByProvider)).filter(
-    (item) => item.provider === canonicalPiProviderId(provider),
+    // A placeholder stands for models discovered elsewhere — the router's live
+    // list, or a custom connection's own id. Choosing one would pin a run to an
+    // id the deployment never verified.
+    (item) => item.provider === canonicalPiProviderId(provider) && !item.placeholder,
   );
   return usableModelId((entries.find((item) => item.recommended) ?? entries[0])?.id);
 }

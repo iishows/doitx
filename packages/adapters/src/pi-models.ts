@@ -4,15 +4,14 @@ import type { ModelOAuthSignInMode, ThinkingLevel } from "@rakazo/contracts";
 import {
   assertHeaderSafeApiKey,
   canonicalPiProviderId,
+  DOITX_PROVIDER_ID,
   LOCAL_PROVIDER_ID,
   MODEL_KEY_REJECTED_ERROR,
 } from "@rakazo/contracts";
+import { DOITX_SEED_MODEL_ID } from "./pi-doitx-provider.js";
 import { createManagedModels, MANAGED_PROVIDER_IDS } from "./pi-managed-models.js";
 import { loadProviderOAuth, SUBSCRIPTION_SIGN_IN_PROVIDERS } from "./pi-oauth.js";
-import {
-  OPENAI_COMPATIBLE_PROVIDER_ID,
-  probeOpenAiCompatibleModels,
-} from "./pi-openai-compatible-provider.js";
+import { probeOpenAiCompatibleModels } from "./pi-openai-compatible-provider.js";
 import { MODEL_CONNECT_TIMEOUT_MS } from "./pi-runtime-limits.js";
 
 export type PiCatalogAuth = "api-key" | "oauth" | "both";
@@ -222,9 +221,7 @@ function pinnedCatalogProbeBaseUrl(
   providerId: string,
   models: ReadonlyArray<{ api: string; baseUrl?: string }>,
 ): string | null {
-  if (providerId === OPENAI_COMPATIBLE_PROVIDER_ID || providerId === LOCAL_PROVIDER_ID) {
-    return null;
-  }
+  if (providerId === LOCAL_PROVIDER_ID) return null;
   const urls = new Set<string>();
   for (const model of models) {
     if (!CATALOG_PROBE_APIS.has(model.api) || !model.baseUrl) continue;
@@ -251,12 +248,6 @@ export function listPiCatalog(): PiCatalogEntry[] {
 
 let cachedCatalog: PiCatalogEntry[] | undefined;
 
-// Keep existing display names across pi 1.3's provider renames.
-const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  "openai-codex": "OpenAI Codex",
-  azure: "Azure OpenAI",
-};
-
 function buildPiCatalog(): PiCatalogEntry[] {
   catalogProbeBaseUrls.clear();
   catalogBaseUrls.clear();
@@ -264,10 +255,10 @@ function buildPiCatalog(): PiCatalogEntry[] {
   const models = createManagedModels();
   const entries: PiCatalogEntry[] = [];
   for (const provider of models.getProviders()) {
-    // Defence in depth: the managed catalog only registers local and
-    // openai-compatible, but never let an unlisted provider reach the UI.
+    // Defence in depth: the managed catalog only registers local and doitx,
+    // but never let an unlisted provider reach the UI.
     if (!MANAGED_PROVIDER_IDS.has(provider.id)) continue;
-    const providerName = PROVIDER_DISPLAY_NAMES[provider.id] ?? provider.name;
+    const providerName = provider.name;
     const apiKey = Boolean(provider.auth.apiKey);
     const oauthAuth = loadProviderOAuth(provider.id);
     const oauth = Boolean(oauthAuth);
@@ -301,16 +292,14 @@ function buildPiCatalog(): PiCatalogEntry[] {
         billing,
         auth,
         oauthLabel,
-        authHint:
-          provider.id === OPENAI_COMPATIBLE_PROVIDER_ID ? "Custom server" : signInMeta?.hint,
+        authHint: signInMeta?.hint,
         subscription,
         signIn: signInMeta?.mode,
         reasoning: Boolean(model.reasoning),
         thinkingLevels,
-        // Compatibility metadata does not prove a model is served by a user's
-        // endpoint. Keep each custom connection scoped to its entered model ID.
-        // Its image support is the connection's own setting, not the catalog's.
-        ...(provider.id === OPENAI_COMPATIBLE_PROVIDER_ID
+        // The router's seed stands in for models a live probe discovers, so it is
+        // not offered as a model itself; real entries carry their declared images.
+        ...(provider.id === DOITX_PROVIDER_ID && model.id === DOITX_SEED_MODEL_ID
           ? { placeholder: true }
           : { images: model.input.includes("image") }),
         ...(probeBaseUrl ? { catalogProbe: true } : {}),
@@ -387,9 +376,6 @@ function catalogBilling(
   if (signInMeta) return signInMeta.billing;
   if (providerId === LOCAL_PROVIDER_ID) {
     return "Runs on infrastructure configured by the server operator. No model charges from Doitx.";
-  }
-  if (providerId === OPENAI_COMPATIBLE_PROVIDER_ID) {
-    return "Runs on a URL you control. Doitx does not pay for model usage.";
   }
   if (opts.oauth && !opts.apiKey) {
     return `${name} subscription login is not in the Doitx UI yet. Skip if this deployment already has credentials.`;

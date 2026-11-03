@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DOITX_PROVIDER_ID } from "./pi-doitx-provider.js";
 import {
   applyProviderLiveCatalog,
   liveCatalogEntry,
@@ -38,9 +39,15 @@ afterEach(() => {
  * seam is closed — nothing probes, merges or invents models for them.
  */
 describe("live catalog is closed for the managed providers", () => {
-  it("ships no provider with a pinned registry probe", () => {
+  it("pins a registry probe on the router alone", () => {
+    // The router lists its models at run time; every other entry is a bundled
+    // model the registry already names, so it needs no probe.
     for (const entry of base) {
-      expect(entry.catalogProbe).toBeUndefined();
+      if (entry.provider === DOITX_PROVIDER_ID) {
+        expect(entry.catalogProbe).toBe(true);
+      } else {
+        expect(entry.catalogProbe).toBeUndefined();
+      }
     }
   });
 

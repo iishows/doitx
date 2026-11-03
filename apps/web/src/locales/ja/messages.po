@@ -565,10 +565,6 @@ msgstr "フォールバックを追加"
 msgid "Add field"
 msgstr "フィールドを追加"
 
-#: src/components/ModelHeadersEditor.tsx
-msgid "Add header"
-msgstr "ヘッダーを追加"
-
 #: src/pages/ScratchpadSection.tsx
 msgid "Add item"
 msgstr "項目を追加"
@@ -627,9 +623,7 @@ msgstr "追加中…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -787,10 +781,6 @@ msgstr "回答済み"
 msgid "Answered: {answer}"
 msgstr "回答済み: {answer}"
 
-#: src/pages/Onboarding.tsx
-msgid "Anthropic API"
-msgstr "Anthropic API"
-
 #: src/pages/Paywall.tsx
 msgid "Any model, with your own key"
 msgstr "自分のキーで、あらゆるモデルを"
@@ -798,7 +788,6 @@ msgstr "自分のキーで、あらゆるモデルを"
 #: src/components/AskCard.tsx
 #: src/lib/localized-provider-hint.ts
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
-#: src/pages/model-settings/compatible-key-field.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
@@ -1690,11 +1679,6 @@ msgstr ""
 msgid "Contains code to run"
 msgstr "実行するコードを含みます"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Context limit"
-msgstr "コンテキスト上限"
-
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx
@@ -2434,10 +2418,8 @@ msgstr "日"
 msgid "Decline"
 msgstr "拒否"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/role-model-picker.tsx
 #: src/pages/ModelRoleSettings.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Default"
 msgstr "デフォルト"
@@ -2769,17 +2751,14 @@ msgid "Enter a valid email"
 msgstr "有効なメールアドレスを入力してください"
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to {MAX_MODEL_CONTEXT_WINDOW} for the context limit."
 msgstr "コンテキスト上限には1〜{MAX_MODEL_CONTEXT_WINDOW}の整数を入力してください。"
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to {MAX_MODEL_MAX_TOKENS} for maximum output tokens."
 msgstr "最大出力トークン数には1〜{MAX_MODEL_MAX_TOKENS}の整数を入力してください。"
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to 1000 for the image limit."
 msgstr "画像の上限には1〜1000の整数を入力してください。"
 
@@ -2905,11 +2884,6 @@ msgstr ""
 msgid "External conversation"
 msgstr "外部の会話"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Extra high"
-msgstr "非常に高い"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Extra high"
@@ -2977,16 +2951,6 @@ msgstr "フィルター"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Find models"
-msgstr "モデルを検索"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Finding…"
-msgstr "検索中…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3105,21 +3069,15 @@ msgstr "ヘッダー"
 msgid "Header \"{header}\""
 msgstr "ヘッダー「{header}」"
 
-#: src/components/ModelHeadersEditor.tsx
 #: src/components/VaultSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Header name"
 msgstr "ヘッダー名"
 
-#: src/components/ModelHeadersEditor.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Header value"
 msgstr "ヘッダー値"
-
-#: src/components/ModelHeadersEditor.tsx
-msgid "Headers"
-msgstr "ヘッダー"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3145,14 +3103,12 @@ msgstr "パスワードを非表示"
 msgid "Hide transcript"
 msgstr "文字起こしを非表示"
 
-#: src/lib/ticket-priority.ts
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
+#. js-lingui-explicit-id
+#: src/lib/model-catalog.ts
 msgid "High"
 msgstr "高"
 
-#. js-lingui-explicit-id
-#: src/lib/model-catalog.ts
+#: src/lib/ticket-priority.ts
 msgid "High"
 msgstr "高"
 
@@ -3552,14 +3508,12 @@ msgstr "ログアウト"
 msgid "Looks like it contains a key"
 msgstr "キーが含まれているようです"
 
-#: src/lib/ticket-priority.ts
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
+#. js-lingui-explicit-id
+#: src/lib/model-catalog.ts
 msgid "Low"
 msgstr "低"
 
-#. js-lingui-explicit-id
-#: src/lib/model-catalog.ts
+#: src/lib/ticket-priority.ts
 msgid "Low"
 msgstr "低"
 
@@ -3624,11 +3578,6 @@ msgstr "Markdown テーブル"
 msgid "Marketing"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Max"
-msgstr "最大"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Max"
@@ -3638,14 +3587,7 @@ msgstr "最大"
 msgid "Maximize"
 msgstr "最大化"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Maximum images per request"
-msgstr "リクエストあたりの最大画像数"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
 msgid "Maximum output tokens"
 msgstr "最大出力トークン数"
 
@@ -3661,11 +3603,6 @@ msgstr ""
 #: src/pages/shell/agent-import.tsx
 msgid "MCP servers"
 msgstr "MCPサーバー"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Medium"
-msgstr "中"
 
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
@@ -3762,11 +3699,6 @@ msgstr "メッセージ"
 msgid "Microphone failed"
 msgstr "マイクのエラー"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Minimal"
-msgstr "最小"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Minimal"
@@ -3802,7 +3734,6 @@ msgid "Mode"
 msgstr "モード"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/model-picker.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -3818,11 +3749,6 @@ msgstr "モデル「{modelId}」は一覧にありませんでした。"
 #: src/pages/shell/bot-panel.tsx
 msgid "Model connections"
 msgstr "モデル接続"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Model id"
-msgstr "モデルID"
 
 #: src/pages/model-settings/model-picker.tsx
 #: src/pages/model-settings/role-model-picker.tsx
@@ -3843,11 +3769,6 @@ msgstr "モデル"
 #: src/components/ModelCredits.tsx
 msgid "Models at provider cost"
 msgstr "プロバイダー原価でのモデル利用"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Models from server"
-msgstr "サーバーのモデル"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
@@ -4235,16 +4156,6 @@ msgstr "OAuthの有効期限切れ"
 msgid "Offline"
 msgstr ""
 
-#: src/pages/model-settings/connection-controls.tsx
-#: src/pages/Onboarding.tsx
-msgid "Ollama API key"
-msgstr "OllamaのAPIキー"
-
-#: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
-msgid "Ollama Cloud"
-msgstr "Ollama Cloud"
-
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
 msgstr "スケジュール"
@@ -4318,22 +4229,11 @@ msgstr "ナビゲーションを開く"
 msgid "Open work"
 msgstr "未完了の作業"
 
-#: src/pages/Onboarding.tsx
-msgid "OpenAI API"
-msgstr "OpenAI API"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "OpenAI-compatible server URL"
-msgstr "OpenAI互換サーバーのURL"
-
 #: src/pages/shell/agent-import.tsx
 msgid "OpenClaw or Hermes"
 msgstr "OpenClawまたはHermes"
 
 #: src/components/SignupSurvey.tsx
-#: src/pages/model-settings/connection-controls.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Optional"
 msgstr "任意"
@@ -4358,11 +4258,6 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "元のメッセージを表示できません"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Other model…"
-msgstr "その他のモデル…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
@@ -4428,10 +4323,6 @@ msgstr "支払い期限超過"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Paste a replacement key"
 msgstr "新しいキーを貼り付け"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-msgid "Paste the OpenAI-compatible address from your server. Doitx adds /v1 if needed."
-msgstr "サーバーのOpenAI互換アドレスを貼り付けてください。必要に応じてDoitxが/v1を追加します。"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Paste the reply"
@@ -4639,11 +4530,6 @@ msgstr "準備完了"
 msgid "Reason"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Reasoning effort"
-msgstr "推論レベル"
-
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 msgid "Recall and write"
 msgstr "参照と書き込み"
@@ -4832,10 +4718,6 @@ msgstr ""
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "Gitイベントを削除"
-
-#: src/components/ModelHeadersEditor.tsx
-msgid "Remove header"
-msgstr "ヘッダーを削除"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove message trigger"
@@ -5103,7 +4985,6 @@ msgstr "土曜日"
 #: src/pages/GroupPanel.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/connection-controls.tsx
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
@@ -5327,8 +5208,6 @@ msgstr "サーバー名"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "サーバーURL"
@@ -5352,10 +5231,6 @@ msgstr "設定: 使用量"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "セットアップ完了"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-msgid "Setup help"
-msgstr "設定ヘルプ"
 
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Shape"
@@ -5706,16 +5581,6 @@ msgstr "サブスクリプションが必要です"
 #: src/lib/cron.ts
 msgid "Sunday"
 msgstr "日曜日"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Supports images"
-msgstr "画像に対応"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Supports thinking"
-msgstr "思考に対応"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switch"
@@ -6247,11 +6112,6 @@ msgstr "{hostLabel}を使用"
 #: src/pages/McpServersOverlay.tsx
 msgid "Use {oauthEnvReference} for the access token."
 msgstr "アクセストークンには{oauthEnvReference}を使用してください。"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Use a found model"
-msgstr "見つかったモデルを使用"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Use Connect to verify the key."

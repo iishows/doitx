@@ -1,9 +1,4 @@
-import {
-  canonicalPiProviderId,
-  isOllamaCloudBaseUrl,
-  OLLAMA_CLOUD_BASE_URL,
-  OPENAI_COMPATIBLE_PROVIDER_ID,
-} from "@rakazo/contracts";
+import { canonicalPiProviderId } from "@rakazo/contracts";
 import { popularModelProvidersFirst } from "@rakazo/core";
 import { fetchFresh } from "@rakazo/core/query";
 import { isCancelledError, useQuery } from "@tanstack/react-query";
@@ -135,7 +130,6 @@ export default function Models() {
   const connectRoute = (provider: ConnectableProvider, intent: ModelConnectIntent) =>
     connectionRoute({
       provider: provider.id,
-      baseUrl: provider.baseUrl,
       credentialId: null,
       target,
       ...intent,
@@ -150,7 +144,7 @@ export default function Models() {
       }),
     );
 
-  /** Every provider, popular first, plus the Ollama Cloud preset of the compatible one. */
+  /** Every provider the deployment offers, popular first. */
   const allProviders = useMemo(() => {
     const grouped = new Map<string, ConnectableProvider>();
     for (const entry of catalog) {
@@ -160,30 +154,16 @@ export default function Models() {
         name: entry.providerName ?? entry.provider,
       });
     }
-    const all = popularModelProvidersFirst([...grouped.values()], (group) => group.id);
-    if (catalog.some((entry) => entry.provider === OPENAI_COMPATIBLE_PROVIDER_ID))
-      all.push({
-        id: OPENAI_COMPATIBLE_PROVIDER_ID,
-        name: t("Ollama Cloud"),
-        baseUrl: OLLAMA_CLOUD_BASE_URL,
-      });
-    return all;
-  }, [catalog, t]);
+    return popularModelProvidersFirst([...grouped.values()], (group) => group.id);
+  }, [catalog]);
 
   // Deployment-funded providers stay listed so people can still add their own key.
   const providers = useMemo(() => {
     const connected = new Set(credentials.map((entry) => canonicalPiProviderId(entry.provider)));
-    const ollama = credentials.some(
-      (entry) =>
-        entry.provider === OPENAI_COMPATIBLE_PROVIDER_ID && isOllamaCloudBaseUrl(entry.baseUrl),
-    );
-    return allProviders.filter((provider) =>
-      provider.baseUrl ? !ollama : !connected.has(canonicalPiProviderId(provider.id)),
-    );
+    return allProviders.filter((provider) => !connected.has(canonicalPiProviderId(provider.id)));
   }, [allProviders, credentials]);
 
-  const providerKey = (provider: ConnectableProvider) =>
-    `connect:${provider.id}:${provider.baseUrl ?? ""}`;
+  const providerKey = (provider: ConnectableProvider) => `connect:${provider.id}`;
   /** Adds a connection, even for a provider that has one, without touching any list. */
   function addProvider() {
     pushModelPicker({
@@ -200,7 +180,6 @@ export default function Models() {
         return provider
           ? connectionRoute({
               provider: provider.id,
-              baseUrl: provider.baseUrl,
               credentialId: null,
               makeDefault: false,
               target,

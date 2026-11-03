@@ -1,33 +1,20 @@
-import type { ModelHeaderRow, ModelOAuthBegin, ThinkingLevel } from "@rakazo/contracts";
+import type { ModelOAuthBegin, ThinkingLevel } from "@rakazo/contracts";
 import {
   CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
   cloudflareModelRouting,
-  compatibleConnectionName,
   connectionDisplayName,
   DEFAULT_MODEL_CONTEXT_WINDOW,
   DEFAULT_MODEL_MAX_TOKENS,
   isCloudflareModelProvider,
-  isOllamaCloudBaseUrl,
   MAX_MODEL_CONTEXT_WINDOW,
   MAX_MODEL_MAX_TOKENS,
-  modelHeadersInput,
-  OPENAI_COMPATIBLE_BASE_URL_HINT,
-  OPENAI_COMPATIBLE_PROVIDER_ID,
-  savedCompatibleEndpointMatches,
 } from "@rakazo/contracts";
 import {
-  COMPATIBLE_THINKING_LEVELS,
   clampCatalogThinkingLevel,
-  compatibleConnectionReady,
-  compatibleModelRows,
   connectionFormFields,
   connectionFormModelId,
   connectionMaxTokensField,
-  createModelProbe,
-  initialModelProbeState,
   modelConnectRequest,
-  savedCompatibleModelIds,
-  toggleEnabledModelId,
 } from "@rakazo/core";
 import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
@@ -46,10 +33,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MenuPickerMenu } from "../../components/menu-picker";
 import { NativeActionButton } from "../../components/native-action-button";
-import { NativeSwitch } from "../../components/native-switch";
-import { Checkmark } from "../../components/row-accessories";
 import { SettingsRow } from "../../components/settings-group";
 import type { MobileMe, MobileModel, MobileModelCredential } from "../../lib/api";
 import { mobileTokens } from "../../lib/appearance";
@@ -69,7 +53,7 @@ type ModelSelection = {
   modelId?: string;
 };
 
-type FeedbackAnchor = "probe" | "model" | "connection" | "limits";
+type FeedbackAnchor = "model" | "connection" | "limits";
 
 /** Connects or manages one provider for the model list that opened it. */
 export default function ModelConnection() {
@@ -94,24 +78,16 @@ export default function ModelConnection() {
   // The provider whose optional personal-key form is open.
   const [ownKeyProvider, setOwnKeyProvider] = useState<string | null>(null);
   const [modelId, setModelId] = useState("");
-  const [enabledModelIds, setEnabledModelIds] = useState<string[]>([]);
   const [apiKey, setApiKey] = useState("");
   const [accountId, setAccountId] = useState("");
   const [gatewayId, setGatewayId] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [headerRows, setHeaderRows] = useState<ModelHeaderRow[] | null>(null);
   const [reasoning, setReasoning] = useState(false);
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel | null>(null);
   const [maxTokens, setMaxTokens] = useState(String(DEFAULT_MODEL_MAX_TOKENS));
   const [contextWindow, setContextWindow] = useState(String(DEFAULT_MODEL_CONTEXT_WINDOW));
   const [supportsImages, setSupportsImages] = useState(false);
   const [maxImagesPerPrompt, setMaxImagesPerPrompt] = useState("");
-  const [showEndpointHelp, setShowEndpointHelp] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [{ models: probeModels, probing }, setProbe] = useState(initialModelProbeState);
-  const [modelProbe] = useState(() => createModelProbe(setProbe));
-  const resetOpenAiCompatibleProbe = modelProbe.reset;
   const [oauth, setOauth] = useState<ModelOAuthBegin | null>(null);
   const [pasteCode, setPasteCode] = useState("");
   const [loading, setLoading] = useState(true);
@@ -170,10 +146,9 @@ export default function ModelConnection() {
   }, [rpc]);
 
   const cancelInFlightWork = useCallback(() => {
-    modelProbe.invalidate();
     cancelOAuth();
     if (codeCopiedTimerRef.current) clearTimeout(codeCopiedTimerRef.current);
-  }, [cancelOAuth, modelProbe]);
+  }, [cancelOAuth]);
 
   useEffect(
     () => () => {
@@ -205,17 +180,12 @@ export default function ModelConnection() {
         provider: nextProvider,
         modelId: nextModel,
         credential: nextCredential,
-        presetBaseUrl: request.baseUrl,
       });
       meRef.current = nextMe;
       setMe(nextMe);
       setCatalog(nextCatalog);
       setCredentials(nextCredentials);
-      resetOpenAiCompatibleProbe();
       setModelId(nextModel);
-      setHeaderRows(null);
-      setEnabledModelIds(fields.enabledModelIds);
-      setBaseUrl(fields.baseUrl);
       setReasoning(fields.reasoning);
       setThinkingLevel(fields.thinkingLevel);
       setMaxTokens(fields.maxTokens);
@@ -248,84 +218,27 @@ export default function ModelConnection() {
   const providerName = selected?.providerName ?? selected?.provider ?? "";
   const selectedProviderLabel = credential
     ? connectionDisplayName(credential, providerName)
-    : compatibleConnectionName(baseUrl, providerName);
+    : providerName;
   useLayoutEffect(() => {
     if (selectedProviderLabel) navigation.setOptions({ title: selectedProviderLabel });
   }, [navigation, selectedProviderLabel]);
-  const isOpenAiCompatible = provider === OPENAI_COMPATIBLE_PROVIDER_ID;
   const isCloudflareGateway = provider === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID;
   const isCloudflare = isCloudflareModelProvider(provider);
   const cloudflareRoutingReady =
     !isCloudflare || cloudflareModelRouting({ provider, accountId, gatewayId }) !== undefined;
-  const compatibleRows = compatibleModelRows(
-    savedCompatibleModelIds(credential, baseUrl),
-    enabledModelIds,
-    probeModels,
-  );
   const acceptsKey = selected?.auth !== "oauth";
   const subscriptionSignIn = selected?.signIn !== undefined;
-  const reasoningEffortValue = thinkingLevel ? thinkingLevelLabel(thinkingLevel, t) : t("Default");
+  const _reasoningEffortValue = thinkingLevel ? thinkingLevelLabel(thinkingLevel, t) : t("Default");
   const busy = pending !== null || oauthPending;
-  const effectiveBaseUrl = baseUrl.trim();
-  const openAiCompatibleReady = compatibleConnectionReady({
-    apiKey,
-    baseUrl,
-    modelId,
-    headerRows,
-    credential,
-  });
   const limitsDirty = maxTokens !== connectionMaxTokensField(provider, credential?.maxTokens);
   const gatewayDirty =
     accountId.trim() !== (credential?.accountId ?? "") ||
     gatewayId.trim() !== (credential?.gatewayId ?? "");
   const gatewayOnlySave = isCloudflare && Boolean(credential) && !apiKey.trim();
 
-  function updateBaseUrl(nextBaseUrl: string) {
-    setBaseUrl(nextBaseUrl);
-    setHeaderRows(null);
-    // A new endpoint starts with no ticks; the saved endpoint gets its saved list back.
-    setEnabledModelIds(savedCompatibleModelIds(credential, nextBaseUrl));
-    resetOpenAiCompatibleProbe();
-    clearFeedback();
-  }
-
   function updateApiKey(nextApiKey: string) {
     setApiKey(nextApiKey);
-    resetOpenAiCompatibleProbe();
     clearFeedback();
-  }
-
-  async function probeServerModels() {
-    if (!baseUrl.trim()) return;
-    Keyboard.dismiss();
-    clearFeedback();
-    await modelProbe.probe({
-      baseUrl,
-      apiKey,
-      request: (input) =>
-        rpc("models/probeOpenAiCompatible", {
-          ...input,
-          headers: modelHeadersInput(headerRows),
-          credentialId: credential?.id,
-        }),
-      onSuccess: (models) => {
-        const next = modelId.trim() || models[0] || "";
-        if (next !== modelId) stageCompatibleModelId(next);
-        else setModelId(next);
-        publishFeedback("probe", {
-          notice:
-            models.length === 0
-              ? t("Server found. Enter a model name.")
-              : models.length === 1
-                ? t("Found {count} model.", { count: 1 })
-                : t("Found {count} models.", { count: models.length }),
-        });
-      },
-      onError: (err) =>
-        publishFeedback("probe", {
-          error: errorText(err, t("Could not reach this model server")),
-        }),
-    });
   }
 
   async function disconnectCredential() {
@@ -348,16 +261,6 @@ export default function ModelConnection() {
     }
   }
 
-  function stageCompatibleModelId(nextModelId: string) {
-    setModelId(nextModelId);
-    setThinkingLevel(
-      clampCatalogThinkingLevel(
-        credential?.modelId === nextModelId ? credential.thinkingLevel : null,
-        reasoning ? COMPATIBLE_THINKING_LEVELS : [],
-      ) as ThinkingLevel | null,
-    );
-  }
-
   async function connectKey(limitsOnly = false) {
     if (!selected) return;
     const anchor = limitsOnly ? "limits" : "connection";
@@ -365,9 +268,10 @@ export default function ModelConnection() {
       form: {
         apiKey,
         modelId,
-        enabledModelIds,
-        baseUrl,
-        headerRows,
+        // The endpoint is a deployment decision now, so a connection never names one.
+        enabledModelIds: [],
+        baseUrl: "",
+        headerRows: null,
         reasoning,
         thinkingLevel,
         maxTokens,
@@ -584,263 +488,6 @@ export default function ModelConnection() {
     );
   }
 
-  const savedHeaderEndpointMatches = savedCompatibleEndpointMatches(baseUrl, credential?.baseUrl);
-  const visibleHeaderRows =
-    headerRows ??
-    (savedHeaderEndpointMatches ? (credential?.headerNames ?? []) : []).map((name) => ({
-      name,
-      value: "",
-    }));
-  function changeHeaderRows(rows: ModelHeaderRow[]) {
-    setHeaderRows(rows);
-    resetOpenAiCompatibleProbe();
-    clearFeedback();
-  }
-
-  const compatConfig = isOpenAiCompatible ? (
-    <>
-      <Text style={styles.sectionTitle}>{t("Server URL")}</Text>
-      <TextInput
-        accessibilityLabel={t("OpenAI-compatible server URL")}
-        autoCapitalize="none"
-        autoCorrect={false}
-        editable={!busy}
-        onChangeText={updateBaseUrl}
-        placeholder={t("http://127.0.0.1:8000/v1")}
-        placeholderTextColor={native.tertiaryLabel}
-        style={styles.keyInput}
-        value={baseUrl}
-      />
-      <NativeActionButton
-        disabled={busy || probing || !effectiveBaseUrl}
-        fill
-        label={probing ? t("Finding…") : t("Find models")}
-        onPress={() => void probeServerModels()}
-        prominence="secondary"
-        style={{ marginTop: 12 }}
-      />
-      {!isOllamaCloudBaseUrl(baseUrl) ? (
-        <>
-          {disclosureRow(t("Setup help"), showEndpointHelp, () =>
-            setShowEndpointHelp((visible) => !visible),
-          )}
-          {showEndpointHelp ? (
-            <Text style={styles.hint}>{t(OPENAI_COMPATIBLE_BASE_URL_HINT)}</Text>
-          ) : null}
-        </>
-      ) : null}
-      {feedbackAnchor === "probe" ? feedback : null}
-      <Text style={[styles.sectionTitle, { marginTop: 12 }]}>{t("Model")}</Text>
-      {/* The switches stay visible while the default is "Other model…" or a typed id. */}
-      {compatibleRows.length ? (
-        <View style={styles.card}>
-          {compatibleRows.map((entry) => (
-            // The switch sits beside the radio, not inside it: an accessible
-            // Pressable would merge it into the row and hide it from VoiceOver.
-            <View key={entry} style={styles.modelRow}>
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{ selected: entry === modelId }}
-                disabled={probing}
-                onPress={() => stageCompatibleModelId(entry)}
-                style={({ pressed }) => [
-                  styles.modelRowChoice,
-                  probing && styles.disabled,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.modelLabel}>{entry}</Text>
-                {entry === modelId ? <Checkmark /> : null}
-              </Pressable>
-              <NativeSwitch
-                accessibilityLabel={entry}
-                value={entry === modelId || enabledModelIds.includes(entry)}
-                onValueChange={(value) =>
-                  setEnabledModelIds((current) => toggleEnabledModelId(current, entry, value))
-                }
-                disabled={busy || entry === modelId}
-              />
-            </View>
-          ))}
-          {compatibleRows.includes(modelId) ? (
-            <Pressable
-              accessibilityRole="radio"
-              accessibilityState={{ selected: false }}
-              disabled={probing}
-              onPress={() => stageCompatibleModelId("")}
-              style={({ pressed }) => [
-                styles.modelRow,
-                probing && styles.disabled,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.modelLabel}>{t("Other model…")}</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-      {compatibleRows.includes(modelId) ? null : (
-        <>
-          <TextInput
-            accessibilityLabel={t("Model id")}
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!busy && !probing}
-            onChangeText={stageCompatibleModelId}
-            placeholder={t("exact-model-id")}
-            placeholderTextColor={native.tertiaryLabel}
-            style={styles.keyInput}
-            value={modelId}
-          />
-          {probeModels.length ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => stageCompatibleModelId(probeModels[0] ?? "")}
-              style={({ pressed }) => [pressed && styles.pressed]}
-            >
-              <Text style={styles.textAction}>{t("Use a found model")}</Text>
-            </Pressable>
-          ) : null}
-        </>
-      )}
-      {disclosureRow(t("Advanced"), showAdvanced, () => setShowAdvanced((visible) => !visible))}
-      {showAdvanced ? (
-        <>
-          <View style={styles.card}>
-            <View style={styles.modelRow}>
-              <Text style={styles.modelLabel}>{t("Supports thinking")}</Text>
-              <NativeSwitch
-                accessibilityLabel={t("Supports thinking")}
-                value={reasoning}
-                onValueChange={(value) => {
-                  setReasoning(value);
-                  if (!value) setThinkingLevel(null);
-                }}
-                disabled={busy}
-              />
-            </View>
-            {reasoning ? (
-              <MenuPickerMenu
-                label={t("Reasoning effort")}
-                choices={[
-                  { key: "", label: t("Default") },
-                  ...COMPATIBLE_THINKING_LEVELS.map((level) => ({
-                    key: level,
-                    label: thinkingLevelLabel(level, t),
-                  })),
-                ]}
-                value={thinkingLevel ?? ""}
-                disabled={busy}
-                onChange={(value) => setThinkingLevel((value || null) as ThinkingLevel | null)}
-              >
-                <View>
-                  <SettingsRow
-                    title={t("Reasoning effort")}
-                    value={reasoningEffortValue}
-                    chevron="down"
-                    accessibilityRole="button"
-                    accessible
-                    accessibilityLabel={t("Reasoning effort")}
-                    accessibilityState={{ disabled: busy }}
-                    accessibilityValue={{ text: reasoningEffortValue }}
-                  />
-                </View>
-              </MenuPickerMenu>
-            ) : null}
-            <View style={[styles.modelRow, styles.singleRow]}>
-              <Text style={styles.modelLabel}>{t("Supports images")}</Text>
-              <NativeSwitch
-                accessibilityLabel={t("Supports images")}
-                value={supportsImages}
-                onValueChange={setSupportsImages}
-                disabled={busy}
-              />
-            </View>
-          </View>
-          <Text style={styles.sectionTitle}>{t("Headers")}</Text>
-          {visibleHeaderRows.map((row, index) => (
-            <View key={index} style={styles.keySection}>
-              <TextInput
-                accessibilityLabel={t("Header name")}
-                placeholder={t("Header name")}
-                placeholderTextColor={native.tertiaryLabel}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="off"
-                editable={!busy}
-                maxLength={256}
-                style={styles.keyInput}
-                value={row.name}
-                onChangeText={(name) =>
-                  changeHeaderRows(
-                    visibleHeaderRows.map((entry, i) => (i === index ? { ...entry, name } : entry)),
-                  )
-                }
-              />
-              <TextInput
-                accessibilityLabel={t("Header value")}
-                placeholder={
-                  savedHeaderEndpointMatches && credential?.headerNames?.includes(row.name)
-                    ? "••••••••"
-                    : t("Header value")
-                }
-                placeholderTextColor={native.tertiaryLabel}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="off"
-                importantForAutofill="no"
-                textContentType="none"
-                secureTextEntry
-                editable={!busy}
-                maxLength={1024}
-                style={styles.keyInput}
-                value={row.value}
-                onChangeText={(value) =>
-                  changeHeaderRows(
-                    visibleHeaderRows.map((entry, i) =>
-                      i === index ? { ...entry, value } : entry,
-                    ),
-                  )
-                }
-              />
-              <NativeActionButton
-                accessibilityLabel={t("Remove header")}
-                icon={{ ios: "xmark", android: "close" }}
-                prominence="plain"
-                disabled={busy}
-                onPress={() => changeHeaderRows(visibleHeaderRows.filter((_, i) => i !== index))}
-              />
-            </View>
-          ))}
-          <NativeActionButton
-            label={t("Add header")}
-            prominence="secondary"
-            disabled={busy || visibleHeaderRows.length >= 8}
-            onPress={() => changeHeaderRows([...visibleHeaderRows, { name: "", value: "" }])}
-          />
-          {limitField(t("Context limit"), contextWindow, setContextWindow, 7)}
-          {limitField(
-            t("Maximum output tokens"),
-            maxTokens,
-            (value) => {
-              setMaxTokens(value);
-              clearFeedback();
-            },
-            6,
-          )}
-          {supportsImages
-            ? limitField(
-                t("Maximum images per request"),
-                maxImagesPerPrompt,
-                setMaxImagesPerPrompt,
-                4,
-              )
-            : null}
-        </>
-      ) : null}
-    </>
-  ) : null;
-
   const serverCredentialsNote = (
     <Text style={styles.secondary}>
       {t("Uses this server's own {source} credentials to access {provider}.", {
@@ -850,61 +497,10 @@ export default function ModelConnection() {
     </Text>
   );
 
-  const compatKeySection =
-    isOpenAiCompatible && acceptsKey ? (
-      <View style={styles.keySection}>
-        {isOllamaCloudBaseUrl(baseUrl) ? (
-          <Text style={styles.sectionTitle}>{t("API key")}</Text>
-        ) : (
-          disclosureRow(t("API key"), showApiKey, () => setShowApiKey((visible) => !visible))
-        )}
-        {showApiKey || isOllamaCloudBaseUrl(baseUrl) ? (
-          <TextInput
-            accessibilityLabel={t("API key")}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="off"
-            editable={!busy}
-            importantForAutofill="no"
-            onChangeText={updateApiKey}
-            placeholder={
-              isOllamaCloudBaseUrl(baseUrl)
-                ? t("Ollama API key")
-                : credential?.hasKey
-                  ? t("Paste a replacement key")
-                  : t("Optional")
-            }
-            placeholderTextColor={native.tertiaryLabel}
-            secureTextEntry
-            style={styles.keyInput}
-            textContentType="none"
-            value={apiKey}
-          />
-        ) : null}
-
-        <NativeActionButton
-          disabled={
-            busy || (isOpenAiCompatible ? !openAiCompatibleReady : apiKey.trim().length < 8)
-          }
-          label={
-            pending === "connect"
-              ? t("Saving…")
-              : isOpenAiCompatible
-                ? t("Save")
-                : credential
-                  ? t("Replace API key")
-                  : t("Connect API key")
-          }
-          onPress={() => void connectKey()}
-          style={{ marginTop: 12 }}
-        />
-      </View>
-    ) : null;
-
   // Managing a connection keeps its model choice in the list that opened it.
   // Keys belong to the provider: models are picked in the list, limits only once connected.
   const catalogModelCard =
-    !isOpenAiCompatible && selected && credential ? (
+    selected && credential ? (
       <>
         {disclosureRow(t("Advanced"), showAdvanced, () => setShowAdvanced((visible) => !visible))}
         {showAdvanced ? (
@@ -935,180 +531,179 @@ export default function ModelConnection() {
       </>
     ) : null;
 
-  const catalogConnectionControls =
-    !isOpenAiCompatible && selected ? (
-      <>
-        {subscriptionSignIn ? (
-          oauth ? (
-            <View style={styles.oauthCard}>
-              {oauth.mode === "auth-url" ? (
-                <>
-                  <Text style={styles.secondary}>{t("Finish signing in in your browser:")}</Text>
-                  <Pressable onPress={() => void Linking.openURL(oauth.verificationUri)}>
-                    <Text style={styles.link}>{oauth.verificationUri}</Text>
-                  </Pressable>
-                  <Text style={styles.secondary}>{t("Then paste the code here.")}</Text>
-                  <TextInput
-                    accessibilityLabel={t("Authorization code")}
-                    value={pasteCode}
-                    onChangeText={setPasteCode}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    style={[styles.keyInput, styles.nestedInput]}
-                  />
-                  <NativeActionButton
-                    disabled={!pasteCode.trim()}
-                    fill
-                    label={t("Submit")}
-                    onPress={() => void submitOAuthCode()}
-                    prominence="secondary"
-                    style={{ marginTop: 12 }}
-                  />
-                  <Text style={styles.secondary}>
-                    {t("Waiting for sign-in — the link expires in about {minutes} minutes.", {
-                      minutes: Math.ceil(oauth.expiresInSeconds / 60),
-                    })}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.secondary}>
-                    {t("A sign-in page opened — enter this code there:")}
-                  </Text>
-                  <Pressable onPress={() => void Linking.openURL(oauth.verificationUri)}>
-                    <Text style={styles.link}>{oauth.verificationUri}</Text>
-                  </Pressable>
-                  <Text style={styles.code}>{oauth.userCode}</Text>
-                  <NativeActionButton
-                    fill
-                    label={codeCopied ? t("Copied") : t("Copy")}
-                    onPress={() => copyOAuthCode(oauth.userCode)}
-                    prominence="secondary"
-                    style={{ marginTop: 12 }}
-                  />
-                  <Text style={styles.secondary}>
-                    {t("Waiting for sign-in — the code expires in about {minutes} minutes.", {
-                      minutes: Math.ceil(oauth.expiresInSeconds / 60),
-                    })}
-                  </Text>
-                </>
-              )}
-              <NativeActionButton
-                fill
-                label={t("Cancel")}
-                onPress={() => cancelOAuth()}
-                prominence="secondary"
-                style={{ marginTop: 12 }}
-              />
-            </View>
-          ) : (
+  const catalogConnectionControls = selected ? (
+    <>
+      {subscriptionSignIn ? (
+        oauth ? (
+          <View style={styles.oauthCard}>
+            {oauth.mode === "auth-url" ? (
+              <>
+                <Text style={styles.secondary}>{t("Finish signing in in your browser:")}</Text>
+                <Pressable onPress={() => void Linking.openURL(oauth.verificationUri)}>
+                  <Text style={styles.link}>{oauth.verificationUri}</Text>
+                </Pressable>
+                <Text style={styles.secondary}>{t("Then paste the code here.")}</Text>
+                <TextInput
+                  accessibilityLabel={t("Authorization code")}
+                  value={pasteCode}
+                  onChangeText={setPasteCode}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={[styles.keyInput, styles.nestedInput]}
+                />
+                <NativeActionButton
+                  disabled={!pasteCode.trim()}
+                  fill
+                  label={t("Submit")}
+                  onPress={() => void submitOAuthCode()}
+                  prominence="secondary"
+                  style={{ marginTop: 12 }}
+                />
+                <Text style={styles.secondary}>
+                  {t("Waiting for sign-in — the link expires in about {minutes} minutes.", {
+                    minutes: Math.ceil(oauth.expiresInSeconds / 60),
+                  })}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.secondary}>
+                  {t("A sign-in page opened — enter this code there:")}
+                </Text>
+                <Pressable onPress={() => void Linking.openURL(oauth.verificationUri)}>
+                  <Text style={styles.link}>{oauth.verificationUri}</Text>
+                </Pressable>
+                <Text style={styles.code}>{oauth.userCode}</Text>
+                <NativeActionButton
+                  fill
+                  label={codeCopied ? t("Copied") : t("Copy")}
+                  onPress={() => copyOAuthCode(oauth.userCode)}
+                  prominence="secondary"
+                  style={{ marginTop: 12 }}
+                />
+                <Text style={styles.secondary}>
+                  {t("Waiting for sign-in — the code expires in about {minutes} minutes.", {
+                    minutes: Math.ceil(oauth.expiresInSeconds / 60),
+                  })}
+                </Text>
+              </>
+            )}
             <NativeActionButton
-              disabled={busy}
               fill
-              label={
-                oauthPending
-                  ? t("Starting…")
-                  : credential
-                    ? t("Sign in again")
-                    : (selected.oauthLabel ?? t("Sign in"))
-              }
-              onPress={() => void startSubscriptionSignIn()}
+              label={t("Cancel")}
+              onPress={() => cancelOAuth()}
               prominence="secondary"
               style={{ marginTop: 12 }}
             />
-          )
-        ) : null}
-        {acceptsKey || isCloudflare ? (
-          <View style={styles.keySection}>
-            {isCloudflare ? (
-              <>
-                <Text style={styles.sectionTitle}>{t("Account ID")}</Text>
-                <TextInput
-                  accessibilityLabel={t("Account ID")}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="off"
-                  editable={!busy}
-                  onChangeText={(value) => {
-                    setAccountId(value);
-                    clearFeedback();
-                  }}
-                  style={styles.keyInput}
-                  value={accountId}
-                />
-                {isCloudflareGateway ? (
-                  <>
-                    <Text style={styles.sectionTitle}>{t("Gateway ID")}</Text>
-                    <TextInput
-                      accessibilityLabel={t("Gateway ID")}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="off"
-                      editable={!busy}
-                      onChangeText={(value) => {
-                        setGatewayId(value);
-                        clearFeedback();
-                      }}
-                      style={styles.keyInput}
-                      value={gatewayId}
-                    />
-                  </>
-                ) : null}
-              </>
-            ) : null}
-            {acceptsKey ? (
-              <>
-                <Text style={styles.sectionTitle}>
-                  {!credential && subscriptionSignIn ? t("Or connect an API key") : t("API key")}
-                </Text>
-                <TextInput
-                  accessibilityLabel={t("API key")}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="off"
-                  editable={!busy}
-                  importantForAutofill="no"
-                  onChangeText={updateApiKey}
-                  placeholder={credential?.hasKey ? t("Paste a replacement key") : t("sk-…")}
-                  placeholderTextColor={native.tertiaryLabel}
-                  secureTextEntry
-                  style={styles.keyInput}
-                  textContentType="none"
-                  value={apiKey}
-                />
-              </>
-            ) : null}
-
-            <NativeActionButton
-              disabled={
-                busy ||
-                !cloudflareRoutingReady ||
-                (gatewayOnlySave ? !gatewayDirty : apiKey.trim().length < 8)
-              }
-              label={
-                pending === "connect" && feedbackAnchor === "connection"
-                  ? t("Saving…")
-                  : gatewayOnlySave
-                    ? t("Save")
-                    : credential
-                      ? t("Replace API key")
-                      : t("Connect API key")
-              }
-              onPress={() => void connectKey()}
-              prominence={credential ? "secondary" : "primary"}
-              style={{ marginTop: 12 }}
-            />
           </View>
-        ) : null}
-        {selected.auth === "oauth" && !subscriptionSignIn ? (
-          <Text style={styles.secondary}>
-            {t(
-              "This subscription sign-in is not available in Doitx yet. Use a deployment credential or choose another provider.",
-            )}
-          </Text>
-        ) : null}
-      </>
-    ) : null;
+        ) : (
+          <NativeActionButton
+            disabled={busy}
+            fill
+            label={
+              oauthPending
+                ? t("Starting…")
+                : credential
+                  ? t("Sign in again")
+                  : (selected.oauthLabel ?? t("Sign in"))
+            }
+            onPress={() => void startSubscriptionSignIn()}
+            prominence="secondary"
+            style={{ marginTop: 12 }}
+          />
+        )
+      ) : null}
+      {acceptsKey || isCloudflare ? (
+        <View style={styles.keySection}>
+          {isCloudflare ? (
+            <>
+              <Text style={styles.sectionTitle}>{t("Account ID")}</Text>
+              <TextInput
+                accessibilityLabel={t("Account ID")}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="off"
+                editable={!busy}
+                onChangeText={(value) => {
+                  setAccountId(value);
+                  clearFeedback();
+                }}
+                style={styles.keyInput}
+                value={accountId}
+              />
+              {isCloudflareGateway ? (
+                <>
+                  <Text style={styles.sectionTitle}>{t("Gateway ID")}</Text>
+                  <TextInput
+                    accessibilityLabel={t("Gateway ID")}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="off"
+                    editable={!busy}
+                    onChangeText={(value) => {
+                      setGatewayId(value);
+                      clearFeedback();
+                    }}
+                    style={styles.keyInput}
+                    value={gatewayId}
+                  />
+                </>
+              ) : null}
+            </>
+          ) : null}
+          {acceptsKey ? (
+            <>
+              <Text style={styles.sectionTitle}>
+                {!credential && subscriptionSignIn ? t("Or connect an API key") : t("API key")}
+              </Text>
+              <TextInput
+                accessibilityLabel={t("API key")}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="off"
+                editable={!busy}
+                importantForAutofill="no"
+                onChangeText={updateApiKey}
+                placeholder={credential?.hasKey ? t("Paste a replacement key") : t("sk-…")}
+                placeholderTextColor={native.tertiaryLabel}
+                secureTextEntry
+                style={styles.keyInput}
+                textContentType="none"
+                value={apiKey}
+              />
+            </>
+          ) : null}
+
+          <NativeActionButton
+            disabled={
+              busy ||
+              !cloudflareRoutingReady ||
+              (gatewayOnlySave ? !gatewayDirty : apiKey.trim().length < 8)
+            }
+            label={
+              pending === "connect" && feedbackAnchor === "connection"
+                ? t("Saving…")
+                : gatewayOnlySave
+                  ? t("Save")
+                  : credential
+                    ? t("Replace API key")
+                    : t("Connect API key")
+            }
+            onPress={() => void connectKey()}
+            prominence={credential ? "secondary" : "primary"}
+            style={{ marginTop: 12 }}
+          />
+        </View>
+      ) : null}
+      {selected.auth === "oauth" && !subscriptionSignIn ? (
+        <Text style={styles.secondary}>
+          {t(
+            "This subscription sign-in is not available in Doitx yet. Use a deployment credential or choose another provider.",
+          )}
+        </Text>
+      ) : null}
+    </>
+  ) : null;
 
   const connectedStatusRow = credential ? (
     <View style={styles.statusRow}>
@@ -1155,14 +750,7 @@ export default function ModelConnection() {
         keyboardShouldPersistTaps="handled"
       >
         {selected ? (
-          isOpenAiCompatible ? (
-            <>
-              {compatConfig}
-              {compatKeySection}
-              {feedbackAnchor === "probe" ? null : feedback}
-              {connectedStatusRow}
-            </>
-          ) : credential ? (
+          credential ? (
             <>
               {provider === me?.hostCredentialProvider ? serverCredentialsNote : null}
               {connectedStatusRow}

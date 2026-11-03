@@ -1,7 +1,6 @@
 import { MODEL_KEY_FORMAT_ERROR } from "@rakazo/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultCatalogModelId } from "./model-selection.js";
-import { modelAcceptsImageInput } from "./model-vision.js";
 import {
   catalogModelLabel,
   catalogModelServesAgents,
@@ -213,36 +212,40 @@ describe("Pi model catalog", () => {
     expect(listPiCatalog().filter((entry) => entry.recommended)).toEqual([]);
   });
 
-  it("exposes only the managed local and OpenAI-compatible providers", () => {
-    const catalog = listPiCatalog();
+  it("exposes only the managed local and Doitx providers", async () => {
+    vi.stubEnv("RAKAZO_DOITX_MODELS", "doitx-flash");
+    vi.resetModules();
+    const { listPiCatalog: listConfiguredCatalog } = await import("./pi-models.js");
+    const catalog = listConfiguredCatalog();
     const providers = new Set(catalog.map((entry) => entry.provider));
-    expect(
-      [...providers].every((provider) => provider === "local" || provider === "openai-compatible"),
-    ).toBe(true);
-    expect(providers.has("openai-compatible")).toBe(true);
-    for (const removed of ["openrouter", "anthropic", "openai", "openai-codex", "azure"]) {
+    expect([...providers].every((provider) => provider === "local" || provider === "doitx")).toBe(
+      true,
+    );
+    expect(providers.has("doitx")).toBe(true);
+    for (const removed of [
+      "openrouter",
+      "anthropic",
+      "openai",
+      "openai-codex",
+      "azure",
+      "openai-compatible",
+    ]) {
       expect(catalog.some((entry) => entry.provider === removed)).toBe(false);
     }
     expect(scriptedCatalogEntry.provider).toBe("scripted");
   });
 
-  it("keeps the custom catalog independent of server model IDs", () => {
-    const custom = listPiCatalog().filter((entry) => entry.provider === "openai-compatible");
-    expect(custom).toHaveLength(1);
-    expect(custom[0]).toMatchObject({ id: "custom", placeholder: true, reasoning: false });
-  });
-
-  it("leaves the custom connection's image support to its own setting", () => {
-    const custom = listPiCatalog().find((entry) => entry.provider === "openai-compatible");
-    expect(custom).toMatchObject({
-      providerName: "OpenAI-compatible",
-      auth: "api-key",
-      authHint: "Custom server",
-      subscription: false,
-      billing: "Runs on a URL you control. Doitx does not pay for model usage.",
-    });
-    // The connection's own "Supports images" setting decides this one.
-    expect(custom?.images).toBeUndefined();
+  it("offers the router even with no configured ids, as a probe placeholder", async () => {
+    vi.resetModules();
+    const { DOITX_SEED_MODEL_ID } = await import("./pi-doitx-provider.js");
+    const { listPiCatalog: listConfiguredCatalog } = await import("./pi-models.js");
+    const doitx = listConfiguredCatalog().filter((entry) => entry.provider === "doitx");
+    // The router's models come from a live probe, so the seed keeps the provider
+    // and its base URL registered until one is chosen.
+    expect(doitx.length).toBeGreaterThan(0);
+    expect(doitx.every((entry) => entry.catalogProbe)).toBe(true);
+    const seed = doitx.find((entry) => entry.id === DOITX_SEED_MODEL_ID);
+    expect(seed?.placeholder).toBe(true);
   });
 
   afterEach(() => {
@@ -259,7 +262,7 @@ describe("Pi model catalog", () => {
     const local = listConfiguredCatalog().filter((entry) => entry.provider === "local");
     expect(local.map((entry) => entry.id)).toEqual(["qwen3"]);
     expect(local[0]).toMatchObject({
-      providerName: "Local (Ollama / LM Studio)",
+      providerName: "Local (self-hosted endpoint)",
       auth: "api-key",
       subscription: false,
       billing:
@@ -293,7 +296,8 @@ describe("Pi model catalog", () => {
     expect(local.find((entry) => entry.id === "qwen3")?.images).toBe(false);
   });
 
-  it("leaves no managed provider with a pinned catalog probe", () => {
+  it("pins the catalog probe to the router and nothing else", () => {
+    // Both deployment endpoints are fixed addresses, so neither is probeable this way.
     for (const provider of ["local", "openai-compatible"]) {
       expect(catalogProviderProbeBaseUrl(provider)).toBeNull();
     }
@@ -302,7 +306,14 @@ describe("Pi model catalog", () => {
       expect(catalogProviderProbeBaseUrl(provider)).toBeNull();
       expect(listPiCatalog().some((entry) => entry.provider === provider)).toBe(false);
     }
-    expect(listPiCatalog().some((entry) => entry.catalogProbe)).toBe(false);
+    // The router lists its models at run time, so it is the one provider the
+    // catalog probes; every other entry is a bundled model that needs no probe.
+    expect(catalogProviderProbeBaseUrl("doitx")).toBe("https://router.doitx.ai/v1");
+    expect(
+      listPiCatalog()
+        .filter((entry) => entry.catalogProbe)
+        .every((entry) => entry.provider === "doitx"),
+    ).toBe(true);
   });
 
   it("keeps caller-supplied public endpoints gated", async () => {
@@ -396,7 +407,6 @@ describe("Pi model catalog", () => {
       catalogModelLabel("claude-opus-4-5-20251101", "Claude Opus 4.5 latest", providerModelIds),
     ).toBe("Claude Opus 4.5");
   });
-
 });
 
 describe("catalogModelLabel", () => {
@@ -457,7 +467,7 @@ describe("models agents can run", () => {
 
   it("offers only the managed providers, so no bundled vendor model appears", () => {
     const offered = offeredCatalog(listPiCatalog());
-    const managed = new Set(["local", "openai-compatible"]);
+    const managed = new Set(["local", "doitx"]);
     expect(offered.every((entry) => managed.has(entry.provider))).toBe(true);
     expect(offered.some((entry) => entry.id.endsWith(":batch"))).toBe(false);
   });

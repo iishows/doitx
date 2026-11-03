@@ -48,12 +48,12 @@ describe("consent grants", () => {
     vi.mocked(deps.prisma.userModelPreference.findMany).mockResolvedValue([
       {
         modelId: "helper-model",
-        credential: { provider: "openai-compatible", secretId: "test-secret" },
+        credential: { provider: "doitx", secretId: "test-secret" },
       },
     ] as never);
     const status = await aiConsentStatus(deps, actor, { botId: "bot", uses: ["model"] });
     expect(status.recipients.map((recipient) => recipient.name)).toEqual(
-      expect.arrayContaining(["OpenAI-compatible", "Cursor"]),
+      expect.arrayContaining(["Doitx Router", "Cursor"]),
     );
     expect(deps.prisma.userVoicePreference.findMany).not.toHaveBeenCalled();
     expect(deps.prisma.bot.findMany).toHaveBeenCalledWith(
@@ -87,8 +87,8 @@ describe("consent grants", () => {
       {
         role: "main",
         position: 1,
-        provider: "openai-compatible",
-        modelId: "claude-backup",
+        provider: "doitx",
+        modelId: "backup-model",
         thinkingLevel: null,
       },
     ] as never);
@@ -96,7 +96,7 @@ describe("consent grants", () => {
       {
         id: "backup-credential",
         userId: actor.userId,
-        provider: "openai-compatible",
+        provider: "doitx",
         label: "fixture",
         secretId: "backup-secret",
         createdAt: new Date(0),
@@ -109,8 +109,8 @@ describe("consent grants", () => {
     expect(status.recipients).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: "OpenAI-compatible",
-          detail: "claude-backup",
+          name: "Doitx Router",
+          detail: "backup-model",
           use: "model",
           allowed: false,
         }),

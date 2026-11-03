@@ -27,6 +27,7 @@ import type { CodexLiveCatalog } from "./pi-codex-catalog.js";
 import { providerCatalogCache } from "./pi-live-catalog.js";
 import { listPiCatalog } from "./pi-models.js";
 import { registerProviderOAuth, serializeModelSecret } from "./pi-oauth.js";
+
 // A deployment now ships only the managed `local` endpoint and user
 // `openai-compatible` connections; the subscription vendors these cases were
 // written against are gone. The machinery under test below (credential choice,
@@ -112,8 +113,8 @@ vi.mock("./pi-managed-models.js", async (importOriginal) => {
 });
 
 // The catalogue reads sign-in kinds from this registry, which ships empty.
-for (const [provider] of FIXTURES.providers) registerProviderOAuth(provider, FIXTURES.oauth as never);
-
+for (const [provider] of FIXTURES.providers)
+  registerProviderOAuth(provider, FIXTURES.oauth as never);
 
 function credential(provider: string, defaultModel: string | null) {
   return {
@@ -252,6 +253,12 @@ describe("defaultCatalogModelId", () => {
     // The fixture seam registers openai-codex/xai/azure/openrouter below; a
     // provider none of them covers has no catalog default at all.
     expect(defaultCatalogModelId("not-a-provider", oauth)).toBeNull();
+  });
+
+  it("never defaults to a provider's probe placeholder", () => {
+    // The router ships a seed placeholder until a live probe replaces it. The
+    // seed is not a real model, so it must not become anyone's default.
+    expect(defaultCatalogModelId("doitx", "fixture-api-key")).toBeNull();
   });
 });
 

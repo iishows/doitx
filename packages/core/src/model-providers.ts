@@ -2,6 +2,8 @@ import type { ModelCatalogEntry } from "@rakazo/contracts";
 import {
   canonicalPiProviderId,
   DEFAULT_MODEL_MAX_TOKENS,
+  DOITX_PROVIDER_ID,
+  LOCAL_PROVIDER_ID,
   normalizeOpenAiCompatibleBaseUrl,
   OPENAI_COMPATIBLE_PROVIDER_ID,
   selectCompatibleModelCredential,
@@ -62,13 +64,12 @@ export function clampCatalogThinkingLevel(
   return null;
 }
 
-export const POPULAR_MODEL_PROVIDER_IDS = [
-  "openai-codex",
-  "anthropic",
-  "openai",
-  "openrouter",
-  "google",
-] as const;
+/**
+ * A Doitx deployment offers exactly two providers, listed here in the order the
+ * UI should show them: the managed router first, then the local endpoint.
+ * Membership comes from the same provider ids the connect schema enforces; only the order is local.
+ */
+export const POPULAR_MODEL_PROVIDER_IDS = [DOITX_PROVIDER_ID, LOCAL_PROVIDER_ID] as const;
 
 const DEFAULT_PROVIDER_COUNT = POPULAR_MODEL_PROVIDER_IDS.length;
 const POPULAR_MODEL_PROVIDER_IDS_LIST: readonly string[] = POPULAR_MODEL_PROVIDER_IDS;

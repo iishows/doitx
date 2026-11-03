@@ -64,7 +64,7 @@ function services(overrides: Partial<AgentImportServices>): AgentImportServices 
     validateBotModel: async () => "Connect that model provider first",
     stdioAllowed: () => false,
     prepareModelKey: async () => ({}),
-    writeModelKey: async () => ({ id: "cred-1", secretId: "secret-1", provider: "openrouter" }),
+    writeModelKey: async () => ({ id: "cred-1", secretId: "secret-1", provider: "doitx" }),
     afterModelKey: () => undefined,
     prepareMcpServer: async () => null,
     insertMcpServer: async () => {
@@ -83,7 +83,10 @@ function services(overrides: Partial<AgentImportServices>): AgentImportServices 
 const input = AgentImportCreateInput.parse({
   files: [
     { path: ".hermes/SOUL.md", content: "Direct.\n" },
-    { path: ".hermes/.env", content: "OPENROUTER_API_KEY=placeholder-openrouter-key\n" },
+    {
+      path: ".hermes/config.yaml",
+      content: "model:\n  provider: doitx\n  api_key: placeholder-doitx-key\n",
+    },
     {
       path: ".hermes/cron/jobs.json",
       content: JSON.stringify({
@@ -105,7 +108,7 @@ const input = AgentImportCreateInput.parse({
     memory: [],
     skills: [],
     routines: ["routine:a"],
-    apiKeys: ["key:openrouter"],
+    apiKeys: ["key:doitx"],
   },
 });
 
@@ -121,7 +124,7 @@ describe("after the import commits", () => {
       createImportedBot(services({ announceRoutine, afterModelKey }), actor, input),
     ).resolves.toBe(bot);
     expect(announceRoutine).toHaveBeenCalledTimes(1);
-    expect(afterModelKey).toHaveBeenCalledWith("openrouter");
+    expect(afterModelKey).toHaveBeenCalledWith("doitx");
   });
 
   it("records only keys it created, leaving a connection made meanwhile alone", async () => {
@@ -158,21 +161,21 @@ describe("the request digest", () => {
 
 describe("reading an import's setup state", () => {
   it("reads each provider once, in one read of the actor's connections", async () => {
-    const connectedProviders = vi.fn(async () => new Set(["openrouter"]));
+    const connectedProviders = vi.fn(async () => new Set(["doitx"]));
     const hasModelConnection = vi.fn(async () => true);
     const state = await agentImportSetupState(
       services({ connectedProviders, hasModelConnection }),
       actor,
       {
         botId: "bot-1",
-        providers: ["openrouter", "openrouter", "deepseek", "openrouter"],
+        providers: ["doitx", "doitx", "local", "doitx"],
         serverIds: [],
         routineIds: [],
       },
     );
-    expect(state.providers).toEqual({ openrouter: true, deepseek: false });
+    expect(state.providers).toEqual({ doitx: true, local: false });
     expect(connectedProviders).toHaveBeenCalledTimes(1);
-    expect(connectedProviders).toHaveBeenCalledWith(actor, ["openrouter", "deepseek"]);
+    expect(connectedProviders).toHaveBeenCalledWith(actor, ["doitx", "local"]);
     expect(hasModelConnection).not.toHaveBeenCalled();
   });
 });

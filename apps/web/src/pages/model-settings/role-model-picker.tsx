@@ -17,8 +17,7 @@ import type { ReactElement } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ModelCatalogEntry } from "../../lib/model-auth";
 
-/** `baseUrl` presets an OpenAI-compatible server, such as Ollama Cloud. */
-export type ConnectableProvider = { id: string; name: string; baseUrl?: string };
+export type ConnectableProvider = { id: string; name: string };
 
 /** A model on one connection; `providerName` is that connection's name. */
 export type RoleModelOption = ModelCatalogEntry & { credentialId?: string };
@@ -78,7 +77,7 @@ export function RoleModelPicker({
   const values = [
     ...(defaultOption && !needle ? ["default"] : []),
     ...groups.flatMap(([, entries]) => entries.map(optionValue)),
-    ...matchingProviders.map((provider) => `connect:${provider.id}:${provider.baseUrl ?? ""}`),
+    ...matchingProviders.map((provider) => `connect:${provider.id}`),
   ];
   // The first row is active whenever the list changes, so Enter always picks something.
   const [activeValue, setActiveValue] = useState("");
@@ -186,8 +185,8 @@ export function RoleModelPicker({
               <CommandGroup>
                 {matchingProviders.map((provider) => (
                   <CommandItem
-                    key={`${provider.id}:${provider.baseUrl ?? ""}`}
-                    value={`connect:${provider.id}:${provider.baseUrl ?? ""}`}
+                    key={`connect:${provider.id}`}
+                    value={`connect:${provider.id}`}
                     onSelect={() => {
                       close();
                       onConnect(provider);

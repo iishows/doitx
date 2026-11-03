@@ -1,13 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { SettingsScope } from "@rakazo/contracts";
-import {
-  compatibleConnectionName,
-  connectionDisplayName,
-  isOllamaCloudBaseUrl,
-  OLLAMA_CLOUD_BASE_URL,
-  OPENAI_COMPATIBLE_PROVIDER_ID,
-  savedCompatibleEndpointMatches,
-} from "@rakazo/contracts";
+import { connectionDisplayName } from "@rakazo/contracts";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,8 +24,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ModelCredential } from "../lib/model-auth";
 import type { ModelRoleConnectIntent } from "./ModelRoleSettings";
 import { ModelRoleSettings } from "./ModelRoleSettings";
-import { CompatibleModelFields } from "./model-settings/compatible-model-fields";
-import { CompatibleKeyControls, ConnectionControls } from "./model-settings/connection-controls";
+import { ConnectionControls } from "./model-settings/connection-controls";
 import { ConnectionNameField, ProvidersSection } from "./model-settings/providers-section";
 import type { ConnectableProvider } from "./model-settings/role-model-picker";
 import { SpaceBotsModelNotice } from "./model-settings/space-bots-model";
@@ -55,7 +47,6 @@ export function ModelSettingsOverlay({
   const { t } = useLingui();
   const model = useModelSettings(onClose, scope);
   const {
-    baseUrl,
     busy,
     catalog,
     cancelOAuthAttempt,
@@ -71,7 +62,6 @@ export function ModelSettingsOverlay({
     handleClose,
     hostCredentialSource,
     intentRef,
-    isOpenAiCompatible,
     loading,
     maxTokens,
     me,
@@ -98,28 +88,11 @@ export function ModelSettingsOverlay({
   const providers: ConnectableProvider[] = groups
     .filter((group) => !credentialByProvider.has(group.id))
     .map((group) => ({ id: group.id, name: group.name }));
-  if (
-    groups.some((group) => group.id === OPENAI_COMPATIBLE_PROVIDER_ID) &&
-    !isOllamaCloudBaseUrl(credentialByProvider.get(OPENAI_COMPATIBLE_PROVIDER_ID)?.baseUrl)
-  )
-    providers.push({
-      id: OPENAI_COMPATIBLE_PROVIDER_ID,
-      name: t`Ollama Cloud`,
-      baseUrl: OLLAMA_CLOUD_BASE_URL,
-    });
   // Adding another account is open to every provider, connected or not.
-  const allProviders: ConnectableProvider[] = [
-    ...groups.map((group) => ({ id: group.id, name: group.name })),
-    ...(groups.some((group) => group.id === OPENAI_COMPATIBLE_PROVIDER_ID)
-      ? [
-          {
-            id: OPENAI_COMPATIBLE_PROVIDER_ID,
-            name: t`Ollama Cloud`,
-            baseUrl: OLLAMA_CLOUD_BASE_URL,
-          },
-        ]
-      : []),
-  ];
+  const allProviders: ConnectableProvider[] = groups.map((group) => ({
+    id: group.id,
+    name: group.name,
+  }));
   const connectionName = (entry: ModelCredential) => {
     const group = groups.find((item) => item.id === entry.provider);
     return connectionDisplayName(
@@ -128,16 +101,8 @@ export function ModelSettingsOverlay({
       group?.entries[0]?.providerName ? [group.entries[0].providerName] : [],
     );
   };
-  const providerLabel = (id: string) =>
-    compatibleConnectionName(
-      credentialByProvider.get(id)?.baseUrl,
-      groups.find((group) => group.id === id)?.name ?? id,
-    );
-  // The Ollama Cloud preset shares the compatible provider id with a saved local server.
-  const connected = Boolean(
-    credential &&
-      (!isOpenAiCompatible || savedCompatibleEndpointMatches(baseUrl, credential.baseUrl)),
-  );
+  const providerLabel = (id: string) => groups.find((group) => group.id === id)?.name ?? id;
+  const connected = Boolean(credential);
 
   /** Opens a connection by id, or connects a new one for the provider. */
   function openConnection(
@@ -146,7 +111,7 @@ export function ModelSettingsOverlay({
     credentialId: string | null,
     at: string,
   ) {
-    model.chooseProvider(next.id, next.baseUrl, credentialId);
+    model.chooseProvider(next.id, credentialId);
     intentRef.current = {
       makeDefault: intent?.makeDefault ?? false,
       onConnected: async (choice) => {
@@ -178,13 +143,7 @@ export function ModelSettingsOverlay({
   ) : null;
 
   const connection = selected ? (
-    isOpenAiCompatible ? (
-      <>
-        <CompatibleModelFields {...model} />
-        <CompatibleKeyControls {...model} />
-        {disconnectButton}
-      </>
-    ) : credential ? (
+    credential ? (
       <>
         <ConnectionControls {...model} />
         <ModelThinkingOptions

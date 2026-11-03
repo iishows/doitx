@@ -1,32 +1,32 @@
-import { createModels, type CreateModelsOptions, type MutableModels } from "@earendil-works/pi-ai";
-import { LOCAL_PROVIDER_ID, OPENAI_COMPATIBLE_PROVIDER_ID } from "@rakazo/contracts";
+import { type CreateModelsOptions, createModels, type MutableModels } from "@earendil-works/pi-ai";
+import { MANAGED_MODEL_PROVIDER_IDS } from "@rakazo/contracts";
+import { registerDoitxProvider } from "./pi-doitx-provider.js";
 import { registerLocalProvider } from "./pi-local-provider.js";
 import { applyPiModelCompatibility } from "./pi-model-compat.js";
-import { registerOpenAiCompatibleCatalog } from "./pi-openai-compatible-provider.js";
 
-/** The only providers a Doitx deployment exposes. */
-export const MANAGED_PROVIDER_IDS: ReadonlySet<string> = new Set([
-  LOCAL_PROVIDER_ID,
-  OPENAI_COMPATIBLE_PROVIDER_ID,
-]);
+/**
+ * The only providers a Doitx deployment exposes — the same set the connect schema
+ * enforces, so the two cannot drift apart.
+ */
+export const MANAGED_PROVIDER_IDS: ReadonlySet<string> = MANAGED_MODEL_PROVIDER_IDS;
 
 /**
  * The one place that decides which providers a Doitx deployment offers.
  *
  * `@earendil-works/pi-ai/providers/all`'s `builtinModels()` registers every
  * provider in the upstream catalog (OpenRouter, Anthropic, OpenAI, Google,
- * Groq, Bedrock, Copilot, ...). Doitx deployments run on a centrally managed
- * endpoint or a user-controlled OpenAI-compatible URL instead, so the upstream
- * catalog is deliberately left empty here and only two providers are added:
+ * Groq, Bedrock, Copilot, ...). Doitx deployments talk to exactly two
+ * OpenAI-compatible endpoints instead, so the upstream catalog is deliberately
+ * left empty here and only two providers are added:
  *
- * - `local` — the deployment-configured OpenAI-compatible endpoint
- * - `openai-compatible` — user-supplied OpenAI-compatible connections
+ * - `local` — the deployment-configured endpoint (default 127.0.0.1:3456)
+ * - `doitx` — the centrally managed Doitx router (default router.doitx.ai)
  *
  * Starting from `createModels()` rather than `builtinModels()` is what keeps
  * the removed providers from reappearing through any call path.
  */
 export function createManagedModels(options?: CreateModelsOptions): MutableModels {
-  return registerOpenAiCompatibleCatalog(
+  return registerDoitxProvider(
     registerLocalProvider(applyPiModelCompatibility(createModels(options))),
   );
 }

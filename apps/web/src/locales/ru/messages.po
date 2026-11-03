@@ -565,10 +565,6 @@ msgstr "Добавить резервную модель"
 msgid "Add field"
 msgstr "Добавить поле"
 
-#: src/components/ModelHeadersEditor.tsx
-msgid "Add header"
-msgstr "Добавить заголовок"
-
 #: src/pages/ScratchpadSection.tsx
 msgid "Add item"
 msgstr "Добавить элемент"
@@ -627,9 +623,7 @@ msgstr "Добавление…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -787,10 +781,6 @@ msgstr "Ответил"
 msgid "Answered: {answer}"
 msgstr "Ответ: {answer}"
 
-#: src/pages/Onboarding.tsx
-msgid "Anthropic API"
-msgstr ""
-
 #: src/pages/Paywall.tsx
 msgid "Any model, with your own key"
 msgstr ""
@@ -798,7 +788,6 @@ msgstr ""
 #: src/components/AskCard.tsx
 #: src/lib/localized-provider-hint.ts
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
-#: src/pages/model-settings/compatible-key-field.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
@@ -1690,11 +1679,6 @@ msgstr ""
 msgid "Contains code to run"
 msgstr "Содержит исполняемый код"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Context limit"
-msgstr ""
-
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx
@@ -2434,10 +2418,8 @@ msgstr "дни"
 msgid "Decline"
 msgstr "Отклонить"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/role-model-picker.tsx
 #: src/pages/ModelRoleSettings.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Default"
 msgstr "По умолчанию"
@@ -2769,17 +2751,14 @@ msgid "Enter a valid email"
 msgstr "Введите действительный адрес электронной почты"
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to {MAX_MODEL_CONTEXT_WINDOW} for the context limit."
 msgstr ""
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to {MAX_MODEL_MAX_TOKENS} for maximum output tokens."
 msgstr ""
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to 1000 for the image limit."
 msgstr ""
 
@@ -2905,11 +2884,6 @@ msgstr ""
 msgid "External conversation"
 msgstr "Внешний диалог"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Extra high"
-msgstr "Очень высокий"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Extra high"
@@ -2977,16 +2951,6 @@ msgstr "Фильтры"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Find models"
-msgstr "Найти модели"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Finding…"
-msgstr "Поиск…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3105,21 +3069,15 @@ msgstr "заголовок"
 msgid "Header \"{header}\""
 msgstr ""
 
-#: src/components/ModelHeadersEditor.tsx
 #: src/components/VaultSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Header name"
 msgstr "Название заголовка"
 
-#: src/components/ModelHeadersEditor.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Header value"
 msgstr "Значение заголовка"
-
-#: src/components/ModelHeadersEditor.tsx
-msgid "Headers"
-msgstr "Заголовки"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3145,14 +3103,12 @@ msgstr "Скрыть пароль"
 msgid "Hide transcript"
 msgstr "Скрыть расшифровку"
 
-#: src/lib/ticket-priority.ts
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
+#. js-lingui-explicit-id
+#: src/lib/model-catalog.ts
 msgid "High"
 msgstr "Высокий"
 
-#. js-lingui-explicit-id
-#: src/lib/model-catalog.ts
+#: src/lib/ticket-priority.ts
 msgid "High"
 msgstr "Высокий"
 
@@ -3552,14 +3508,12 @@ msgstr "Выйти"
 msgid "Looks like it contains a key"
 msgstr "Похоже, содержит ключ"
 
-#: src/lib/ticket-priority.ts
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
+#. js-lingui-explicit-id
+#: src/lib/model-catalog.ts
 msgid "Low"
 msgstr "Низкий"
 
-#. js-lingui-explicit-id
-#: src/lib/model-catalog.ts
+#: src/lib/ticket-priority.ts
 msgid "Low"
 msgstr "Низкий"
 
@@ -3624,11 +3578,6 @@ msgstr "Таблица Markdown"
 msgid "Marketing"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Max"
-msgstr "Макс"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Max"
@@ -3638,14 +3587,7 @@ msgstr "Макс"
 msgid "Maximize"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Maximum images per request"
-msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
 msgid "Maximum output tokens"
 msgstr ""
 
@@ -3661,11 +3603,6 @@ msgstr ""
 #: src/pages/shell/agent-import.tsx
 msgid "MCP servers"
 msgstr "MCP-серверы"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Medium"
-msgstr "Средний"
 
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
@@ -3762,11 +3699,6 @@ msgstr "Обмен сообщениями"
 msgid "Microphone failed"
 msgstr "Ошибка микрофона"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Minimal"
-msgstr "Минимальный"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Minimal"
@@ -3802,7 +3734,6 @@ msgid "Mode"
 msgstr "Режим"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/model-picker.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -3818,11 +3749,6 @@ msgstr "Модель \"{modelId}\" отсутствует в списке."
 #: src/pages/shell/bot-panel.tsx
 msgid "Model connections"
 msgstr "Подключения моделей"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Model id"
-msgstr "Идентификатор модели"
 
 #: src/pages/model-settings/model-picker.tsx
 #: src/pages/model-settings/role-model-picker.tsx
@@ -3843,11 +3769,6 @@ msgstr "Модели"
 #: src/components/ModelCredits.tsx
 msgid "Models at provider cost"
 msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Models from server"
-msgstr "Модели с сервера"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
@@ -4235,16 +4156,6 @@ msgstr "Срок действия OAuth истек"
 msgid "Offline"
 msgstr ""
 
-#: src/pages/model-settings/connection-controls.tsx
-#: src/pages/Onboarding.tsx
-msgid "Ollama API key"
-msgstr ""
-
-#: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
-msgid "Ollama Cloud"
-msgstr ""
-
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
 msgstr "По расписанию"
@@ -4318,22 +4229,11 @@ msgstr "Открыть навигацию"
 msgid "Open work"
 msgstr "Открытые задачи"
 
-#: src/pages/Onboarding.tsx
-msgid "OpenAI API"
-msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "OpenAI-compatible server URL"
-msgstr "URL-адрес сервера, совместимого с OpenAI"
-
 #: src/pages/shell/agent-import.tsx
 msgid "OpenClaw or Hermes"
 msgstr "OpenClaw или Hermes"
 
 #: src/components/SignupSurvey.tsx
-#: src/pages/model-settings/connection-controls.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Optional"
 msgstr "Необязательно"
@@ -4358,11 +4258,6 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "Исходное сообщение недоступно"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Other model…"
-msgstr "Другая модель…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
@@ -4428,10 +4323,6 @@ msgstr ""
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Paste a replacement key"
 msgstr "Вставьте запасной ключ"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-msgid "Paste the OpenAI-compatible address from your server. Doitx adds /v1 if needed."
-msgstr "Вставьте OpenAI-совместимый адрес со своего сервера. При необходимости Doitx добавляет /v1."
 
 #: src/pages/shell/agent-import.tsx
 msgid "Paste the reply"
@@ -4639,11 +4530,6 @@ msgstr "Готово"
 msgid "Reason"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Reasoning effort"
-msgstr ""
-
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 msgid "Recall and write"
 msgstr ""
@@ -4832,10 +4718,6 @@ msgstr ""
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "Удалить событие Git"
-
-#: src/components/ModelHeadersEditor.tsx
-msgid "Remove header"
-msgstr "Удалить заголовок"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove message trigger"
@@ -5103,7 +4985,6 @@ msgstr "суббота"
 #: src/pages/GroupPanel.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/connection-controls.tsx
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
@@ -5327,8 +5208,6 @@ msgstr "Имя сервера"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "URL-адрес сервера"
@@ -5352,10 +5231,6 @@ msgstr "Настройки: Использование"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "Настройка завершена"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-msgid "Setup help"
-msgstr "Помощь по настройке"
 
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Shape"
@@ -5706,16 +5581,6 @@ msgstr ""
 #: src/lib/cron.ts
 msgid "Sunday"
 msgstr "воскресенье"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Supports images"
-msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Supports thinking"
-msgstr "Поддерживает рассуждения"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switch"
@@ -6247,11 +6112,6 @@ msgstr "Используйте {hostLabel}"
 #: src/pages/McpServersOverlay.tsx
 msgid "Use {oauthEnvReference} for the access token."
 msgstr "Используйте {oauthEnvReference} для токена доступа."
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Use a found model"
-msgstr "Использовать найденную модель"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Use Connect to verify the key."

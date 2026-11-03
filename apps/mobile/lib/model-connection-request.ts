@@ -6,8 +6,6 @@ export type ModelConnectionRequest = {
   provider: string;
   /** The connection to manage, or null to add another one for the provider. */
   credentialId: string | null;
-  /** Prefills an OpenAI-compatible endpoint, such as the Ollama Cloud preset. */
-  baseUrl?: string;
   /** Only the main model's empty first slot takes the new connection's model on connect. */
   makeDefault: boolean;
   /** Whose main model makeDefault sets: the account's, or a Space's override. */

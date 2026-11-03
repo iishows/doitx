@@ -566,10 +566,6 @@ msgstr "新增備援模型"
 msgid "Add field"
 msgstr "新增欄位"
 
-#: src/components/ModelHeadersEditor.tsx
-msgid "Add header"
-msgstr "新增標頭"
-
 #: src/pages/ScratchpadSection.tsx
 msgid "Add item"
 msgstr "新增項目"
@@ -628,9 +624,7 @@ msgstr "正在新增…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -788,10 +782,6 @@ msgstr "已回答"
 msgid "Answered: {answer}"
 msgstr "已回答：{answer}"
 
-#: src/pages/Onboarding.tsx
-msgid "Anthropic API"
-msgstr "Anthropic API"
-
 #: src/pages/Paywall.tsx
 msgid "Any model, with your own key"
 msgstr "使用自己的金鑰連接任何模型"
@@ -799,7 +789,6 @@ msgstr "使用自己的金鑰連接任何模型"
 #: src/components/AskCard.tsx
 #: src/lib/localized-provider-hint.ts
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
-#: src/pages/model-settings/compatible-key-field.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
@@ -1691,11 +1680,6 @@ msgstr ""
 msgid "Contains code to run"
 msgstr "包含可執行的程式碼"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Context limit"
-msgstr "上下文長度限制"
-
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx
@@ -2435,10 +2419,8 @@ msgstr "天"
 msgid "Decline"
 msgstr "拒絕"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/role-model-picker.tsx
 #: src/pages/ModelRoleSettings.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Default"
 msgstr "預設"
@@ -2770,17 +2752,14 @@ msgid "Enter a valid email"
 msgstr "請輸入有效的電子郵件地址"
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to {MAX_MODEL_CONTEXT_WINDOW} for the context limit."
 msgstr "請輸入 1 到 {MAX_MODEL_CONTEXT_WINDOW} 之間的整數作為上下文限制。"
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to {MAX_MODEL_MAX_TOKENS} for maximum output tokens."
 msgstr "請輸入 1 到 {MAX_MODEL_MAX_TOKENS} 之間的整數作為最大輸出 token 數。"
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to 1000 for the image limit."
 msgstr "請輸入 1 到 1000 之間的整數作為影像限制。"
 
@@ -2906,11 +2885,6 @@ msgstr ""
 msgid "External conversation"
 msgstr "外部對話"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Extra high"
-msgstr "極高"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Extra high"
@@ -2978,16 +2952,6 @@ msgstr "篩選器"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Find models"
-msgstr "查詢模型"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Finding…"
-msgstr "正在查詢…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3106,21 +3070,15 @@ msgstr "標頭"
 msgid "Header \"{header}\""
 msgstr "標頭「{header}」"
 
-#: src/components/ModelHeadersEditor.tsx
 #: src/components/VaultSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Header name"
 msgstr "標頭名稱"
 
-#: src/components/ModelHeadersEditor.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Header value"
 msgstr "標頭值"
-
-#: src/components/ModelHeadersEditor.tsx
-msgid "Headers"
-msgstr "標頭"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3146,14 +3104,12 @@ msgstr "隱藏密碼"
 msgid "Hide transcript"
 msgstr "隱藏文字紀錄"
 
-#: src/lib/ticket-priority.ts
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
+#. js-lingui-explicit-id
+#: src/lib/model-catalog.ts
 msgid "High"
 msgstr "高"
 
-#. js-lingui-explicit-id
-#: src/lib/model-catalog.ts
+#: src/lib/ticket-priority.ts
 msgid "High"
 msgstr "高"
 
@@ -3553,14 +3509,12 @@ msgstr "登出"
 msgid "Looks like it contains a key"
 msgstr "似乎包含金鑰"
 
-#: src/lib/ticket-priority.ts
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
+#. js-lingui-explicit-id
+#: src/lib/model-catalog.ts
 msgid "Low"
 msgstr "低"
 
-#. js-lingui-explicit-id
-#: src/lib/model-catalog.ts
+#: src/lib/ticket-priority.ts
 msgid "Low"
 msgstr "低"
 
@@ -3625,11 +3579,6 @@ msgstr "Markdown 表格"
 msgid "Marketing"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Max"
-msgstr "最大"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Max"
@@ -3639,14 +3588,7 @@ msgstr "最大"
 msgid "Maximize"
 msgstr "最大化"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Maximum images per request"
-msgstr "每次請求的最大影像數"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
 msgid "Maximum output tokens"
 msgstr "最大輸出 token 數"
 
@@ -3662,11 +3604,6 @@ msgstr ""
 #: src/pages/shell/agent-import.tsx
 msgid "MCP servers"
 msgstr "MCP 伺服器"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Medium"
-msgstr "中"
 
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
@@ -3763,11 +3700,6 @@ msgstr "訊息"
 msgid "Microphone failed"
 msgstr "麥克風失敗"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Minimal"
-msgstr "最低"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Minimal"
@@ -3803,7 +3735,6 @@ msgid "Mode"
 msgstr "模式"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/model-picker.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -3819,11 +3750,6 @@ msgstr "模型「{modelId}」未列出。"
 #: src/pages/shell/bot-panel.tsx
 msgid "Model connections"
 msgstr "模型連線"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Model id"
-msgstr "模型 ID"
 
 #: src/pages/model-settings/model-picker.tsx
 #: src/pages/model-settings/role-model-picker.tsx
@@ -3844,11 +3770,6 @@ msgstr "模型"
 #: src/components/ModelCredits.tsx
 msgid "Models at provider cost"
 msgstr "按供應商成本計價的模型"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Models from server"
-msgstr "來自伺服器的模型"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
@@ -4236,16 +4157,6 @@ msgstr "OAuth 已過期"
 msgid "Offline"
 msgstr ""
 
-#: src/pages/model-settings/connection-controls.tsx
-#: src/pages/Onboarding.tsx
-msgid "Ollama API key"
-msgstr "Ollama API 金鑰"
-
-#: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
-msgid "Ollama Cloud"
-msgstr "Ollama Cloud"
-
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
 msgstr "依排程"
@@ -4319,22 +4230,11 @@ msgstr "開啟導覽"
 msgid "Open work"
 msgstr "待辦"
 
-#: src/pages/Onboarding.tsx
-msgid "OpenAI API"
-msgstr "OpenAI API"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "OpenAI-compatible server URL"
-msgstr "OpenAI 相容伺服器 URL"
-
 #: src/pages/shell/agent-import.tsx
 msgid "OpenClaw or Hermes"
 msgstr "OpenClaw 或 Hermes"
 
 #: src/components/SignupSurvey.tsx
-#: src/pages/model-settings/connection-controls.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Optional"
 msgstr "選填"
@@ -4359,11 +4259,6 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "原訊息不可用"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Other model…"
-msgstr "其他模型…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
@@ -4429,10 +4324,6 @@ msgstr "付款逾期"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Paste a replacement key"
 msgstr "貼上替換金鑰"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-msgid "Paste the OpenAI-compatible address from your server. Doitx adds /v1 if needed."
-msgstr "貼上伺服器的 OpenAI 相容地址。需要時 Doitx 會補上 /v1。"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Paste the reply"
@@ -4640,11 +4531,6 @@ msgstr "就緒"
 msgid "Reason"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Reasoning effort"
-msgstr "推理強度"
-
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 msgid "Recall and write"
 msgstr "回想與寫入"
@@ -4833,10 +4719,6 @@ msgstr ""
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "移除 Git 事件"
-
-#: src/components/ModelHeadersEditor.tsx
-msgid "Remove header"
-msgstr "移除標頭"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove message trigger"
@@ -5104,7 +4986,6 @@ msgstr "週六"
 #: src/pages/GroupPanel.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/connection-controls.tsx
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
@@ -5328,8 +5209,6 @@ msgstr "伺服器名稱"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "伺服器 URL"
@@ -5353,10 +5232,6 @@ msgstr "設定：用量"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "設定完成"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-msgid "Setup help"
-msgstr "設定說明"
 
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Shape"
@@ -5707,16 +5582,6 @@ msgstr "需要訂閱"
 #: src/lib/cron.ts
 msgid "Sunday"
 msgstr "週日"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Supports images"
-msgstr "支援圖片"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Supports thinking"
-msgstr "支援思考"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switch"
@@ -6248,11 +6113,6 @@ msgstr "使用 {hostLabel}"
 #: src/pages/McpServersOverlay.tsx
 msgid "Use {oauthEnvReference} for the access token."
 msgstr "存取權杖請使用 {oauthEnvReference}。"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Use a found model"
-msgstr "使用找到的模型"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Use Connect to verify the key."

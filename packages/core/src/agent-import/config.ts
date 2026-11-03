@@ -66,8 +66,6 @@ export const AGENT_IMPORT_PROVIDER_KEYS: Readonly<Record<string, string>> = {
   MISTRAL_API_KEY: "mistral",
   GROQ_API_KEY: "groq",
 };
-const KEY_PROVIDERS = new Set(Object.values(AGENT_IMPORT_PROVIDER_KEYS));
-
 // A key for a proxy or gateway must never be checked against, or sent to, the provider itself.
 /** The base URL kept with a key, so the server can tell the provider's own from a proxy's. */
 const baseUrlOf = (entry: Json, field: "base_url" | "baseUrl") =>
@@ -174,7 +172,6 @@ function projectConfig(
   secrets: boolean,
   referenced: Set<string>,
 ): string {
-  const keyed = (name: string) => KEY_PROVIDERS.has(normalizeImportProvider(name));
   // A base URL is kept even without a key here, so a key for that provider from `.env`
   // can be held back when it belongs to a proxy.
   const keyEntry = (entry: Json, key: "api_key" | "apiKey", url: "base_url" | "baseUrl") => {
@@ -186,20 +183,16 @@ function projectConfig(
   };
   if (path === "config.yaml") {
     const model = isObject(config.model) ? config.model : {};
-    const keepModelKey = secrets && keyed(String(model.provider ?? ""));
+    const keepModelKey = secrets;
     const providers = Object.entries(isObject(config.providers) ? config.providers : {}).flatMap(
       ([name, entry]) => {
-        const kept =
-          secrets && keyed(name) && isObject(entry) ? keyEntry(entry, "api_key", "base_url") : null;
+        const kept = secrets && isObject(entry) ? keyEntry(entry, "api_key", "base_url") : null;
         return kept ? [[name, kept]] : [];
       },
     );
     const custom = (Array.isArray(config.custom_providers) ? config.custom_providers : []).flatMap(
       (entry) => {
-        const kept =
-          secrets && isObject(entry) && keyed(String(entry.name ?? ""))
-            ? keyEntry(entry, "api_key", "base_url")
-            : null;
+        const kept = secrets && isObject(entry) ? keyEntry(entry, "api_key", "base_url") : null;
         return kept ? [{ name: String(entry.name), ...kept }] : [];
       },
     );
@@ -241,7 +234,7 @@ function projectConfig(
     const models = isObject(config.models) ? config.models : {};
     const providers = Object.entries(isObject(models.providers) ? models.providers : {}).flatMap(
       ([id, entry]) => {
-        const kept = keyed(id) && isObject(entry) ? keyEntry(entry, "apiKey", "baseUrl") : null;
+        const kept = isObject(entry) ? keyEntry(entry, "apiKey", "baseUrl") : null;
         return kept ? [[id, kept]] : [];
       },
     );
@@ -277,7 +270,6 @@ function manualKeys(content: string): Json {
   const auth = readAgentImportConfig("auth.json", content) ?? {};
   const pool = isObject(auth.credential_pool) ? auth.credential_pool : {};
   const kept = Object.entries(pool).flatMap(([provider, entries]) => {
-    if (!KEY_PROVIDERS.has(normalizeImportProvider(provider))) return [];
     const manual = (Array.isArray(entries) ? entries : []).filter(
       (entry) => isObject(entry) && entry.auth_type === "api_key" && entry.source === "manual",
     );
@@ -298,16 +290,15 @@ export function hasAgentImportSecrets(path: string, content: string): boolean {
   if (path !== "openclaw.json" && path !== "config.yaml") return false;
   const config = readAgentImportConfig(path, content);
   if (!config) return false;
-  const keyed = (name: unknown) => KEY_PROVIDERS.has(normalizeImportProvider(String(name ?? "")));
   if (path === "config.yaml") {
     const model = isObject(config.model) ? config.model : {};
     return (
-      (keyed(model.provider) && Boolean(model.api_key)) ||
+      Boolean(model.api_key) ||
       Object.entries(isObject(config.providers) ? config.providers : {}).some(
-        ([name, entry]) => keyed(name) && isObject(entry) && Boolean(entry.api_key),
+        ([, entry]) => isObject(entry) && Boolean(entry.api_key),
       ) ||
       (Array.isArray(config.custom_providers) ? config.custom_providers : []).some(
-        (entry) => isObject(entry) && keyed(entry.name) && Boolean(entry.api_key),
+        (entry) => isObject(entry) && Boolean(entry.api_key),
       )
     );
   }
@@ -316,7 +307,7 @@ export function hasAgentImportSecrets(path: string, content: string): boolean {
   const vars = { ...env, ...(isObject(env.vars) ? env.vars : {}) };
   return (
     Object.entries(isObject(models.providers) ? models.providers : {}).some(
-      ([id, entry]) => keyed(id) && isObject(entry) && entry.apiKey !== undefined,
+      ([, entry]) => isObject(entry) && entry.apiKey !== undefined,
     ) || Object.keys(vars).some((name) => name in AGENT_IMPORT_PROVIDER_KEYS)
   );
 }

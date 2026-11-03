@@ -51,3 +51,11 @@ playwright-report-www
 Python/
 .iconprobe/
 .diagnostics/
+
+# Ad-hoc scratch from local test/debug runs, never part of the repo
+.*-fail.json
+.rt-*
+catalog-dump.json
+**/tmp-e2e/
+# Windows path escapes that land in the tree as "C:<pua>Users..." literals
+*UserslenovoAppDataLocalTemp*

@@ -51,7 +51,7 @@ describe("catalog availability by sign-in kind", () => {
       ),
     ).toEqual(catalog);
     for (const entry of catalog) {
-      expect(entry.provider === "local" || entry.provider === "openai-compatible").toBe(true);
+      expect(entry.provider === "local" || entry.provider === "doitx").toBe(true);
     }
   });
 

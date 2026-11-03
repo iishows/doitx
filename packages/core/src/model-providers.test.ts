@@ -30,16 +30,9 @@ function provider(provider: string): ModelCatalogEntry {
 }
 
 describe("popularModelProvidersFirst", () => {
-  it("lists subscriptions and the common API providers first", () => {
-    const ids = ["azure", "google", "openai", "anthropic", "openai-codex", "openrouter"];
-    expect(popularModelProvidersFirst(ids, (id) => id)).toEqual([
-      "openai-codex",
-      "anthropic",
-      "openai",
-      "openrouter",
-      "google",
-      "azure",
-    ]);
+  it("lists the router before the local endpoint and keeps the rest in order", () => {
+    const ids = ["legacy", "local", "doitx"];
+    expect(popularModelProvidersFirst(ids, (id) => id)).toEqual(["doitx", "local", "legacy"]);
   });
 });
 

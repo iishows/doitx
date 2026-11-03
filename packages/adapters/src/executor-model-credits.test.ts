@@ -23,7 +23,6 @@ describe("funding selects credentials without deleting saved connections", () =>
       },
       { billingEnabled: true, mode: "byok", provider: "local", hosted: false },
       { billingEnabled: false, mode: "credits", provider: "local", hosted: false },
-      { billingEnabled: true, mode: "credits", provider: "openai-compatible", hosted: false },
     ])(
       "$mode funding for $provider with billing=$billingEnabled",
       async ({ billingEnabled, mode, provider, hosted, personal = true, rejected = false }) => {

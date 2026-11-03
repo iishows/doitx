@@ -1,48 +1,34 @@
 import { useLingui } from "@lingui/react/macro";
-import type { Me, ModelHeaderRow, SettingsScope, ThinkingLevel } from "@rakazo/contracts";
+import type { Me, SettingsScope, ThinkingLevel } from "@rakazo/contracts";
 import {
   CLOUDFLARE_AI_GATEWAY_PROVIDER_ID,
   cloudflareModelRouting,
-  compatibleConnectionName,
   connectionDisplayName,
   DEFAULT_MODEL_CONTEXT_WINDOW,
   DEFAULT_MODEL_MAX_TOKENS,
   isCloudflareModelProvider,
   MAX_MODEL_CONTEXT_WINDOW,
   MAX_MODEL_MAX_TOKENS,
-  modelHeadersInput,
-  OPENAI_COMPATIBLE_PROVIDER_ID,
-  openAiCompatibleProbeSuccessMessage,
-  savedCompatibleEndpointMatches,
 } from "@rakazo/contracts";
 import type { ConnectionFormFields } from "@rakazo/core";
 import {
-  COMPATIBLE_THINKING_LEVELS,
   clampCatalogThinkingLevel,
-  compatibleConnectionReady,
-  compatibleModelRows,
   connectionFormFields,
   connectionFormModelId,
   connectionMaxTokensField,
-  createModelProbe,
-  initialModelProbeState,
   modelConnectRequest,
   popularModelProvidersFirst,
-  savedCompatibleModelIds,
 } from "@rakazo/core";
 import { fetchFresh } from "@rakazo/core/query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCopyText } from "../../lib/copy-text";
-import { providerDisplayName } from "../../lib/localized-provider-hint";
 import type { ModelCatalogEntry } from "../../lib/model-auth";
 import type { ModelPreflightFailure } from "../../lib/model-connection-preflight";
 import {
-  classifyModelConnectionFailure,
   loadStoredModelAuth,
   modelPreflightSuccessMessage,
   runModelConnectionPreflight,
-  unavailableSelectedModel,
 } from "../../lib/model-connection-preflight";
 import { useSpaceQueries } from "../../lib/query";
 import { useSpaceRpc } from "../../lib/space-rpc";
@@ -96,23 +82,15 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     setCredentialIdState(next);
   };
   const [modelId, setModelId] = useState("");
-  const modelIdRef = useRef(modelId);
-  modelIdRef.current = modelId;
-  const [enabledModelIds, setEnabledModelIds] = useState<string[]>([]);
   const [apiKey, setApiKey] = useState("");
   const [accountId, setAccountId] = useState("");
   const [gatewayId, setGatewayId] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [headerRows, setHeaderRows] = useState<ModelHeaderRow[] | null>(null);
   const [reasoning, setReasoning] = useState(false);
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel | null>(null);
   const [maxTokens, setMaxTokens] = useState(String(DEFAULT_MODEL_MAX_TOKENS));
   const [contextWindow, setContextWindow] = useState(String(DEFAULT_MODEL_CONTEXT_WINDOW));
   const [supportsImages, setSupportsImages] = useState(false);
   const [maxImagesPerPrompt, setMaxImagesPerPrompt] = useState("");
-  const [{ models: probeModels, probing }, setProbe] = useState(initialModelProbeState);
-  const [modelProbe] = useState(() => createModelProbe(setProbe));
-  const resetOpenAiCompatibleProbe = modelProbe.reset;
   const [codeCopied, copyOAuthCode] = useCopyText();
   const [loading, setLoading] = useState(
     () =>
@@ -125,9 +103,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [preflightTesting, setPreflightTesting] = useState(false);
-  const [preflightTarget, setPreflightTarget] = useState<
-    "api-key" | "sign-in" | "compatible" | null
-  >(null);
+  const [preflightTarget, setPreflightTarget] = useState<"api-key" | "sign-in" | null>(null);
   const [preflightSuccess, setPreflightSuccess] = useState<string | null>(null);
   const [preflightFailure, setPreflightFailure] = useState<ModelPreflightFailure | null>(null);
   const preflightRevisionRef = useRef(0);
@@ -206,10 +182,8 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     });
     if (selectionRevision === selectionRevisionRef.current) {
       invalidatePreflight();
-      resetOpenAiCompatibleProbe();
       setProvider(nextProvider);
       setModelId(nextModel);
-      setHeaderRows(null);
       applyFields(
         connectionFormFields({
           catalog: nextCatalog,
@@ -222,8 +196,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   }
 
   function applyFields(fields: ConnectionFormFields) {
-    setEnabledModelIds(fields.enabledModelIds);
-    setBaseUrl(fields.baseUrl);
     setReasoning(fields.reasoning);
     setThinkingLevel(fields.thinkingLevel);
     setMaxTokens(fields.maxTokens);
@@ -247,7 +219,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
       .finally(() => setLoading(false));
     return () => {
       refreshRevisionRef.current += 1;
-      modelProbe.invalidate();
     };
   }, []);
 
@@ -261,11 +232,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     return popularModelProvidersFirst(
       [...grouped].map(([id, entries]) => ({
         id,
-        name: providerDisplayName(
-          id,
-          entries[0]?.providerName ?? id,
-          credentials.find((entry) => entry.provider === id)?.authKind,
-        ),
+        name: entries[0]?.providerName ?? id,
         entries,
       })),
       (group) => group.id,
@@ -278,10 +245,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   const modelsForProvider = catalog.filter((entry) => entry.provider === provider);
   const selected = modelsForProvider.find((entry) => entry.id === modelId) ?? modelsForProvider[0];
   selectedLabelRef.current = selected?.label;
-  const selectedProviderName = compatibleConnectionName(
-    baseUrl,
-    groups.find((group) => group.id === provider)?.name ?? provider,
-  );
+  const selectedProviderName = groups.find((group) => group.id === provider)?.name ?? provider;
   const credential = credentialId
     ? credentials.find((entry) => entry.id === credentialId)
     : undefined;
@@ -294,7 +258,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     : selectedProviderName;
   const disconnectName = selectedConnectionName;
   const hostCredentialSource = me?.hostCredentialSource ?? "";
-  const isOpenAiCompatible = provider === OPENAI_COMPATIBLE_PROVIDER_ID;
   const isCloudflareGateway = provider === CLOUDFLARE_AI_GATEWAY_PROVIDER_ID;
   const isCloudflare = isCloudflareModelProvider(provider);
   const cloudflareRoutingReady =
@@ -308,29 +271,12 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   const subscriptionSignIn = selected?.signIn !== undefined;
   // Effort levels for the staged catalog model — "off" stays out, matching the
   // per-bot Thinking picker.
-  const catalogThinkingLevels =
-    !isOpenAiCompatible && selected
-      ? (selected.thinkingLevels ?? []).filter((level) => level !== "off")
-      : [];
+  const catalogThinkingLevels = selected
+    ? (selected.thinkingLevels ?? []).filter((level) => level !== "off")
+    : [];
   const busy = pending !== null || oauthPending;
-  const savedHeaderEndpointMatches = savedCompatibleEndpointMatches(baseUrl, credential?.baseUrl);
-  const effectiveBaseUrl = baseUrl.trim();
-  const openAiCompatibleReady = compatibleConnectionReady({
-    apiKey,
-    baseUrl,
-    modelId,
-    headerRows,
-    credential,
-  });
-  const compatibleRows = compatibleModelRows(
-    savedCompatibleModelIds(credential, baseUrl),
-    enabledModelIds,
-    probeModels,
-  );
-  const defaultModelOptions = [...new Set([...enabledModelIds, modelId])];
   // Saved-connection settings edited without a new key (output limit, gateway ids).
   const settingsDirty =
-    !isOpenAiCompatible &&
     Boolean(credential) &&
     (maxTokens.trim() !== connectionMaxTokensField(provider, credential?.maxTokens) ||
       (isCloudflare &&
@@ -349,39 +295,13 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     return revision === preflightRevisionRef.current;
   }
 
-  function updateBaseUrl(nextBaseUrl: string) {
-    setBaseUrl(nextBaseUrl);
-    setHeaderRows(null);
-    // A new endpoint starts with no ticks; the saved endpoint gets its saved list back.
-    setEnabledModelIds(savedCompatibleModelIds(credential, nextBaseUrl));
-    resetOpenAiCompatibleProbe();
-    invalidatePreflight();
-    setError(null);
-    setNotice(null);
-  }
-
   function updateApiKey(nextApiKey: string) {
     setApiKey(nextApiKey);
-    resetOpenAiCompatibleProbe();
     invalidatePreflight();
-  }
-
-  function stageCompatibleModelId(nextModelId: string) {
-    setModelId(nextModelId);
-    setThinkingLevel(
-      clampCatalogThinkingLevel(
-        credential?.modelId === nextModelId ? credential.thinkingLevel : null,
-        reasoning ? COMPATIBLE_THINKING_LEVELS : [],
-      ) as ThinkingLevel | null,
-    );
   }
 
   /** Opens a connection (by id) or a new one (null) for the provider. */
-  function chooseProvider(
-    nextProvider: string,
-    presetBaseUrl?: string,
-    targetCredentialId: string | null = null,
-  ) {
+  function chooseProvider(nextProvider: string, targetCredentialId: string | null = null) {
     cancelOAuthAttempt();
     formRevisionRef.current += 1;
     selectionRevisionRef.current += 1;
@@ -403,56 +323,12 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
         provider: nextProvider,
         modelId: nextModelId,
         credential: nextCredential,
-        presetBaseUrl,
       }),
     );
     setApiKey("");
-    setHeaderRows(null);
-    resetOpenAiCompatibleProbe();
     invalidatePreflight();
     setError(null);
     setNotice(null);
-  }
-
-  async function probeServerModels() {
-    if (!baseUrl.trim()) return;
-    const revision = preflightRevisionRef.current;
-    setError(null);
-    setNotice(null);
-    setPreflightSuccess(null);
-    setPreflightFailure(null);
-    setPreflightTarget("compatible");
-    await modelProbe.probe({
-      baseUrl,
-      apiKey,
-      request: (input) =>
-        rpc.models.probeOpenAiCompatible({
-          ...input,
-          headers: modelHeadersInput(headerRows),
-          credentialId: credential?.id,
-        }),
-      onSuccess: (models) => {
-        if (!preflightStillCurrent(revision)) return;
-        const current = modelIdRef.current;
-        const next = current.trim() || models[0] || "";
-        if (next !== current) stageCompatibleModelId(next);
-        else setModelId(next);
-        const unavailable = unavailableSelectedModel(current, models);
-        if (unavailable) {
-          setPreflightFailure(unavailable);
-          setNotice(null);
-          return;
-        }
-        setPreflightTarget(null);
-        setPreflightFailure(null);
-        setNotice(openAiCompatibleProbeSuccessMessage(models.length));
-      },
-      onError: (err) => {
-        if (!preflightStillCurrent(revision)) return;
-        setPreflightFailure(classifyModelConnectionFailure(err, { modelId }));
-        setNotice(null);
-      },
-    });
   }
 
   async function testApiKeyConnection() {
@@ -521,9 +397,9 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
       form: {
         apiKey,
         modelId,
-        enabledModelIds,
-        baseUrl,
-        headerRows,
+        enabledModelIds: [],
+        baseUrl: "",
+        headerRows: null,
         reasoning,
         thinkingLevel,
         maxTokens,
@@ -576,7 +452,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
           credentialId: saved?.id,
         });
       // A fresh connection speaks for itself through the Active model row.
-      if (isOpenAiCompatible || savingLimitOnly) setNotice(t`Saved.`);
+      if (savingLimitOnly) setNotice(t`Saved.`);
     } catch (err) {
       if (stillSelected()) setError(errorText(err, t`Could not connect this provider`));
     } finally {
@@ -633,14 +509,9 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   return {
     intentRef,
     refresh,
-    resetOpenAiCompatibleProbe,
-    headerRows,
-    setHeaderRows,
-    savedHeaderEndpointMatches,
     acceptsKey,
     accountId,
     apiKey,
-    baseUrl,
     beginSelectedSubscriptionSignIn,
     busy,
     cancelOAuthAttempt,
@@ -649,7 +520,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     chooseProvider,
     cloudflareRoutingReady,
     codeCopied,
-    compatibleRows,
     confirmDisconnect,
     connectKey,
     contextWindow,
@@ -658,11 +528,8 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     credentialByProvider,
     credentials,
     currentEntry,
-    defaultModelOptions,
     disconnectCredential,
     disconnectName,
-    effectiveBaseUrl,
-    enabledModelIds,
     error,
     gatewayId,
     groups,
@@ -671,7 +538,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     invalidatePreflight,
     isCloudflare,
     isCloudflareGateway,
-    isOpenAiCompatible,
     loading,
     maxImagesPerPrompt,
     maxTokens,
@@ -681,7 +547,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     notice,
     oauth,
     oauthPending,
-    openAiCompatibleReady,
     pasteCode,
     pending,
     popupBlocked,
@@ -689,9 +554,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     preflightSuccess,
     preflightTarget,
     preflightTesting,
-    probeModels,
-    probeServerModels,
-    probing,
     provider,
     reasoning,
     selected,
@@ -701,7 +563,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     setAccountId,
     setConfirmDisconnect,
     setContextWindow,
-    setEnabledModelIds,
     setError,
     setGatewayId,
     setMaxImagesPerPrompt,
@@ -713,7 +574,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     setSupportsImages,
     setThinkingLevel,
     settingsDirty,
-    stageCompatibleModelId,
     submitOAuthCode,
     subscriptionSignIn,
     supportsImages,
@@ -721,7 +581,6 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     testOAuthConnection,
     thinkingLevel,
     updateApiKey,
-    updateBaseUrl,
     usingServerCredentials,
   };
 }

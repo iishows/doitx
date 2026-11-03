@@ -12,7 +12,6 @@ import {
   parseCodexCatalog,
 } from "./pi-codex-catalog.js";
 import { liveCatalogEntry } from "./pi-live-catalog.js";
-import { listPiCatalog } from "./pi-models.js";
 import { CHATGPT_OAUTH_PROVIDER, parseModelSecret } from "./pi-oauth.js";
 
 const SPARK = "gpt-5.3-codex-spark";
@@ -1013,9 +1012,9 @@ describe("applyCodexLiveCatalog", () => {
 
   it("ships no Codex provider to merge against", () => {
     expect(base.some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)).toBe(false);
-    expect(
-      base.every((entry) => entry.provider === "local" || entry.provider === "openai-compatible"),
-    ).toBe(true);
+    expect(base.every((entry) => entry.provider === "local" || entry.provider === "doitx")).toBe(
+      true,
+    );
   });
 
   it("passes the catalogue through unchanged whatever the account can call", () => {
@@ -1098,7 +1097,11 @@ describe("applyCodexLiveCatalog", () => {
     expect(parsed(null)[0]?.supportsImages).toBeUndefined();
     expect(parsed(["text"])[0]?.supportsImages).toBe(false);
 
-    const merged = applyCodexLiveCatalog(base, oauthAuth, liveFor({ "secret-a": parsed(["text"]) }));
+    const merged = applyCodexLiveCatalog(
+      base,
+      oauthAuth,
+      liveFor({ "secret-a": parsed(["text"]) }),
+    );
     expect(merged.some((entry) => entry.provider === CHATGPT_OAUTH_PROVIDER)).toBe(false);
   });
 

@@ -196,8 +196,8 @@ function AddProvider({
             <CommandGroup>
               {matching.map((provider) => (
                 <CommandItem
-                  key={`${provider.id}:${provider.baseUrl ?? ""}`}
-                  value={`${provider.id}:${provider.baseUrl ?? ""}`}
+                  key={provider.id}
+                  value={provider.id}
                   onSelect={() => {
                     setOpen(false);
                     onPick(provider);

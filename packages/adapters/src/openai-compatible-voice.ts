@@ -9,11 +9,7 @@ import type {
   VoiceTranscribeRequest,
   VoiceVerifyResult,
 } from "@rakazo/adapter-kit";
-import {
-  DEFAULT_COMPATIBLE_STT_MODEL,
-  DEFAULT_COMPATIBLE_TTS_MODEL,
-  OPENAI_COMPATIBLE_PROVIDER_ID,
-} from "@rakazo/contracts";
+import { DEFAULT_COMPATIBLE_STT_MODEL, DEFAULT_COMPATIBLE_TTS_MODEL } from "@rakazo/contracts";
 import {
   assertAllowedOpenAiCompatibleUrl,
   assertHttpsForKeyedOpenAiCompatibleUrl,
@@ -31,7 +27,8 @@ import {
 } from "./voice-http.js";
 
 export { DEFAULT_COMPATIBLE_STT_MODEL, DEFAULT_COMPATIBLE_TTS_MODEL };
-export const OPENAI_COMPATIBLE_VOICE_PROVIDER_ID = OPENAI_COMPATIBLE_PROVIDER_ID;
+/** The self-hosted speech server's own provider id, independent of the model providers. */
+export const OPENAI_COMPATIBLE_VOICE_PROVIDER_ID = "openai-compatible";
 
 const PROVIDER_NAME = "The speech server";
 const MAX_MODEL_ID_LENGTH = 200;

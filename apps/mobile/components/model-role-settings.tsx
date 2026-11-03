@@ -18,7 +18,6 @@ import {
   connectionDisplayName,
   MAX_MODEL_BACKUPS,
   modelRoleChoiceKey,
-  OPENAI_COMPATIBLE_PROVIDER_ID,
   withConnectionName,
 } from "@rakazo/contracts";
 import { createModelRoleSettings, modelRoleListPatch } from "@rakazo/core";
@@ -35,7 +34,7 @@ import { native, useResolvedAppearance, useThemedStyles } from "../lib/native";
 import { thinkingLevelLabel } from "../lib/thinking-level";
 import { SettingsGroup, SettingsRow } from "./settings-group";
 
-export type ConnectableProvider = { id: string; name: string; baseUrl?: string };
+export type ConnectableProvider = { id: string; name: string };
 
 export type ModelConnectIntent = {
   /** Only the main model's empty first slot takes the new connection's model on connect. */
@@ -51,8 +50,7 @@ type Slot = number | "empty" | "add";
 const sameChoice = (left: ModelRoleChoice, right: ModelRoleChoice) =>
   modelRoleChoiceKey(left) === modelRoleChoiceKey(right);
 
-const connectKey = (provider: ConnectableProvider) =>
-  `connect:${provider.id}:${provider.baseUrl ?? ""}`;
+const connectKey = (provider: ConnectableProvider) => `connect:${provider.id}`;
 
 /** One ordered list per model purpose: the first row runs, the rest take over in order. */
 export function ModelRoleSettings({
@@ -160,9 +158,8 @@ export function ModelRoleSettings({
   };
   const isPrimarySlot = (slot: Slot) => slot === "empty" || (slot === 0 && primary !== null);
 
-  // Compatible endpoints keep their effort with the connection.
   const thinkingLevels =
-    role === "main" && primary && primary.provider !== OPENAI_COMPATIBLE_PROVIDER_ID
+    role === "main" && primary
       ? (entryFor(primary)?.thinkingLevels ?? []).filter((level) => level !== "off")
       : [];
   const thinking = primary?.thinkingLevel ?? null;

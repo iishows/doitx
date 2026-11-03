@@ -565,10 +565,6 @@ msgstr "Terugvalmodel toevoegen"
 msgid "Add field"
 msgstr "Veld toevoegen"
 
-#: src/components/ModelHeadersEditor.tsx
-msgid "Add header"
-msgstr "Header toevoegen"
-
 #: src/pages/ScratchpadSection.tsx
 msgid "Add item"
 msgstr "Item toevoegen"
@@ -627,9 +623,7 @@ msgstr "Toevoegen…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/RoutineSchedule.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -787,10 +781,6 @@ msgstr "Beantwoord"
 msgid "Answered: {answer}"
 msgstr "Beantwoord: {answer}"
 
-#: src/pages/Onboarding.tsx
-msgid "Anthropic API"
-msgstr ""
-
 #: src/pages/Paywall.tsx
 msgid "Any model, with your own key"
 msgstr "Elk model, met je eigen sleutel"
@@ -798,7 +788,6 @@ msgstr "Elk model, met je eigen sleutel"
 #: src/components/AskCard.tsx
 #: src/lib/localized-provider-hint.ts
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
-#: src/pages/model-settings/compatible-key-field.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
@@ -1690,11 +1679,6 @@ msgstr ""
 msgid "Contains code to run"
 msgstr "Bevat code om uit te voeren"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Context limit"
-msgstr "Contextlimiet"
-
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx
@@ -2434,10 +2418,8 @@ msgstr "dagen"
 msgid "Decline"
 msgstr "Weigeren"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/role-model-picker.tsx
 #: src/pages/ModelRoleSettings.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Default"
 msgstr "Standaard"
@@ -2769,17 +2751,14 @@ msgid "Enter a valid email"
 msgstr "Voer een geldig e-mailadres in"
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to {MAX_MODEL_CONTEXT_WINDOW} for the context limit."
 msgstr "Voer een geheel getal van 1 tot {MAX_MODEL_CONTEXT_WINDOW} in voor de contextlimiet."
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to {MAX_MODEL_MAX_TOKENS} for maximum output tokens."
 msgstr "Voer een geheel getal van 1 tot {MAX_MODEL_MAX_TOKENS} in voor het maximale aantal uitvoertokens."
 
 #: src/pages/model-settings/use-model-settings.ts
-#: src/pages/Onboarding.tsx
 msgid "Enter a whole number from 1 to 1000 for the image limit."
 msgstr "Voer een geheel getal van 1 tot 1000 in voor de afbeeldingslimiet."
 
@@ -2905,11 +2884,6 @@ msgstr ""
 msgid "External conversation"
 msgstr "Extern gesprek"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Extra high"
-msgstr "Extra hoog"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Extra high"
@@ -2977,16 +2951,6 @@ msgstr "Filters"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Find models"
-msgstr "Modellen zoeken"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Finding…"
-msgstr "Bezig met zoeken…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3105,21 +3069,15 @@ msgstr "header"
 msgid "Header \"{header}\""
 msgstr "Header \"{header}\""
 
-#: src/components/ModelHeadersEditor.tsx
 #: src/components/VaultSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Header name"
 msgstr "Headernaam"
 
-#: src/components/ModelHeadersEditor.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Header value"
 msgstr "Headerwaarde"
-
-#: src/components/ModelHeadersEditor.tsx
-msgid "Headers"
-msgstr "Headers"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3145,14 +3103,12 @@ msgstr "Wachtwoord verbergen"
 msgid "Hide transcript"
 msgstr "Transcript verbergen"
 
-#: src/lib/ticket-priority.ts
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
+#. js-lingui-explicit-id
+#: src/lib/model-catalog.ts
 msgid "High"
 msgstr "Hoog"
 
-#. js-lingui-explicit-id
-#: src/lib/model-catalog.ts
+#: src/lib/ticket-priority.ts
 msgid "High"
 msgstr "Hoog"
 
@@ -3552,14 +3508,12 @@ msgstr "Uitloggen"
 msgid "Looks like it contains a key"
 msgstr "Lijkt een sleutel te bevatten"
 
-#: src/lib/ticket-priority.ts
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
+#. js-lingui-explicit-id
+#: src/lib/model-catalog.ts
 msgid "Low"
 msgstr "Laag"
 
-#. js-lingui-explicit-id
-#: src/lib/model-catalog.ts
+#: src/lib/ticket-priority.ts
 msgid "Low"
 msgstr "Laag"
 
@@ -3624,11 +3578,6 @@ msgstr "Markdown-tabel"
 msgid "Marketing"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Max"
-msgstr "Max"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Max"
@@ -3638,14 +3587,7 @@ msgstr "Max"
 msgid "Maximize"
 msgstr "Maximaliseren"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Maximum images per request"
-msgstr "Maximum aantal afbeeldingen per verzoek"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
 msgid "Maximum output tokens"
 msgstr "Maximaal aantal uitvoertokens"
 
@@ -3661,11 +3603,6 @@ msgstr ""
 #: src/pages/shell/agent-import.tsx
 msgid "MCP servers"
 msgstr "MCP-servers"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Medium"
-msgstr "Gemiddeld"
 
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
@@ -3762,11 +3699,6 @@ msgstr "Berichten"
 msgid "Microphone failed"
 msgstr "Microfoon mislukt"
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Minimal"
-msgstr "Minimaal"
-
 #. js-lingui-explicit-id
 #: src/lib/model-catalog.ts
 msgid "Minimal"
@@ -3802,7 +3734,6 @@ msgid "Mode"
 msgstr "Modus"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/model-picker.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -3818,11 +3749,6 @@ msgstr "Model \"{modelId}\" stond niet in de lijst."
 #: src/pages/shell/bot-panel.tsx
 msgid "Model connections"
 msgstr "Modelverbindingen"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Model id"
-msgstr "Model-id"
 
 #: src/pages/model-settings/model-picker.tsx
 #: src/pages/model-settings/role-model-picker.tsx
@@ -3843,11 +3769,6 @@ msgstr "Modellen"
 #: src/components/ModelCredits.tsx
 msgid "Models at provider cost"
 msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Models from server"
-msgstr "Modellen van de server"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
@@ -4235,16 +4156,6 @@ msgstr "OAuth verlopen"
 msgid "Offline"
 msgstr ""
 
-#: src/pages/model-settings/connection-controls.tsx
-#: src/pages/Onboarding.tsx
-msgid "Ollama API key"
-msgstr ""
-
-#: src/pages/ModelSettingsOverlay.tsx
-#: src/pages/Onboarding.tsx
-msgid "Ollama Cloud"
-msgstr ""
-
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
 msgstr "Op een schema"
@@ -4318,22 +4229,11 @@ msgstr "Navigatie openen"
 msgid "Open work"
 msgstr "Openstaand werk"
 
-#: src/pages/Onboarding.tsx
-msgid "OpenAI API"
-msgstr ""
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "OpenAI-compatible server URL"
-msgstr "OpenAI-compatibele server-URL"
-
 #: src/pages/shell/agent-import.tsx
 msgid "OpenClaw or Hermes"
 msgstr "OpenClaw of Hermes"
 
 #: src/components/SignupSurvey.tsx
-#: src/pages/model-settings/connection-controls.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Optional"
 msgstr "Optioneel"
@@ -4358,11 +4258,6 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "Oorspronkelijk bericht niet beschikbaar"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Other model…"
-msgstr "Ander model…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
@@ -4428,10 +4323,6 @@ msgstr "Achterstallig"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Paste a replacement key"
 msgstr "Plak een vervangende sleutel"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-msgid "Paste the OpenAI-compatible address from your server. Doitx adds /v1 if needed."
-msgstr "Plak het OpenAI-compatibele adres van je server. Doitx voegt zo nodig /v1 toe."
 
 #: src/pages/shell/agent-import.tsx
 msgid "Paste the reply"
@@ -4639,11 +4530,6 @@ msgstr "Klaar"
 msgid "Reason"
 msgstr ""
 
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Reasoning effort"
-msgstr "Redeneerinspanning"
-
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 msgid "Recall and write"
 msgstr "Ophalen en schrijven"
@@ -4832,10 +4718,6 @@ msgstr ""
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "Git-gebeurtenis verwijderen"
-
-#: src/components/ModelHeadersEditor.tsx
-msgid "Remove header"
-msgstr "Header verwijderen"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove message trigger"
@@ -5103,7 +4985,6 @@ msgstr "zaterdag"
 #: src/pages/GroupPanel.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/connection-controls.tsx
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
@@ -5327,8 +5208,6 @@ msgstr "Servernaam"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "Server-URL"
@@ -5352,10 +5231,6 @@ msgstr "Instellingen: gebruik"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "Instellen voltooid"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-msgid "Setup help"
-msgstr "Installatiehulp"
 
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Shape"
@@ -5706,16 +5581,6 @@ msgstr "Abonnement vereist"
 #: src/lib/cron.ts
 msgid "Sunday"
 msgstr "zondag"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Supports images"
-msgstr "Ondersteunt afbeeldingen"
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Supports thinking"
-msgstr "Ondersteunt denken"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switch"
@@ -6247,11 +6112,6 @@ msgstr "{hostLabel} gebruiken"
 #: src/pages/McpServersOverlay.tsx
 msgid "Use {oauthEnvReference} for the access token."
 msgstr "Gebruik {oauthEnvReference} voor het toegangstoken."
-
-#: src/pages/model-settings/compatible-model-fields.tsx
-#: src/pages/Onboarding.tsx
-msgid "Use a found model"
-msgstr "Een gevonden model gebruiken"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Use Connect to verify the key."

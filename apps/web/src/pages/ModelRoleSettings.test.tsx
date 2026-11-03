@@ -10,10 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /** Provider rows end with their "Connect" action; models show their name alone. */
 const optionName = (entry: Element) => entry.textContent?.replace(/(Connect|Default)$/, "");
 const api = vi.hoisted(() => ({ role: vi.fn(), forRole: vi.fn(), setRole: vi.fn() }));
-vi.mock("../lib/localized-provider-hint", () => ({
-  providerDisplayName: (provider: string, name: string, auth?: string) =>
-    provider === "anthropic" && auth === "oauth" ? "Claude subscription" : name,
-}));
 vi.mock("../lib/space-rpc", () => {
   const client = { models: api };
   return { useSpaceRpc: () => client };

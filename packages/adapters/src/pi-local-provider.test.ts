@@ -56,9 +56,9 @@ describe("local model provider", () => {
     expect(model?.cost).toEqual({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
   });
 
-  it("defaults to the Ollama endpoint and honours an override", () => {
+  it("defaults to the deployment endpoint and honours an override", () => {
     delete process.env.RAKAZO_LOCAL_MODELS_URL;
-    expect(localBaseUrl()).toBe("http://127.0.0.1:11434/v1");
+    expect(localBaseUrl()).toBe("http://127.0.0.1:3456/v1");
 
     process.env.RAKAZO_LOCAL_MODELS_URL = "http://127.0.0.1:1234/v1";
     setModels("some-local-model");
@@ -128,7 +128,7 @@ describe("local model provider", () => {
     process.env.RAKAZO_LOCAL_MODELS_API_KEY = "sk-example-gateway-token";
     const auth = await resolveAuth(localProvider());
     expect(auth.apiKey).toBe("sk-example-gateway-token");
-    expect(auth.baseUrl).toBe("http://127.0.0.1:11434/v1");
+    expect(auth.baseUrl).toBe("http://127.0.0.1:3456/v1");
   });
 
   it("treats a blank key as keyless rather than sending an empty bearer", async () => {

@@ -768,35 +768,28 @@ way by default.
 Only configure an endpoint you control: prompts, attachments, and tool results sent to that model
 leave Doitx through this URL. Leave `RAKAZO_LOCAL_MODELS` blank to disable the provider.
 
-### Ollama Cloud
+### Doitx Router
 
-In **Settings → Models**, choose **Ollama Cloud**, paste an API key from ollama.com, then **Find models**. This uses an OpenAI-compatible connection with no environment configuration, and stays available when `RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC=0`.
+`doitx` is the centrally managed router at `https://router.doitx.ai/v1`. Every deployment offers it
+without configuration, and each user supplies their own router key in **Settings → Models**. The
+router's model list is read from the router at run time rather than bundled, so no model ids need to
+be declared:
 
-Each user can also connect their own OpenAI-compatible endpoint from **Connect a model** /
-**Settings → Models** on web and mobile. Choose **OpenAI-compatible**, enter the server base URL
-(for example `http://127.0.0.1:8000/v1`), the exact model id, and an optional API key.
-Add optional request headers under **Advanced**; values are stored encrypted, and only their names
-are shown afterwards.
-Public hosts and ordinary hostnames need HTTPS when they receive an API key or custom headers,
-and must resolve only to public addresses. Set `RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC=0` on the API
-and worker to block them.
-Literal private IP, loopback, and `host.docker.internal` targets do not, but only the deployment
-owner can use them, checked on save, on model discovery, and on every run. Set
-`MCP_ALLOW_PRIVATE_ENDPOINT=true` on the API and worker to allow them for every user.
-For a self-hosted endpoint whose hostname resolves to private IPs, set
-`RAKAZO_OPENAI_COMPAT_PRIVATE_HOSTS=models.example.test,other.example.test` in the deployment
-environment for both API and worker, then recreate those containers. Entries are exact hostnames
-(case-insensitive, optional trailing dot), not URLs, suffixes, or wildcards. These hosts ignore
-`RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC`; every DNS answer must be private, and metadata and
-link-local destinations remain blocked. This applies to discovery and model requests.
-HTTPS still validates the hostname's certificate. Like private IP endpoints, trusted hostnames
-also permit HTTP with API keys; use HTTPS unless the network is trusted. Only allow hosts you
-control. Private endpoints require `MCP_ALLOW_PRIVATE_ENDPOINT=true` for the deployment; no app account bypasses that policy.
-If that endpoint's model
-accepts images, enable **Supports images** under **Advanced** when connecting so attachments and
-screenshot computer tools stay available. Existing connections default to disabled. For centrally
-managed endpoints, the deployment-wide fallback remains
-`RAKAZO_OPENAI_COMPATIBLE_VISION_MODELS=gpt4o-vision,llava`.
+```env
+# Optional override of the endpoint, for a mirror reachable from your network.
+RAKAZO_DOITX_MODELS_URL=https://router.doitx.ai/v1
+# Optional: pin an explicit model list instead of discovering it from the router.
+# RAKAZO_DOITX_MODELS=
+# Optional: a server-side router key, for a deployment that provisions one for its users.
+# RAKAZO_DOITX_API_KEY=
+# Optional: router model ids that accept images (screenshot computer tools).
+# RAKAZO_DOITX_VISION_MODELS=
+```
+
+Because the address is fixed, this provider is unaffected by `RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC` and
+`RAKAZO_OPENAI_COMPAT_PRIVATE_HOSTS`. A blank `RAKAZO_DOITX_MODELS_URL` falls back to the default, so
+point it only at a trusted mirror: prompts, attachments, and tool results sent to a router model
+leave Doitx through that URL.
 
 ### Client updates
 

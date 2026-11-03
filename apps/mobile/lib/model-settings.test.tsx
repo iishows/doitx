@@ -13,14 +13,12 @@ import { modelConnectionRequest, openModelConnection } from "./model-connection-
 import { modelPickerRequest } from "./model-picker-selection";
 import { queryClient } from "./query";
 
-const savedEndpoint = "https://models.example.test/v1";
 const { push, back, params, rpcCalls, saved } = vi.hoisted(() => ({
   push: vi.fn(),
   back: vi.fn(),
   params: {} as { requestId?: string; spaceId?: string },
   rpcCalls: [] as [string, unknown, { requestContext?: { headers: object } }?][],
   saved: {
-    baseUrl: "https://models.example.test/v1",
     hasKey: false,
     label: "Fixture",
     held: null as Promise<void> | null,
@@ -48,7 +46,7 @@ vi.mock("./api", () => ({
       return {
         userId: "user-fixture",
         spaceId: "space-fixture",
-        defaultProvider: "openai-compatible",
+        defaultProvider: "local",
         defaultModel: "model-fixture",
       };
     if (procedure === "models/role") return { primary: null, backups: [] };
@@ -56,26 +54,27 @@ vi.mock("./api", () => ({
     if (procedure === "models/forRole") return [];
     if (procedure === "models/list")
       return [
-        { provider: "openai-compatible", id: "model-fixture", label: "Fixture" },
-        { provider: "anthropic", providerName: "Anthropic", id: "claude-fixture", label: "Claude" },
+        {
+          provider: "local",
+          providerName: "Local (self-hosted endpoint)",
+          id: "model-fixture",
+          label: "Fixture",
+        },
         // Deployment-funded models still leave room for a personal key.
         {
-          provider: "openrouter",
-          providerName: "OpenRouter",
-          id: "funded-fixture",
-          label: "Funded",
-          managed: true,
+          provider: "doitx",
+          providerName: "Doitx Router",
+          id: "doitx-fixture",
+          label: "Doitx Fixture",
         },
       ];
     if (procedure === "models/credentials")
       return [
         {
           id: "credential-fixture",
-          provider: "openai-compatible",
+          provider: "local",
           modelId: "model-fixture",
-          baseUrl: saved.baseUrl,
           hasKey: saved.hasKey,
-          headerNames: ["x-session"],
           label: saved.label,
         },
       ];
@@ -177,9 +176,13 @@ notifyManager.setScheduler((callback) => callback());
 let container: HTMLDivElement;
 let root: Root;
 
+function button(label: string) {
+  return [...container.querySelectorAll("button")].find((entry) => entry.textContent === label);
+}
+
 async function renderConnection(request: Partial<ModelConnectionRequest> = {}) {
   params.requestId = openModelConnection({
-    provider: "openai-compatible",
+    provider: "local",
     credentialId: "credential-fixture",
     makeDefault: false,
     target: { scope: "account" },
@@ -198,9 +201,7 @@ beforeEach(async () => {
   document.body.appendChild(container);
   root = createRoot(container);
   await renderConnection();
-  const advanced = [...container.querySelectorAll("button")].find(
-    (button) => button.textContent === "Advanced",
-  );
+  const advanced = button("Advanced");
   expect(advanced).toBeDefined();
   await act(async () => advanced!.click());
 });
@@ -220,41 +221,9 @@ async function change(label: string, value: string) {
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
-
-function expectSavedHeader() {
-  expect(field("Header name")?.value).toBe("x-session");
-  expect(field("Header value")?.value).toBe("");
-  expect(field("Header value")?.placeholder).toBe("••••••••");
-  expect(field("Header value")?.type).toBe("password");
+async function authenticate() {
+  await change("API key", "fixture-key-123");
 }
-
-describe("mobile saved model headers", () => {
-  it.each([
-    " https://models.example.test/v1 ",
-    "https://models.example.test/v1/",
-    "https://models.example.test",
-  ])("keeps masked saved headers for the equivalent endpoint %s", async (endpoint) => {
-    expectSavedHeader();
-    await change("OpenAI-compatible server URL", endpoint);
-    expectSavedHeader();
-  });
-
-  it.each(["https://other.example.test/v1", "https://models.example.test/v2", "http://", ""])(
-    "does not show saved headers at a changed or incomplete endpoint %s",
-    async (endpoint) => {
-      await change("OpenAI-compatible server URL", endpoint);
-      expect(field("Header name")).toBeNull();
-      const add = [...container.querySelectorAll("button")].find(
-        (button) => button.textContent === "Add header",
-      )!;
-      await act(async () => add.click());
-      await change("Header name", "x-session");
-      expect(field("Header value")?.placeholder).toBe("Header value");
-      await change("OpenAI-compatible server URL", savedEndpoint);
-      expectSavedHeader();
-    },
-  );
-});
 
 async function remount(render: () => Promise<void>) {
   await act(async () => root.unmount());
@@ -266,8 +235,8 @@ async function notConnectedChoices() {
   await remount(async () => {
     await act(async () => root.render(createElement(Models)));
   });
-  const add = [...container.querySelectorAll("button")].find((button) =>
-    button.textContent?.includes("Add fallback"),
+  const add = [...container.querySelectorAll("button")].find((entry) =>
+    entry.textContent?.includes("Add fallback"),
   );
   expect(add).toBeDefined();
   await act(async () => add!.click());
@@ -275,53 +244,24 @@ async function notConnectedChoices() {
   return modelPickerRequest(route.params.requestId)!.connectChoices ?? [];
 }
 
-it("offers deployment-funded providers and Ollama Cloud once among providers to connect", async () => {
-  expect((await notConnectedChoices()).map((choice) => choice.label)).toEqual([
-    "Anthropic",
-    "OpenRouter",
-    "Ollama Cloud",
-  ]);
-});
-
-it("does not offer Ollama Cloud again once it is the saved connection", async () => {
-  saved.baseUrl = "https://ollama.com/";
-  try {
-    expect((await notConnectedChoices()).map((choice) => choice.label)).toEqual([
-      "Anthropic",
-      "OpenRouter",
-    ]);
-  } finally {
-    saved.baseUrl = savedEndpoint;
-  }
-});
-
-it("opens the Ollama preset through the compatible form with a visible key field", async () => {
-  await remount(() => renderConnection({ baseUrl: "https://ollama.com/v1", credentialId: null }));
-  expect(field("OpenAI-compatible server URL")?.value).toBe("https://ollama.com/v1");
-  expect(field("API key")?.placeholder).toBe("Ollama API key");
-  expect(field("API key")?.type).toBe("password");
-  expect(
-    [...container.querySelectorAll("button")].filter((button) =>
-      ["Setup help", "API key"].includes(button.textContent ?? ""),
-    ),
-  ).toHaveLength(0);
+it("offers providers to connect without repeating a connected one", async () => {
+  expect((await notConnectedChoices()).map((choice) => choice.label)).toEqual(["Doitx Router"]);
 });
 
 it("hands a connected model back to the slot that asked for it", async () => {
   const onConnected = vi.fn(async () => undefined);
-  await remount(() => renderConnection({ makeDefault: true, onConnected }));
-  const save = [...container.querySelectorAll("button")].find(
-    (button) => button.textContent === "Save",
-  )!;
+  await remount(() => renderConnection({ credentialId: null, makeDefault: true, onConnected }));
+  await authenticate();
+  const save = button("Connect API key")!;
   await act(async () => save.click());
   expect(rpcCalls.find(([procedure]) => procedure === "models/connect")?.[1]).toMatchObject({
-    provider: "openai-compatible",
+    provider: "local",
     modelId: "model-fixture",
     makeDefault: true,
     scope: "account",
   });
   expect(onConnected).toHaveBeenCalledWith({
-    provider: "openai-compatible",
+    provider: "local",
     modelId: "model-fixture",
     credentialId: "credential-new",
   });
@@ -356,58 +296,20 @@ describe("a Space's model override", () => {
     const onConnected = vi.fn(async () => undefined);
     await remount(() =>
       renderConnection({
+        credentialId: null,
         makeDefault: true,
         target: { scope: "space", spaceId: "space-other" },
         onConnected,
       }),
     );
-    const save = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "Save",
-    )!;
+    await authenticate();
+    const save = button("Connect API key")!;
     await act(async () => save.click());
     const connect = rpcCalls.find(([procedure]) => procedure === "models/connect");
     expect(connect?.[1]).toMatchObject({ makeDefault: true, scope: "space" });
     expect(connect?.[2]).toEqual({ requestContext: otherSpace });
   });
 });
-
-it("keeps setup help and API key collapsible for generic compatible servers", async () => {
-  const row = (name: string) =>
-    [...container.querySelectorAll("button")].find((button) => button.textContent === name)!;
-  expect(field("API key")).toBeNull();
-  expect(container.textContent).not.toContain("Doitx adds /v1");
-  await act(async () => row("Setup help").click());
-  expect(container.textContent).toContain("Doitx adds /v1");
-  await act(async () => row("Setup help").click());
-  expect(container.textContent).not.toContain("Doitx adds /v1");
-  await act(async () => row("API key").click());
-  expect(field("API key")).not.toBeNull();
-  await act(async () => row("API key").click());
-  expect(field("API key")).toBeNull();
-});
-
-it.each(["https://ollama.com", "https://ollama.com/v1/"])(
-  "keeps Save enabled with a saved Ollama key at %s",
-  async (baseUrl) => {
-    saved.baseUrl = "https://ollama.com/v1";
-    saved.hasKey = true;
-    try {
-      await remount(() => renderConnection());
-      await change("OpenAI-compatible server URL", baseUrl);
-      const save = [...container.querySelectorAll("button")].find(
-        (button) => button.textContent === "Save",
-      );
-      expect(save).toBeDefined();
-      expect(save!.disabled).toBe(false);
-      await change("OpenAI-compatible server URL", "https://other.test/v1");
-      await change("OpenAI-compatible server URL", "https://ollama.com/v1/");
-      expect(save!.disabled).toBe(false);
-    } finally {
-      saved.baseUrl = savedEndpoint;
-      saved.hasKey = false;
-    }
-  },
-);
 
 it("paints a revisit from cache without a spinner and refreshes behind it", async () => {
   await remount(async () => {
@@ -447,7 +349,7 @@ it("offers a retry when the first load fails, then shows the model lists", async
     expect(container.textContent).toContain("Could not load model settings");
     saved.failMe = false;
     const retry = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "Retry",
+      (entry) => entry.textContent === "Retry",
     );
     await act(async () => retry!.click());
     expect(container.textContent).toContain("Add fallback");
