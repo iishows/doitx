@@ -100,6 +100,8 @@ vi.mock("react-native", () => {
     Pressable: MockPressable,
     ScrollView: MockView,
     Text: MockView,
+    TextInput: (props: { value?: string; placeholder?: string }) =>
+      createElement("input", { value: props.value, placeholder: props.placeholder }),
     View: MockView,
     useWindowDimensions: () => ({ width: 393, height: 852, scale: 3, ...textScale }),
   };
@@ -254,6 +256,8 @@ const botWorking: ComputerStatus = {
   busyBotName: "Basil",
   canUpdate: false,
   terminalAvailable: false,
+  maxRunsPerComputer: 1,
+  maxRunsPerComputerOverride: false,
 };
 
 function respond(status: ComputerStatus, screenUrl = "https://screen.example.test/embed") {

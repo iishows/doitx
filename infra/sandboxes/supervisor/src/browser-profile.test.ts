@@ -23,13 +23,21 @@ function fixture() {
   mkdirSync(shared, { recursive: true });
   mkdirSync(runtime);
   const profile = (bot: string) => browserProfilePathForScreen(bot).replace("/home/rakazo", home);
+  // The generated scripts are POSIX shell, so they see POSIX paths; Node still reads and
+  // writes the same files through the native paths above.
+  const homeShell = posixPath(home);
+  const runtimeShell = posixPath(runtime);
   const run = (script: string) => {
     // GNU cp's reflink optimization has no macOS equivalent; all copy semantics remain intact.
     const portable =
       process.platform === "darwin" ? script.replaceAll(" --reflink=auto", "") : script;
     return spawnSync(
-      "bash",
-      ["-eu", "-c", portable.replaceAll("/tmp/rakazo", runtime).replaceAll("/home/rakazo", home)],
+      bashBinary(),
+      [
+        "-eu",
+        "-c",
+        portable.replaceAll("/tmp/rakazo", runtimeShell).replaceAll("/home/rakazo", homeShell),
+      ],
       {
         encoding: "utf8",
         timeout: 10_000,
@@ -40,7 +48,11 @@ function fixture() {
 }
 
 describe("durable independent browser profiles", () => {
-  it("keeps both bots' data through stop and restart without copying the default profile", () => {
+  // The stop script finds and kills the browser through /proc/<pid>/cmdline, which has no
+  // Windows equivalent; it runs for real on the Linux hosts the computer uses.
+  it.skipIf(process.platform === "win32")(
+    "keeps both bots' data through stop and restart without copying the default profile",
+    () => {
     const { shared, profile, run } = fixture();
     writeFileSync(path.join(shared, "login"), "legacy-session");
     for (const bot of ["writer", "reader"]) {
@@ -63,5 +75,28 @@ describe("durable independent browser profiles", () => {
     expect(run(prepareBrowserProfileCommand("new-bot")).status).toBe(0);
     expect(existsSync(path.join(profile("new-bot"), "login"))).toBe(false);
     expect(readFileSync(path.join(shared, "login"), "utf8")).toBe("legacy-session");
-  });
+    },
+  );
 });
+
+/** The shell to run, resolved against the real PATH (a test may not replace it). */
+function bashBinary(): string {
+  const extensions = process.platform === "win32" ? [".exe", ""] : [""];
+  for (const directory of (process.env.PATH ?? "").split(path.delimiter)) {
+    if (!directory) continue;
+    for (const extension of extensions) {
+      const candidate = path.join(directory, `bash${extension}`);
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return "bash";
+}
+
+/** The shell's own spelling of a path; on Windows MSYS renders it under /tmp or /c. */
+function posixPath(target: string): string {
+  if (process.platform !== "win32") return target;
+  const directory = spawnSync(bashBinary(), ["-c", 'cd "$1" && pwd', "bash", path.dirname(target)], {
+    encoding: "utf8",
+  }).stdout.trim();
+  return path.posix.join(directory, path.basename(target));
+}

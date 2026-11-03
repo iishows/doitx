@@ -127,6 +127,34 @@ export class DockerSandboxProvider implements SandboxProvider {
     return `${this.supervisorUrl.replace(/\/$/, "")}${path}`;
   }
 
+  /**
+   * The computer's cgroup pressure, read by the supervisor. A failure here must never block
+   * a run on its own account, so the caller decides what an unreachable metric means; this
+   * only reports what the supervisor answered.
+   */
+  async observePressure(
+    computer: ComputerRef,
+    context: AdapterContext,
+  ): Promise<{ memRatio: number; throttledRatio: number; oomKills: number }> {
+    const res = await fetch(this.url(`/computers/${computer.id}/pressure`), {
+      headers: this.headers(context, computer.botId),
+      signal: context.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`computer pressure failed: ${res.status} ${await safeBody(res, context.signal)}`);
+    }
+    const body = (await res.json()) as {
+      memRatio?: unknown;
+      throttledRatio?: unknown;
+      oomKills?: unknown;
+    };
+    return {
+      memRatio: typeof body.memRatio === "number" ? body.memRatio : 0,
+      throttledRatio: typeof body.throttledRatio === "number" ? body.throttledRatio : 0,
+      oomKills: typeof body.oomKills === "number" ? body.oomKills : 0,
+    };
+  }
+
   private headers(context: AdapterContext, botId?: string) {
     return {
       authorization: `Bearer ${this.supervisorToken}`,

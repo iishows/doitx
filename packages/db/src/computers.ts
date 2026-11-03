@@ -76,6 +76,27 @@ export function resolveMaxComputersPerUser(
   return limit;
 }
 
+/**
+ * How many runs may execute on one computer at once.
+ *
+ * One computer is one container, so this is what keeps a shared team computer from
+ * being oversubscribed when several of its bots start a run at the same time. A
+ * per-computer override wins over the instance default, which is 1 when unset, so
+ * the safe behaviour needs no configuration.
+ */
+export function resolveMaxRunsPerComputer(
+  override: number | null | undefined,
+  envValue = process.env.SANDBOX_MAX_RUNS_PER_COMPUTER,
+): number {
+  if (override !== null && override !== undefined && override >= 1) return override;
+  if (envValue === undefined || envValue.trim() === "") return 1;
+  const limit = Number(envValue);
+  if (!Number.isSafeInteger(limit) || limit < 1) {
+    throw new Error("SANDBOX_MAX_RUNS_PER_COMPUTER must be a positive integer");
+  }
+  return limit;
+}
+
 export class ComputerLimitError extends Error {
   constructor(limit: number) {
     super(`User computer limit (${limit}) reached`);
@@ -193,6 +214,69 @@ export async function expireComputerExecutionLeases(
     where,
     data: { expiresAt: new Date(0) },
   });
+}
+
+/**
+ * Tombstone leases whose run has already reached a terminal status but whose release
+ * path never ran — e.g. the worker died between marking the run terminal and releasing
+ * the lease. A live lease outlives that window, so without this the computer stays
+ * "held" until the lease expires on its own.
+ *
+ * Tombstones (expiresAt = epoch) rather than deletes: the row carries the fence that
+ * the next acquire must increment, and dropping it would reset fence to 1 and make a
+ * stale screen session look current again. See releaseComputerExecutionLease.
+ */
+export async function expireLeasesForTerminalRuns(
+  prisma: Pick<PrismaClient, "computerExecutionLease" | "run">,
+  terminalStatuses: readonly string[],
+): Promise<number> {
+  const live = await prisma.computerExecutionLease.findMany({
+    where: { expiresAt: { gt: new Date() } },
+    select: { id: true, runId: true },
+  });
+  if (live.length === 0) return 0;
+  // The lease stores runId as a bare string, not a relation, so match the ids here.
+  const finished = await prisma.run.findMany({
+    where: { id: { in: live.map((lease) => lease.runId) }, status: { in: [...terminalStatuses] } },
+    select: { id: true },
+  });
+  if (finished.length === 0) return 0;
+  const finishedIds = new Set(finished.map((run) => run.id));
+  const staleIds = live.filter((lease) => finishedIds.has(lease.runId)).map((lease) => lease.id);
+  if (staleIds.length === 0) return 0;
+  await prisma.computerExecutionLease.updateMany({
+    where: { id: { in: staleIds } },
+    data: { expiresAt: new Date(0) },
+  });
+  return staleIds.length;
+}
+
+/** How many runs may execute on this computer at once; see resolveMaxRunsPerComputer. */
+export async function getMaxRunsPerComputer(
+  prisma: ComputerDb,
+  computerId: string,
+): Promise<number> {
+  const computer = await prisma.computer.findUnique({
+    where: { id: computerId },
+    select: { maxRunsPerComputer: true },
+  });
+  return resolveMaxRunsPerComputer(computer?.maxRunsPerComputer);
+}
+
+/** Set (or clear, with null) the per-computer ceiling, returning the effective value. */
+export async function setMaxRunsPerComputer(
+  prisma: ComputerDb,
+  computerId: string,
+  value: number | null,
+): Promise<number> {
+  if (value !== null && (!Number.isSafeInteger(value) || value < 1)) {
+    throw new Error("maxRunsPerComputer must be a positive integer or null");
+  }
+  await prisma.computer.update({
+    where: { id: computerId },
+    data: { maxRunsPerComputer: value },
+  });
+  return resolveMaxRunsPerComputer(value);
 }
 
 function upsertComputerRecord(

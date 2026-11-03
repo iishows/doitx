@@ -1943,8 +1943,11 @@ describe("computer execution leases", () => {
         updateMany,
         updateManyAndReturn,
         findUnique: vi.fn().mockResolvedValue(null),
+        // Only bot-1's own tombstone exists here; it is not live, so admission is free.
+        count: vi.fn().mockResolvedValue(0),
       },
     } as unknown as PrismaClient;
+    withTransactionSupport(prisma);
     const lease = {
       computerId: "computer-1",
       botId: "bot-1",
@@ -2048,6 +2051,7 @@ describe("computer execution leases", () => {
     };
     const create = vi.fn().mockRejectedValue(Object.assign(new Error("unique"), { code: "P2002" }));
     const client = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
       externalEffect: { deleteMany: vi.fn(async () => ({ count: 0 })) },
       thread: {
         update: vi
@@ -2064,6 +2068,8 @@ describe("computer execution leases", () => {
       task: { updateMany: vi.fn() },
       secret: { deleteMany: vi.fn() },
       computerExecutionLease: {
+        // clearThread tombstoned the only lease, so nothing is live when acquire runs.
+        count: vi.fn(async () => (lease.expiresAt > new Date() ? 1 : 0)),
         updateMany: vi.fn().mockImplementation(async ({ data }) => {
           lease.expiresAt = data.expiresAt;
           return { count: 1 };
@@ -2127,7 +2133,7 @@ describe("computer execution leases", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("lets two Team bots hold leases at the same time", async () => {
+  it("admits one Team bot at a time so a shared computer is not oversubscribed", async () => {
     const prisma = leasePrisma({ scope: "team" });
 
     await expect(
@@ -2143,8 +2149,93 @@ describe("computer execution leases", () => {
         runId: "run-2",
         botId: "bot-2",
       }),
-    ).resolves.toMatchObject({ botId: "bot-2", runId: "run-2" });
+    ).rejects.toThrow("Computer is busy");
+    expect(prisma.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses even the first run on a starved computer", async () => {
+    const prisma = leasePrisma({ scope: "team" });
+
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-1",
+        botId: "bot-1",
+        pressure: { memRatio: 0.95, throttledRatio: 0, oomKills: 0 },
+      }),
+    ).rejects.toThrow("Computer is busy");
+    expect(prisma.create).not.toHaveBeenCalled();
+  });
+
+  it("keeps admitting when pressure could not be read, so a failed probe never blocks", async () => {
+    const prisma = leasePrisma({ scope: "team" });
+
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-1",
+        botId: "bot-1",
+        pressure: null,
+      }),
+    ).resolves.toMatchObject({ botId: "bot-1" });
+  });
+
+  it("admits more than one bot when the computer raises its own ceiling", async () => {
+    const prisma = leasePrisma({ scope: "team", maxRunsPerComputer: 2 });
+
+    await acquireComputerExecutionLease(prisma.client, {
+      computerId: "computer-1",
+      runId: "run-1",
+      botId: "bot-1",
+    });
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-2",
+        botId: "bot-2",
+      }),
+    ).resolves.toMatchObject({ botId: "bot-2" });
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-3",
+        botId: "bot-3",
+      }),
+    ).rejects.toThrow("Computer is busy");
     expect(prisma.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets a bot resume its own live lease even when the computer is at its ceiling", async () => {
+    const prisma = leasePrisma({
+      scope: "team",
+      liveLeaseCount: 1,
+      reclaim: true,
+      fence: 4,
+      heldLease: { runId: "run-1", expiresAt: new Date(Date.now() + 60_000) },
+    });
+
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-1",
+        botId: "bot-1",
+        resumeHeldLease: true,
+      }),
+    ).resolves.toMatchObject({ botId: "bot-1", runId: "run-1" });
+    expect(prisma.create).not.toHaveBeenCalled();
+  });
+
+  it("will not revive an expired lease past the ceiling", async () => {
+    const prisma = leasePrisma({ scope: "team", liveLeaseCount: 1, reclaim: true, fence: 4 });
+
+    await expect(
+      acquireComputerExecutionLease(prisma.client, {
+        computerId: "computer-1",
+        runId: "run-1",
+        botId: "bot-1",
+      }),
+    ).rejects.toThrow("Computer is busy");
+    expect(prisma.updateManyAndReturn).not.toHaveBeenCalled();
   });
 
   it("rejects a second run for the same Team bot while its lease is held", async () => {
@@ -2499,51 +2590,84 @@ describe("computer execution leases", () => {
   });
 });
 
+/**
+ * Gives a hand-written Prisma fake the transaction surface acquire uses. Its work runs
+ * against the same object, so the fake's own lease stubs stay the single source.
+ */
+function withTransactionSupport<T extends object>(prisma: T): T & { $transaction: unknown } {
+  const client = prisma as T & { $queryRaw?: unknown; $transaction?: unknown };
+  client.$queryRaw ??= vi.fn().mockResolvedValue([]);
+  client.$transaction ??= vi.fn(async (work: (tx: T) => unknown) => work(prisma));
+  return client as T & { $transaction: unknown };
+}
+
 function leasePrisma(options: {
   scope: string;
   reclaim?: boolean;
   fence?: number;
   uniqueConflict?: boolean;
   /** The lease row acquire inspects before reclaiming a parked run's hold. */
-  heldLease?: { runId: string } | null;
+  heldLease?: { runId: string; expiresAt?: Date } | null;
   /** Status of the run behind that lease; null means the run is gone. */
   heldRunStatus?: string | null;
+  /** Live leases already on the computer, which the admission ceiling counts. */
+  liveLeaseCount?: number;
+  /** Per-computer override of the concurrency ceiling; unset inherits the default 1. */
+  maxRunsPerComputer?: number | null;
 }) {
-  const updateMany = vi.fn().mockResolvedValue({ count: 1 });
-  const deleteMany = vi.fn().mockResolvedValue({ count: 1 });
-  const updateManyAndReturn = vi
-    .fn()
-    .mockResolvedValue(options.reclaim ? [{ fence: options.fence ?? 1 }] : []);
+  // Live leases grow as acquire creates them and shrink as release tombstones them, so a
+  // later bot sees the slot freed the way it would in the database. A tombstone is an
+  // update to the epoch; a renewal pushes the expiry out and stays live.
+  let createdLeases = 0;
   const create = vi.fn().mockImplementation(async () => {
     if (options.uniqueConflict) {
       throw Object.assign(new Error("unique"), { code: "P2002" });
     }
+    createdLeases += 1;
     return { fence: 1 };
   });
+  const updateMany = vi.fn().mockImplementation(
+    async (args: { data?: { expiresAt?: Date } }) => {
+      if (args?.data?.expiresAt?.getTime() === 0 && createdLeases > 0) createdLeases -= 1;
+      return { count: 1 };
+    },
+  );
+  const deleteMany = vi.fn().mockResolvedValue({ count: 1 });
+  const updateManyAndReturn = vi
+    .fn()
+    .mockResolvedValue(options.reclaim ? [{ fence: options.fence ?? 1 }] : []);
   const findUniqueOrThrow = vi.fn().mockResolvedValue({
     scope: options.scope,
     state: "running",
+    maxRunsPerComputer: options.maxRunsPerComputer ?? null,
   });
   const leaseFindUnique = vi.fn().mockResolvedValue(options.heldLease ?? null);
   const runFindUnique = vi
     .fn()
     .mockResolvedValue(options.heldRunStatus ? { status: options.heldRunStatus } : null);
+  const count = vi.fn(async () => (options.liveLeaseCount ?? 0) + createdLeases);
+  // acquire takes an advisory lock inside a transaction; the fake runs the work against
+  // the same client so lease stubs stay single-sourced.
+  const client = {
+    $queryRaw: vi.fn().mockResolvedValue([]),
+    computer: {
+      findUniqueOrThrow,
+    },
+    run: {
+      findUnique: runFindUnique,
+    },
+    computerExecutionLease: {
+      updateManyAndReturn,
+      create,
+      updateMany,
+      deleteMany,
+      findUnique: leaseFindUnique,
+      count,
+    },
+  };
+  const $transaction = vi.fn(async (work: (tx: typeof client) => unknown) => work(client));
   return {
-    client: {
-      computer: {
-        findUniqueOrThrow,
-      },
-      run: {
-        findUnique: runFindUnique,
-      },
-      computerExecutionLease: {
-        updateManyAndReturn,
-        create,
-        updateMany,
-        deleteMany,
-        findUnique: leaseFindUnique,
-      },
-    } as unknown as PrismaClient,
+    client: { ...client, $transaction } as unknown as PrismaClient,
     updateMany,
     updateManyAndReturn,
     create,
@@ -2551,6 +2675,8 @@ function leasePrisma(options: {
     findUniqueOrThrow,
     leaseFindUnique,
     runFindUnique,
+    count,
+    $transaction,
   };
 }
 

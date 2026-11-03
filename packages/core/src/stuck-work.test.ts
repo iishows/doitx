@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   isAgedStuckWork,
   isStuckWorkStatus,
+  STALLED_RUN_EXPIRE_AFTER_MS,
+  STALLED_RUN_MESSAGE,
+  STALLED_RUN_NOTIFY_AFTER_MS,
+  stalledRunAction,
+  stalledRunReminder,
+  stalledRunStoppedNotification,
   STUCK_WORK_EXPIRE_AFTER_MS,
   STUCK_WORK_NOTIFY_AFTER_MS,
   stuckWorkAction,
@@ -71,3 +77,37 @@ describe("stuck work age", () => {
 function STUCK_WORK_STATUSES_FOR_TEST(): string[] {
   return [...stuckWorkStatusMessages()];
 }
+
+describe("stalled running run", () => {
+  it("keeps the reminder well before the cancellation", () => {
+    expect(STALLED_RUN_EXPIRE_AFTER_MS).toBeGreaterThan(STALLED_RUN_NOTIFY_AFTER_MS);
+  });
+
+  it("reminds when output goes quiet, then cancels much later", () => {
+    const action = (silentForMs: number, alreadyNotified: boolean) =>
+      stalledRunAction({ silentForMs, alreadyNotified });
+    expect(action(STALLED_RUN_NOTIFY_AFTER_MS - 1, false)).toBe("none");
+    expect(action(STALLED_RUN_NOTIFY_AFTER_MS, false)).toBe("notify");
+    expect(action(STALLED_RUN_NOTIFY_AFTER_MS, true)).toBe("none");
+    expect(action(STALLED_RUN_EXPIRE_AFTER_MS - 1, true)).toBe("none");
+    expect(action(STALLED_RUN_EXPIRE_AFTER_MS, true)).toBe("expire");
+  });
+
+  it("does not treat a running run as a stuck wait, so its fence stays on output", () => {
+    // running work is scanned on output time, not the queue/human-wait mechanism.
+    expect(isStuckWorkStatus("running")).toBe(false);
+  });
+
+  it("gives the stop a status line and a matching stopped notice", () => {
+    expect(STALLED_RUN_MESSAGE).toMatch(/without showing anything/);
+    expect(stalledRunStoppedNotification("  ")).toEqual({
+      kind: "failure",
+      title: "Bot stopped",
+      body: STALLED_RUN_MESSAGE,
+    });
+    expect(stalledRunReminder("Ada")).toMatchObject({
+      kind: "help",
+      title: "Ada has gone quiet",
+    });
+  });
+});

@@ -52,6 +52,7 @@ import {
   IsolationError,
   parseComputerMode,
   recordComputerRunEnd,
+  setMaxRunsPerComputer,
 } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import { scrollPoint } from "../computer-input.js";
@@ -284,6 +285,16 @@ export function computerRoutes(ctx: RouterContext) {
       }),
       releaseInterrupted: authed.computer.releaseInterrupted.handler(() => {
         throw new ORPCError("FORBIDDEN");
+      }),
+      maxRuns: authed.computer.maxRuns.handler(async ({ context, input }) => {
+        const bot = await repos.getBot(context.actor, input.botId);
+        if (!bot.computer) throw new IsolationError();
+        const maxRunsPerComputer = await setMaxRunsPerComputer(
+          deps.prisma,
+          bot.computer.id,
+          input.maxRunsPerComputer,
+        );
+        return { maxRunsPerComputer };
       }),
       dismissUpdate: authed.computer.dismissUpdate.handler(async ({ context, input }) => {
         await deps.prisma.computerUpdate.updateMany({

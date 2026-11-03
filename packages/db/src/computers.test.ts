@@ -6,8 +6,11 @@ import {
   computerHomeKey,
   computerScopeKey,
   ensureComputerRecord,
+  expireLeasesForTerminalRuns,
   resolveMaxComputersPerUser,
+  resolveMaxRunsPerComputer,
   restoreBotUnderComputerQuota,
+  setMaxRunsPerComputer,
 } from "./computers.js";
 
 function fakePrisma(count = 0, existing = false) {
@@ -296,6 +299,106 @@ describe("resolveMaxComputersPerUser", () => {
     expect(resolveMaxComputersPerUser("3")).toBe(3);
     for (const value of ["-1", "1.5", "not-a-number"])
       expect(() => resolveMaxComputersPerUser(value)).toThrow(/positive integer/);
+  });
+});
+
+describe("resolveMaxRunsPerComputer", () => {
+  it("defaults to one run per computer so a shared computer is never oversubscribed", () => {
+    expect(resolveMaxRunsPerComputer(null)).toBe(1);
+    expect(resolveMaxRunsPerComputer(undefined)).toBe(1);
+    expect(resolveMaxRunsPerComputer(null, "")).toBe(1);
+    expect(resolveMaxRunsPerComputer(null, "  ")).toBe(1);
+  });
+
+  it("prefers a per-computer override over the instance default", () => {
+    expect(resolveMaxRunsPerComputer(3, "5")).toBe(3);
+    expect(resolveMaxRunsPerComputer(2)).toBe(2);
+  });
+
+  it("falls back to the instance default when the override is unset", () => {
+    expect(resolveMaxRunsPerComputer(null, "4")).toBe(4);
+    expect(resolveMaxRunsPerComputer(undefined, "4")).toBe(4);
+  });
+
+  it("ignores a nonsensical override rather than locking the computer shut", () => {
+    expect(resolveMaxRunsPerComputer(0, "2")).toBe(2);
+    expect(resolveMaxRunsPerComputer(-1, "2")).toBe(2);
+  });
+
+  it("rejects a nonsensical instance default", () => {
+    for (const value of ["0", "-1", "1.5", "not-a-number"]) {
+      expect(() => resolveMaxRunsPerComputer(null, value)).toThrow(/positive integer/);
+    }
+  });
+});
+
+describe("setMaxRunsPerComputer", () => {
+  it("rejects a value that is not a positive integer", async () => {
+    const prisma = { computer: { update: vi.fn() } };
+    for (const value of [0, -1, 1.5]) {
+      await expect(
+        setMaxRunsPerComputer(prisma as never, "computer-1", value),
+      ).rejects.toThrow(/positive integer/);
+    }
+    expect(prisma.computer.update).not.toHaveBeenCalled();
+  });
+
+  it("clears the override with null and reports the effective default", async () => {
+    const update = vi.fn(async () => ({}));
+    const prisma = { computer: { update } };
+    await expect(setMaxRunsPerComputer(prisma as never, "computer-1", null)).resolves.toBe(1);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "computer-1" },
+      data: { maxRunsPerComputer: null },
+    });
+  });
+});
+
+describe("expireLeasesForTerminalRuns", () => {
+  it("tombstones only leases whose run already finished", async () => {
+    const updateMany = vi.fn(async () => ({ count: 1 }));
+    const prisma = {
+      computerExecutionLease: {
+        findMany: vi.fn(async () => [
+          { id: "lease-done", runId: "run-done" },
+          { id: "lease-live", runId: "run-live" },
+        ]),
+        updateMany,
+      },
+      run: {
+        findMany: vi.fn(async () => [{ id: "run-done" }]),
+      },
+    };
+    await expect(
+      expireLeasesForTerminalRuns(prisma as never, ["completed", "failed", "cancelled"]),
+    ).resolves.toBe(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["lease-done"] } },
+      data: { expiresAt: new Date(0) },
+    });
+  });
+
+  it("leaves a running run's live lease alone", async () => {
+    const updateMany = vi.fn();
+    const prisma = {
+      computerExecutionLease: {
+        findMany: vi.fn(async () => [{ id: "lease-live", runId: "run-live" }]),
+        updateMany,
+      },
+      run: { findMany: vi.fn(async () => []) },
+    };
+    await expect(expireLeasesForTerminalRuns(prisma as never, ["completed"])).resolves.toBe(0);
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it("does no work when no lease is live", async () => {
+    const findManyRuns = vi.fn();
+    const prisma = {
+      computerExecutionLease: { findMany: vi.fn(async () => []), updateMany: vi.fn() },
+      run: { findMany: findManyRuns },
+    };
+    await expect(expireLeasesForTerminalRuns(prisma as never, ["completed"])).resolves.toBe(0);
+    expect(findManyRuns).not.toHaveBeenCalled();
   });
 });
 

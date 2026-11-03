@@ -2,6 +2,7 @@ import { computerSupportsTerminal, computerSupportsUpdate } from "@rakazo/adapte
 import type { ComputerStatus } from "@rakazo/contracts";
 import { ACTIVE_RUN_STATUSES, computerScreenSize } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
+import { resolveMaxRunsPerComputer } from "@rakazo/db";
 
 /** Mirrors computer.takeover: an execution lease blocks user control unless a takeover is pending. */
 export function executionBlocksUserTakeover(input: {
@@ -60,6 +61,7 @@ export function toComputerStatus(
     controlRunId?: string | null;
     homeRevision: string;
     maintenanceId?: string | null;
+    maxRunsPerComputer?: number | null;
   } | null,
   busyBotName: string | null = null,
 ): ComputerStatus {
@@ -93,5 +95,8 @@ export function toComputerStatus(
     busyBotName,
     canUpdate: computerSupportsUpdate(kind),
     terminalAvailable: computerSupportsTerminal(kind),
+    maxRunsPerComputer: resolveMaxRunsPerComputer(computer?.maxRunsPerComputer),
+    maxRunsPerComputerOverride:
+      computer?.maxRunsPerComputer !== null && computer?.maxRunsPerComputer !== undefined,
   };
 }

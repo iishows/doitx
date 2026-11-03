@@ -3,6 +3,10 @@ import { runContinueJob } from "@rakazo/adapter-kit";
 import type { StuckWorkStatus } from "@rakazo/core";
 import {
   isStuckWorkStatus,
+  STALLED_RUN_NOTIFY_AFTER_MS,
+  stalledRunAction,
+  stalledRunReminder,
+  stalledRunStoppedNotification,
   STUCK_WORK_NOTICE,
   STUCK_WORK_STATUSES,
   stuckWorkAction,
@@ -12,16 +16,34 @@ import {
   stuckWorkStoppedNotification,
 } from "@rakazo/core";
 import type { Prisma, PrismaClient, ThreadEvents } from "@rakazo/db";
-import { appendEventInTransaction, expireStuckRun, withTransactionRetry } from "@rakazo/db";
+import {
+  appendEventInTransaction,
+  expireStalledRun,
+  expireStuckRun,
+  findStalledRunningRuns,
+  stalledRunEpisodeAt,
+  withTransactionRetry,
+} from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import { ExpoPushProvider } from "./expo-push.js";
 
 type StuckCursor = { at: Date; id: string };
 
+/**
+ * Work that needs the user's attention because it is not moving.
+ *
+ * A wait's episode is its updatedAt, which a claim or answer changes. A running run's row is
+ * touched by its own lease heartbeat every minute, so its episode is the last user-visible
+ * output instead; that is also the clock its staleness is measured on.
+ */
 type StuckCandidate = {
   id: string;
-  status: StuckWorkStatus;
-  updatedAt: Date;
+  kind: "waiting" | "stalled";
+  /** Only meaningful for a wait; a stalled run's status is always "running". */
+  status: StuckWorkStatus | "running";
+  episodeAt: Date;
+  /** How long this has been stuck, from the same clock as the action threshold. */
+  stuckForMs: number;
   spaceId: string;
   threadId: string;
   botId: string;
@@ -39,10 +61,11 @@ type StuckCandidate = {
 export const STUCK_NOTICE_CLAIM_TTL_MS = 2 * 60 * 1000;
 
 /**
- * Remind, then cancel, queued runs and human waits that have been sitting still. The notice
- * stamp is keyed to this episode's updatedAt, so answering or reclaiming the run can remind
- * again later. A pending claim becomes delivered only after the push is accepted and is removed
- * when the push fails, so a crash or a dropped token can still remind.
+ * Remind, then cancel, work that has been sitting still: queued runs and human waits, and
+ * running runs that have shown the user nothing for a long time. The notice stamp is keyed
+ * to the episode, so the work moving on can remind again later. A pending claim becomes
+ * delivered only after the push is accepted and is removed when the push fails, so a crash
+ * or a dropped token can still remind.
  */
 export async function reconcileStuckWork(deps: {
   prisma: PrismaClient;
@@ -93,26 +116,92 @@ export async function reconcileStuckWork(deps: {
     const candidate = readyStuckRun(run, deps.now);
     return candidate ? [candidate] : [];
   });
-  const notices = due.length
-    ? await deps.prisma.event.findMany({
-        where: {
-          runId: { in: due.map((run) => run.id) },
-          type: "thread.meta",
-          payload: { path: ["notice"], equals: STUCK_WORK_NOTICE },
-        },
-        select: { runId: true, payload: true },
-      })
-    : [];
+
+  await applyStuckActions(deps, due);
+
+  const last = runs.at(-1);
+  if (runs.length < deps.batchSize || !last || !(last.updatedAt instanceof Date)) return undefined;
+  return { at: last.updatedAt, id: last.id };
+}
+
+/**
+ * Remind, then cancel, running runs that have shown the user nothing for a long time.
+ *
+ * Kept apart from the waiting sweep because it runs on a different clock: a running run's
+ * row is touched by its lease heartbeat every minute, so staleness is measured from its
+ * last user-visible output instead of updatedAt. Runs its own reconcile pass so a slow
+ * output query never delays the queue and human-wait reminders.
+ */
+export async function reconcileStalledRuns(deps: {
+  prisma: PrismaClient;
+  jobs: JobPublisher;
+  events?: ThreadEvents;
+  notifications?: NotificationProvider;
+  now: Date;
+  batchSize: number;
+}): Promise<void> {
+  await applyStuckActions(deps, await readyStalledRuns(deps));
+}
+
+/** Runs whose last user-visible output is old; bounded like the waiting batch. */
+async function readyStalledRuns(deps: {
+  prisma: PrismaClient;
+  now: Date;
+  batchSize: number;
+}): Promise<StuckCandidate[]> {
+  const stalled = await findStalledRunningRuns(deps.prisma, {
+    silentMs: STALLED_RUN_NOTIFY_AFTER_MS,
+    now: deps.now,
+    batchSize: deps.batchSize,
+  });
+  return stalled.map((run) => ({
+    id: run.id,
+    kind: "stalled",
+    status: "running",
+    episodeAt: run.lastOutputAt,
+    stuckForMs: deps.now.getTime() - run.lastOutputAt.getTime(),
+    spaceId: run.spaceId,
+    threadId: run.threadId,
+    botId: run.botId,
+    userId: run.userId,
+    taskId: run.taskId,
+    bot: run.bot,
+    thread: run.thread,
+  }));
+}
+
+async function applyStuckActions(
+  deps: {
+    prisma: PrismaClient;
+    jobs: JobPublisher;
+    events?: ThreadEvents;
+    notifications?: NotificationProvider;
+    now: Date;
+  },
+  due: StuckCandidate[],
+) {
+  if (due.length === 0) return;
+  const notices = await deps.prisma.event.findMany({
+    where: {
+      runId: { in: due.map((run) => run.id) },
+      type: "thread.meta",
+      payload: { path: ["notice"], equals: STUCK_WORK_NOTICE },
+    },
+    select: { runId: true, payload: true },
+  });
 
   for (const run of due) {
     const alreadyNotified = notices.some(
-      (notice) => notice.runId === run.id && noticeIsDelivered(notice.payload, run.updatedAt),
+      (notice) => notice.runId === run.id && noticeIsDelivered(notice.payload, run.episodeAt),
     );
-    const action = stuckWorkAction({
-      status: run.status,
-      ageMs: stuckWorkAgeMs(run.updatedAt, deps.now),
-      alreadyNotified,
-    });
+    const action =
+      run.kind === "stalled"
+        ? stalledRunAction({ silentForMs: run.stuckForMs, alreadyNotified })
+        : stuckWorkAction({
+            status: run.status as StuckWorkStatus,
+            ageMs: run.stuckForMs,
+            alreadyNotified,
+          });
     try {
       if (action === "notify") await remindStuckRun(deps, run);
       else if (action === "expire") await expireOne(deps, run);
@@ -120,25 +209,35 @@ export async function reconcileStuckWork(deps: {
       getLogger().error("stuck work", error);
     }
   }
-
-  const last = runs.at(-1);
-  if (runs.length < deps.batchSize || !last || !(last.updatedAt instanceof Date)) return undefined;
-  return { at: last.updatedAt, id: last.id };
 }
 
 function readyStuckRun(
-  run: Omit<Partial<StuckCandidate>, "status"> & { id: string; status?: string },
+  run: {
+    id: string;
+    status?: string;
+    updatedAt?: Date | null;
+    spaceId?: string | null;
+    threadId?: string | null;
+    botId?: string | null;
+    userId?: string | null;
+    taskId?: string | null;
+    bot?: { name: string; notifyOnFinish: boolean } | null;
+    thread?: { groupId: string | null } | null;
+  },
   now: Date,
 ): StuckCandidate | null {
   if (!run.status || !isStuckWorkStatus(run.status)) return null;
   if (!(run.updatedAt instanceof Date)) return null;
-  if (stuckWorkAgeMs(run.updatedAt, now) < stuckWorkDueAfterMs(run.status)) return null;
+  const stuckForMs = stuckWorkAgeMs(run.updatedAt, now);
+  if (stuckForMs < stuckWorkDueAfterMs(run.status)) return null;
   if (!run.spaceId || !run.threadId || !run.botId || !run.userId || !run.taskId) return null;
   if (!run.bot || !run.thread) return null;
   return {
     id: run.id,
+    kind: "waiting",
     status: run.status,
-    updatedAt: run.updatedAt,
+    episodeAt: run.updatedAt,
+    stuckForMs,
     spaceId: run.spaceId,
     threadId: run.threadId,
     botId: run.botId,
@@ -168,16 +267,16 @@ function stuckNoticePayload(payload: unknown): StuckNoticePayload | null {
 }
 
 /** A stamp counts as delivered once the push was accepted. Pending claims do not. */
-function noticeIsDelivered(payload: unknown, updatedAt: Date): boolean {
+function noticeIsDelivered(payload: unknown, episodeAt: Date): boolean {
   const record = stuckNoticePayload(payload);
-  if (!record || record.updatedAt !== updatedAt.toISOString()) return false;
+  if (!record || record.updatedAt !== episodeAt.toISOString()) return false;
   return record.state !== "pending";
 }
 
-function pendingClaimFresh(payload: unknown, updatedAt: Date, now: Date): boolean {
+function pendingClaimFresh(payload: unknown, episodeAt: Date, now: Date): boolean {
   const record = stuckNoticePayload(payload);
   if (!record) return false;
-  if (record.state !== "pending" || record.updatedAt !== updatedAt.toISOString()) return false;
+  if (record.state !== "pending" || record.updatedAt !== episodeAt.toISOString()) return false;
   if (typeof record.claimedAt !== "string") return false;
   const claimedAt = Date.parse(record.claimedAt);
   if (!Number.isFinite(claimedAt)) return false;
@@ -185,10 +284,10 @@ function pendingClaimFresh(payload: unknown, updatedAt: Date, now: Date): boolea
   return age >= 0 && age < STUCK_NOTICE_CLAIM_TTL_MS;
 }
 
-function deliveredNotice(run: StuckCandidate): Prisma.InputJsonValue {
+function deliveredNotice(episodeAt: Date): Prisma.InputJsonValue {
   return {
     notice: STUCK_WORK_NOTICE,
-    updatedAt: run.updatedAt.toISOString(),
+    updatedAt: episodeAt.toISOString(),
     state: "delivered",
   };
 }
@@ -209,7 +308,10 @@ async function remindStuckRun(
     deps.prisma.$transaction((tx) => claimStuckReminder(tx, run, deps.now)),
   );
   if (!claimId) return;
-  const reminder = stuckWorkReminder(run.status, run.bot.name);
+  const reminder =
+    run.kind === "stalled"
+      ? stalledRunReminder(run.bot.name)
+      : stuckWorkReminder(run.status as StuckWorkStatus, run.bot.name);
   const delivery = await sendStuckNotice(deps.notifications, run, {
     kind: reminder.kind,
     title: reminder.title,
@@ -234,23 +336,31 @@ async function pushCanDeliver(
   return notifications.hasPushRecipient(userId);
 }
 
+/** Re-reads the episode under the thread lock so a run that moved on is not reminded. */
+async function currentEpisodeAt(
+  tx: Prisma.TransactionClient,
+  run: StuckCandidate,
+): Promise<Date | null> {
+  const current = await tx.run.findUnique({
+    where: { id: run.id },
+    select: { status: true, updatedAt: true, startedAt: true },
+  });
+  if (!current || current.status !== run.status) return null;
+  if (run.kind === "stalled") {
+    // Output, not updatedAt: the lease heartbeat rewrites updatedAt every minute.
+    return stalledRunEpisodeAt(tx, run.id, current.startedAt ?? run.episodeAt);
+  }
+  return current.updatedAt;
+}
+
 async function claimStuckReminder(
   tx: Prisma.TransactionClient,
   run: StuckCandidate,
   now: Date,
 ): Promise<string | null> {
   await tx.$queryRaw`SELECT id FROM threads WHERE id = ${run.threadId} FOR UPDATE`;
-  const current = await tx.run.findUnique({
-    where: { id: run.id },
-    select: { status: true, updatedAt: true },
-  });
-  if (
-    !current ||
-    current.status !== run.status ||
-    current.updatedAt.getTime() !== run.updatedAt.getTime()
-  ) {
-    return null;
-  }
+  const episodeAt = await currentEpisodeAt(tx, run);
+  if (!episodeAt || episodeAt.getTime() !== run.episodeAt.getTime()) return null;
   const existing = await tx.event.findMany({
     where: {
       runId: run.id,
@@ -259,8 +369,8 @@ async function claimStuckReminder(
     },
     select: { payload: true },
   });
-  if (existing.some((notice) => noticeIsDelivered(notice.payload, current.updatedAt))) return null;
-  if (existing.some((notice) => pendingClaimFresh(notice.payload, current.updatedAt, now))) {
+  if (existing.some((notice) => noticeIsDelivered(notice.payload, episodeAt))) return null;
+  if (existing.some((notice) => pendingClaimFresh(notice.payload, episodeAt, now))) {
     return null;
   }
   await tx.event.deleteMany({
@@ -269,7 +379,7 @@ async function claimStuckReminder(
       type: "thread.meta",
       AND: [
         { payload: { path: ["notice"], equals: STUCK_WORK_NOTICE } },
-        { payload: { path: ["updatedAt"], equals: current.updatedAt.toISOString() } },
+        { payload: { path: ["updatedAt"], equals: episodeAt.toISOString() } },
         { payload: { path: ["state"], equals: "pending" } },
       ],
     },
@@ -282,7 +392,7 @@ async function claimStuckReminder(
     runId: run.id,
     payload: {
       notice: STUCK_WORK_NOTICE,
-      updatedAt: current.updatedAt.toISOString(),
+      updatedAt: episodeAt.toISOString(),
       state: "pending",
       claimedAt: now.toISOString(),
     },
@@ -298,7 +408,7 @@ async function markStuckNoticeDelivered(
   await tx.$queryRaw`SELECT id FROM threads WHERE id = ${run.threadId} FOR UPDATE`;
   await tx.event.update({
     where: { id: eventId },
-    data: { payload: deliveredNotice(run) },
+    data: { payload: deliveredNotice(run.episodeAt) },
   });
 }
 
@@ -318,13 +428,21 @@ async function expireOne(
 ) {
   const expired = await withTransactionRetry(() =>
     deps.prisma.$transaction((tx) =>
-      expireStuckRun(tx, {
-        runId: run.id,
-        threadId: run.threadId,
-        status: run.status,
-        updatedAt: run.updatedAt,
-        now: deps.now,
-      }),
+      run.kind === "stalled"
+        ? expireStalledRun(tx, {
+            runId: run.id,
+            threadId: run.threadId,
+            startedAt: run.episodeAt,
+            lastOutputAt: run.episodeAt,
+            now: deps.now,
+          })
+        : expireStuckRun(tx, {
+            runId: run.id,
+            threadId: run.threadId,
+            status: run.status as StuckWorkStatus,
+            updatedAt: run.episodeAt,
+            now: deps.now,
+          }),
     ),
   );
   if (!expired) return;
@@ -337,7 +455,10 @@ async function expireOne(
     });
   }
   if (!deps.notifications || !noticesEnabled(run)) return;
-  const stopped = stuckWorkStoppedNotification(run.status, run.bot.name);
+  const stopped =
+    run.kind === "stalled"
+      ? stalledRunStoppedNotification(run.bot.name)
+      : stuckWorkStoppedNotification(run.status as StuckWorkStatus, run.bot.name);
   await sendStuckNotice(deps.notifications, run, {
     kind: stopped.kind,
     title: stopped.title,

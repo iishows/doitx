@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,6 +37,14 @@ const LOGIN_SHELL_STARTUP = [
   "fi",
 ].join("\n");
 
+/** One home, in the two forms the two sides of this test need. */
+type Home = {
+  /** Where Node writes files: a native path for this host. */
+  fs: string;
+  /** What the shell sees: POSIX on Windows, where MSYS maps the temp dir to /tmp. */
+  shell: string;
+};
+
 describe("agent shell PATH after Debian login startup", () => {
   const homes: string[] = [];
 
@@ -40,18 +56,18 @@ describe("agent shell PATH after Debian login startup", () => {
     "keeps the sandbox home bin visible with no home profile (%s)",
     (shell) => {
       const home = createHome();
-      installHello(home);
+      installHello(home.fs);
 
       const result = loginShell(home, 'printf "%s\\n" "$PATH"; hello', LOGIN_SHELL_STARTUP, shell);
 
-      expect(result.stdout.split("\n")[0]?.split(":")[0]).toBe(`${home}/.local/bin`);
+      expect(result.stdout.split("\n")[0]?.split(":")[0]).toBe(`${home.shell}/.local/bin`);
       expect(result.stdout).toContain("hello-from-local-bin");
     },
   );
 
   it("does not duplicate an entry that is already present", () => {
     const home = createHome();
-    const preset = `${home}/.local/bin:/usr/bin:/bin`;
+    const preset = `${home.shell}/.local/bin:/usr/bin:/bin`;
 
     const result = loginShell(
       home,
@@ -60,8 +76,8 @@ describe("agent shell PATH after Debian login startup", () => {
       [
         `PATH=${shellQuote(preset)}`,
         "export PATH",
-        `. ${shellQuote(localBinSnippet)}`,
-        `. ${shellQuote(localBinSnippet)}`,
+        `. ${shellQuote(posixPath(localBinSnippet))}`,
+        `. ${shellQuote(posixPath(localBinSnippet))}`,
       ].join("\n"),
     );
 
@@ -70,22 +86,26 @@ describe("agent shell PATH after Debian login startup", () => {
 
   it("does not treat a longer path prefix as the sandbox bin", () => {
     const home = createHome();
-    const lookalike = `${home}/.local/bin-extra`;
-    mkdirSync(lookalike, { recursive: true });
+    const lookalikeFs = `${home.fs}/.local/bin-extra`;
+    mkdirSync(lookalikeFs, { recursive: true });
+    const lookalike = posixPath(lookalikeFs);
 
     const result = loginShell(
       home,
       'printf "%s" "$PATH"',
-      `PATH=${shellQuote(`${lookalike}:/usr/bin`)}\nexport PATH\n. ${shellQuote(localBinSnippet)}`,
+      `PATH=${shellQuote(`${lookalike}:/usr/bin`)}\nexport PATH\n. ${shellQuote(posixPath(localBinSnippet))}`,
     );
 
-    expect(result.stdout.split(":")).toEqual([`${home}/.local/bin`, lookalike, "/usr/bin"]);
+    expect(result.stdout.split(":")).toEqual([`${home.shell}/.local/bin`, lookalike, "/usr/bin"]);
   });
 
   it("leaves PATH alone when HOME is unset", () => {
     const result = execFileSync(
-      "sh",
-      ["-c", `unset HOME\n. ${shellQuote(localBinSnippet)}\nprintf "%s" "$PATH"`],
+      shellBinary("sh"),
+      [
+        "-c",
+        `unset HOME\n. ${shellQuote(posixPath(localBinSnippet))}\nprintf "%s" "$PATH"`,
+      ],
       {
         encoding: "utf8",
         env: { PATH: "/usr/bin:/bin" },
@@ -97,14 +117,14 @@ describe("agent shell PATH after Debian login startup", () => {
 
   it("still leaves the sandbox bin on PATH when a home profile prepends another directory", () => {
     const home = createHome();
-    mkdirSync(path.join(home, "bin"));
-    writeFileSync(path.join(home, ".profile"), 'PATH="$HOME/bin:$PATH"\nexport PATH\n');
+    mkdirSync(path.join(home.fs, "bin"));
+    writeFileSync(path.join(home.fs, ".profile"), 'PATH="$HOME/bin:$PATH"\nexport PATH\n');
 
     const result = loginShell(home, 'printf "%s" "$PATH"');
 
     const entries = result.stdout.split(":");
-    expect(entries[0]).toBe(`${home}/bin`);
-    expect(entries).toContain(`${home}/.local/bin`);
+    expect(entries[0]).toBe(`${home.shell}/bin`);
+    expect(entries).toContain(`${home.shell}/.local/bin`);
   });
 
   it("installs the snippet where Debian login shells source it", () => {
@@ -117,10 +137,10 @@ describe("agent shell PATH after Debian login startup", () => {
     expect(dockerfile).toContain("/etc/profile.d/rakazo-local-bin.sh");
   });
 
-  function createHome(): string {
-    const home = mkdtempSync(path.join(tmpdir(), "rakazo-local-bin-"));
-    homes.push(home);
-    return home;
+  function createHome(): Home {
+    const fs = mkdtempSync(path.join(tmpdir(), "rakazo-local-bin-"));
+    homes.push(fs);
+    return { fs, shell: posixPath(fs) };
   }
 });
 
@@ -133,22 +153,56 @@ function installHello(home: string): void {
 }
 
 function loginShell(
-  home: string,
+  home: Home,
   command: string,
   startup = LOGIN_SHELL_STARTUP,
   shell = "sh",
 ): { stdout: string } {
-  const stdout = execFileSync(shell, ["-c", `${startup}\n${command}`], {
+  const stdout = execFileSync(shellBinary(shell), ["-c", `${startup}\n${command}`], {
     encoding: "utf8",
     env: {
-      HOME: home,
+      HOME: home.shell,
       LOGNAME: "rakazo",
-      PATH: `${home}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
+      // The PATH the snippet runs with, so it must stay POSIX for the snippet's parsing.
+      PATH: `${home.shell}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`,
       USER: "rakazo",
-      RAKAZO_LOCAL_BIN_SNIPPET: localBinSnippet,
+      RAKAZO_LOCAL_BIN_SNIPPET: posixPath(localBinSnippet),
     },
   });
   return { stdout: stdout.trim() };
+}
+
+/**
+ * The shell to run, resolved against the real PATH before a test replaces PATH for the
+ * snippet. Resolving "sh" through that replacement would search Debian's directories and
+ * miss a shell that lives elsewhere, such as Git's sh.exe on Windows.
+ */
+function shellBinary(name: string): string {
+  const extensions = process.platform === "win32" ? [".exe", ""] : [""];
+  for (const directory of (process.env.PATH ?? "").split(path.delimiter)) {
+    if (!directory) continue;
+    for (const extension of extensions) {
+      const candidate = path.join(directory, `${name}${extension}`);
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return name;
+}
+
+/**
+ * The shell's own spelling of a path. On Windows that is MSYS form (/tmp/...), which is
+ * what the snippet manipulates; elsewhere it is the path unchanged.
+ */
+function posixPath(target: string): string {
+  if (process.platform !== "win32") return target;
+  // Ask the shell for its view of the containing directory (works for files and dirs
+  // alike), then reattach the name unchanged.
+  const directory = execFileSync(
+    shellBinary("sh"),
+    ["-c", 'cd "$1" && pwd', "sh", path.dirname(target)],
+    { encoding: "utf8" },
+  ).trim();
+  return path.posix.join(directory, path.basename(target));
 }
 
 function shellQuote(value: string): string {

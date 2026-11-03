@@ -175,6 +175,32 @@ export async function startNextWaitingRun(
   if (next) await deps.jobs.enqueue(runContinueJob(next.id));
 }
 
+/**
+ * Start the oldest run waiting on this computer, whichever bot owns it.
+ *
+ * A shared computer is held by one run at a time across all its bots, so the run that
+ * releases it must hand off to the earliest waiter even when that waiter belongs to a
+ * different bot. Oldest-first keeps the handoff fair rather than letting one bot's runs
+ * keep winning the slot.
+ */
+export async function startNextWaitingRunForComputer(
+  deps: ExecutorDeps,
+  computerId: string,
+  releasedBy: string,
+): Promise<void> {
+  const next = await deps.prisma.run.findFirst({
+    where: {
+      status: "queued",
+      id: { not: releasedBy },
+      bot: { computerId },
+      OR: [{ wakeAt: null }, { wakeAt: { lte: new Date() } }],
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true },
+  });
+  if (next) await deps.jobs.enqueue(runContinueJob(next.id));
+}
+
 /** Open the model only while this worker still owns the running lease. */
 export function mayOpenModelStream(
   run: { status: string; leaseOwner: string | null; leaseFence: number | null } | null,

@@ -31,6 +31,7 @@ import {
   createRunExecutor,
   createRunSandbox,
   createRunSecretWriter,
+  createStaleExecutionLeaseSweeper,
   createTicketChangeNotifier,
   createWebProvider,
   databaseCapacityBackoffMs,
@@ -60,6 +61,7 @@ import {
   reconcileCloudAgents,
   reconcileComputerUpdates,
   reconcilePurchases,
+  reconcileStalledRuns,
   resolveDeploymentModel,
   resolvePiSessionRoot,
   resolveSandboxProvider,
@@ -356,6 +358,16 @@ async function main() {
     ),
     reconcileHomeStorage: homeStorageSweeper(home),
     reconcileIdleComputers: createIdleComputerSweeper({ prisma, jobs }),
+    reconcileStaleExecutionLeases: createStaleExecutionLeaseSweeper({ prisma }),
+    reconcileStalledRuns: () =>
+      reconcileStalledRuns({
+        prisma,
+        jobs,
+        events,
+        notifications,
+        now: new Date(),
+        batchSize: 100,
+      }),
     reconcileDeadJobs: inMemoryJobs ? undefined : createDeadJobPruner(pool),
   });
   let stopHealth: (() => Promise<void>) | undefined;

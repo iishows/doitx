@@ -1,7 +1,12 @@
 import type { RealtimeFanout } from "@rakazo/adapter-kit";
 import type { MessageBlock } from "@rakazo/contracts";
 import type { StuckWorkStatus } from "@rakazo/core";
-import { ACTIVE_RUN_STATUSES, stuckWorkExpiredNonce, stuckWorkStatusMessage } from "@rakazo/core";
+import {
+  ACTIVE_RUN_STATUSES,
+  STALLED_RUN_MESSAGE,
+  stuckWorkExpiredNonce,
+  stuckWorkStatusMessage,
+} from "@rakazo/core";
 import type { Prisma, PrismaClient } from "./client.js";
 import { expireComputerExecutionLeases } from "./computers.js";
 import {
@@ -12,6 +17,7 @@ import {
   transientRunEventsWhere,
 } from "./events.js";
 import { createThreadMessageInTransaction } from "./messages.js";
+import { stalledRunEpisodeAt } from "./run-stall.js";
 import { clearEndedRunState } from "./run-secrets.js";
 import { withTransactionRetry } from "./transaction-retry.js";
 
@@ -55,17 +61,31 @@ export async function expireStuckRun(
   if (input.status === "waiting_takeover" && (await userHasTakeoverScreen(tx, input.runId))) {
     return null;
   }
+  const message = stuckWorkStatusMessage(input.status);
   const cancelled = await tx.run.updateMany({
     where: { id: input.runId, status: input.status, updatedAt: current.updatedAt },
     data: {
       status: "cancelled",
-      error: stuckWorkStatusMessage(input.status),
+      error: message,
       completedAt: input.now,
       leaseOwner: null,
       leaseExpiresAt: null,
     },
   });
   if (cancelled.count !== 1) return null;
+  return finishStuckCancel(tx, { runId: input.runId, message, now: input.now });
+}
+
+/**
+ * Cancel a run that already proved it is stuck. The caller owns the row lock on the thread
+ * and the compare-and-set that decided this cancel; this writes the cancel and everything
+ * that must follow it — attempts, the task, the status line, transient events, lease and
+ * control release, and the continuation run.
+ */
+async function finishStuckCancel(
+  tx: Prisma.TransactionClient,
+  input: { runId: string; message: string; now: Date },
+): Promise<ExpireStuckRunResult | null> {
   await clearEndedRunState(tx, [input.runId]);
 
   await tx.attempt.updateMany({
@@ -95,8 +115,7 @@ export async function expireStuckRun(
     });
   }
 
-  const text = stuckWorkStatusMessage(input.status);
-  const blocks: MessageBlock[] = [{ kind: "meta", text }];
+  const blocks: MessageBlock[] = [{ kind: "meta", text: input.message }];
   const message = await createThreadMessageInTransaction(tx, {
     threadId: run.threadId,
     role: "system",
@@ -152,6 +171,51 @@ export async function expireStuckRun(
     botId: run.botId,
   });
   return { seq: cancelledEvent.seq, continuationRunId };
+}
+
+export interface ExpireStalledRunInput {
+  runId: string;
+  threadId: string;
+  /** Run start, the silence clock before any output landed. */
+  startedAt: Date;
+  /** The silence clock this cancel was decided on. */
+  lastOutputAt: Date;
+  now: Date;
+}
+
+/**
+ * Cancel a running run that has shown the user nothing for a long time.
+ *
+ * The fence is the last user-visible output, not `updatedAt`: a running run's row is
+ * touched by its own lease heartbeat every minute, so an `updatedAt` fence would never
+ * match and the cancel would silently do nothing. Holding the thread lock makes the
+ * re-read a real compare-and-set, because writing a message also locks the thread.
+ */
+export async function expireStalledRun(
+  tx: Prisma.TransactionClient,
+  input: ExpireStalledRunInput,
+): Promise<ExpireStuckRunResult | null> {
+  await tx.$queryRaw`SELECT id FROM threads WHERE id = ${input.threadId} FOR UPDATE`;
+  const current = await tx.run.findUnique({
+    where: { id: input.runId },
+    select: { status: true, startedAt: true },
+  });
+  if (!current || current.status !== "running") return null;
+  const episodeAt = await stalledRunEpisodeAt(tx, input.runId, current.startedAt ?? input.startedAt);
+  if (episodeAt.getTime() !== input.lastOutputAt.getTime()) return null;
+  const message = STALLED_RUN_MESSAGE;
+  const cancelled = await tx.run.updateMany({
+    where: { id: input.runId, status: "running" },
+    data: {
+      status: "cancelled",
+      error: message,
+      completedAt: input.now,
+      leaseOwner: null,
+      leaseExpiresAt: null,
+    },
+  });
+  if (cancelled.count !== 1) return null;
+  return finishStuckCancel(tx, { runId: input.runId, message, now: input.now });
 }
 
 /**

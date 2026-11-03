@@ -13,17 +13,21 @@ import {
   abortableDelay,
   isRetryableError,
   parseScreenLeaseId,
+  pressuredRunLimit,
   screenLeaseId,
+  TERMINAL_RUN_STATUSES,
   WAITING_ON_USER_RUN_STATUSES,
   WORKING_RUN_STATUSES,
 } from "@rakazo/core";
 import type { PrismaClient, ThreadEvents } from "@rakazo/db";
 import {
   expireComputerExecutionLeases,
+  expireLeasesForTerminalRuns,
   expireStuckRun,
   parseComputerMode,
   recordComputerRunEnd,
   recordComputerRunStart,
+  resolveMaxRunsPerComputer,
   withTransactionRetry,
 } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
@@ -819,6 +823,12 @@ export async function acquireComputerExecutionLease(
     runId: string;
     botId: string;
     resumeHeldLease?: boolean;
+    /**
+     * Live pressure of the machine, observed by the caller before the attempt. Absent means
+     * the provider could not report it, which must not block a run: the static ceiling then
+     * stands. The caller cannot observe this inside the transaction, so it is passed in.
+     */
+    pressure?: { memRatio: number; throttledRatio: number; oomKills: number } | null;
   },
 ): Promise<ComputerExecutionLease | null> {
   const computer = await prisma.computer.findUniqueOrThrow({ where: { id: input.computerId } });
@@ -830,48 +840,70 @@ export async function acquireComputerExecutionLease(
   await releaseLeaseHeldByParkedRun(prisma, input.computerId, input.botId);
   const now = new Date();
   const expiresAt = new Date(now.getTime() + EXECUTION_LEASE_MS);
-  const [reclaimed] = await prisma.computerExecutionLease.updateManyAndReturn({
-    where: {
-      computerId: input.computerId,
-      botId: input.botId,
-      OR: [{ expiresAt: { lt: now } }, ...(input.resumeHeldLease ? [{ runId: input.runId }] : [])],
-    },
-    data: {
-      runId: input.runId,
-      expiresAt,
-      fence: { increment: 1 },
-    },
-    select: { fence: true },
+  // Admission is serialized per computer: without the lock two bots could both count a
+  // free slot and both insert — the very oversubscription this guards against. Count and
+  // write share one transaction so a rejected admission leaves nothing behind.
+  const limit = pressuredRunLimit({
+    staticLimit: resolveMaxRunsPerComputer(computer.maxRunsPerComputer),
+    pressure: input.pressure ?? null,
   });
-  if (reclaimed) {
-    return validateAcquiredComputerLease(prisma, {
-      computerId: input.computerId,
-      botId: input.botId,
-      runId: input.runId,
-      fence: reclaimed.fence,
-    });
-  }
+  let acquired: { fence: number } | null;
   try {
-    const created = await prisma.computerExecutionLease.create({
-      data: {
-        computerId: input.computerId,
-        botId: input.botId,
-        runId: input.runId,
-        fence: 1,
-        expiresAt,
-      },
-      select: { fence: true },
-    });
-    return validateAcquiredComputerLease(prisma, {
-      computerId: input.computerId,
-      botId: input.botId,
-      runId: input.runId,
-      fence: created.fence,
-    });
+    acquired = await withTransactionRetry(() =>
+      prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${input.computerId}, 2))::text`;
+        const live = await tx.computerExecutionLease.count({
+          where: { computerId: input.computerId, expiresAt: { gt: now } },
+        });
+        const own = await tx.computerExecutionLease.findUnique({
+          where: { computerId_botId: { computerId: input.computerId, botId: input.botId } },
+          select: { runId: true, expiresAt: true },
+        });
+        // Resuming this run's own live lease adds no occupant, so it always proceeds;
+        // reviving an expired row or taking a fresh slot does, and must fit the ceiling.
+        const resumesOwnLiveLease =
+          own !== null &&
+          own.expiresAt > now &&
+          own.runId === input.runId &&
+          input.resumeHeldLease === true;
+        if (!resumesOwnLiveLease && live >= limit) return null;
+        const [reclaimed] = await tx.computerExecutionLease.updateManyAndReturn({
+          where: {
+            computerId: input.computerId,
+            botId: input.botId,
+            OR: [
+              { expiresAt: { lt: now } },
+              ...(input.resumeHeldLease ? [{ runId: input.runId }] : []),
+            ],
+          },
+          data: { runId: input.runId, expiresAt, fence: { increment: 1 } },
+          select: { fence: true },
+        });
+        if (reclaimed) return { fence: reclaimed.fence };
+        const created = await tx.computerExecutionLease.create({
+          data: {
+            computerId: input.computerId,
+            botId: input.botId,
+            runId: input.runId,
+            fence: 1,
+            expiresAt,
+          },
+          select: { fence: true },
+        });
+        return { fence: created.fence };
+      }),
+    );
   } catch (error) {
     if (isUniqueConstraintError(error)) throw new ComputerBusyError();
     throw error;
   }
+  if (!acquired) throw new ComputerBusyError();
+  return validateAcquiredComputerLease(prisma, {
+    computerId: input.computerId,
+    botId: input.botId,
+    runId: input.runId,
+    fence: acquired.fence,
+  });
 }
 
 async function validateAcquiredComputerLease(
@@ -947,6 +979,24 @@ export async function releaseComputerExecutionLease(
 
 function isUniqueConstraintError(error: unknown) {
   return Boolean(error && typeof error === "object" && "code" in error && error.code === "P2002");
+}
+
+/**
+ * Tombstone leases left behind by runs that already finished.
+ *
+ * Releasing a lease is the last thing a run does, so a worker that dies in between —
+ * or a crash between marking the run terminal and releasing — leaves a live lease on a
+ * finished run. The computer then reads as held until that lease expires on its own,
+ * and with a per-computer ceiling of 1 that blocks every other bot in the meantime.
+ * Calling this every reconcile tick also cleans up whatever the previous process left.
+ */
+export function createStaleExecutionLeaseSweeper(deps: { prisma: PrismaClient }): () => Promise<void> {
+  return async () => {
+    const reclaimed = await expireLeasesForTerminalRuns(deps.prisma, TERMINAL_RUN_STATUSES);
+    if (reclaimed > 0) {
+      getLogger().info("reclaimed execution leases", { count: reclaimed });
+    }
+  };
 }
 
 export type ComputerReplaceMode = "recover" | "reset" | "update";

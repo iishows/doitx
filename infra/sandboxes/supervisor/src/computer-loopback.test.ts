@@ -2,10 +2,10 @@ import type * as NodeFsPromises from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
 import { Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 import { resolveSupervisorToken } from "@rakazo/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  COMPUTER_IMAGE,
   computerBridgeNameFor,
   computerNetworkNameFor,
   computerNetworkOwnerFor,
@@ -52,6 +52,16 @@ vi.mock("node:fs/promises", async (importOriginal) => ({
 
 let screen: http.Server;
 let screenPort: string;
+
+/**
+ * The data directory the supervisor actually uses: DATA_DIR resolved against the repository
+ * root, exactly as index.ts does. Resolving it here too keeps every derived path — and the
+ * owner label hashed from it — identical whatever the install location or host platform.
+ */
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+function resolvedDataDir(): string {
+  return path.resolve(repositoryRoot, process.env.DATA_DIR ?? "./data");
+}
 
 beforeEach(async () => {
   vi.resetModules();
@@ -246,7 +256,7 @@ describe("computer loopback provision lifecycle", () => {
   ])("matches publication on stopped container reuse: %j", async ({ enabled, hosts, resumed }) => {
     vi.stubEnv("SANDBOX_CONTROL_VIA_LOOPBACK", String(enabled));
     const { supervisorApp } = await import("./index.js");
-    const homePath = path.join(process.env.DATA_DIR!, "homes", "bot");
+    const homePath = path.join(resolvedDataDir(), "homes", "bot");
     const info = {
       Image: "test-image-id",
       Config: {
@@ -336,7 +346,7 @@ describe("provisioning network rollback", () => {
     return { network, container };
   }
 
-  async function provision(homePath = path.join(process.env.DATA_DIR!, "homes", "bot")) {
+  async function provision(homePath = path.join(resolvedDataDir(), "homes", "bot")) {
     const { supervisorApp } = await import("./index.js");
     return supervisorApp.request("/computers", {
       method: "POST",
@@ -367,7 +377,7 @@ describe("provisioning network rollback", () => {
               // The supervisor resolves both dataDir and home to host paths, so
               // this Destination has to be resolved the same way or the mount
               // never matches and the subpath assertion below is skipped.
-              Destination: path.resolve(process.env.DATA_DIR!),
+              Destination: resolvedDataDir(),
               Source: "/var/lib/docker/volumes/example_appdata/_data",
             },
           ],
@@ -505,7 +515,7 @@ describe("provisioning network rollback", () => {
 
 describe("restricted egress rekeying", () => {
   function setupExisting(botNet: string) {
-    const homePath = path.join(process.env.DATA_DIR!, "homes", "bot");
+    const homePath = path.join(resolvedDataDir(), "homes", "bot");
     const info = {
       Image: "test-image-id",
       Config: {
@@ -542,7 +552,7 @@ describe("restricted egress rekeying", () => {
 
   async function provision() {
     const { supervisorApp } = await import("./index.js");
-    const homePath = path.join(process.env.DATA_DIR!, "homes", "bot");
+    const homePath = path.join(resolvedDataDir(), "homes", "bot");
     return supervisorApp.request("/computers", {
       method: "POST",
       headers: {
@@ -744,7 +754,7 @@ describe("space computer limit enforcement", () => {
   async function provisionBot(
     botId = "bot-new",
     spaceId = "space-1",
-    homePath = path.join(process.env.DATA_DIR!, "homes", botId),
+    homePath = path.join(resolvedDataDir(), "homes", botId),
   ) {
     const { supervisorApp } = await import("./index.js");
     return supervisorApp.request("/computers", {
@@ -938,10 +948,13 @@ describe("space computer limit enforcement", () => {
           return [];
         }
         // Legacy managed computer: COMPUTER_IMAGE + workspaceId, no rakazo.managed.
+        // Resolve the image the supervisor itself uses: it loads the root env on import,
+        // which can differ from this file’s load-time constant (e.g. a pinned tag).
+        const { COMPUTER_IMAGE: image } = await import("./computer-spec.js");
         return [
           {
             Id: "legacy",
-            Image: COMPUTER_IMAGE,
+            Image: image,
             Labels: { "rakazo.workspaceId": "space-1", "rakazo.botId": "legacy-bot" },
           },
         ];
@@ -1673,7 +1686,7 @@ describe("screen registry across run boundaries", () => {
       body: JSON.stringify({
         botId: "bot",
         spaceId: "space",
-        homePath: path.join(process.env.DATA_DIR!, "homes", "bot"),
+        homePath: path.join(resolvedDataDir(), "homes", "bot"),
       }),
     });
     await vi.waitFor(() => expect(mocks.docker.createNetwork).toHaveBeenCalled());
@@ -2017,7 +2030,7 @@ describe("screen registry across run boundaries", () => {
 
 describe("computer network reclaim", () => {
   const botNet = computerNetworkNameFor("bot");
-  const homePath = () => path.join(process.env.DATA_DIR!, "homes", "bot");
+  const homePath = () => path.join(resolvedDataDir(), "homes", "bot");
   const headers = {
     authorization: `Bearer ${resolveSupervisorToken(process.env)}`,
     "x-rakazo-bot-id": "bot",
@@ -2308,7 +2321,7 @@ describe("computer network reclaim", () => {
     }
 
     function ownerLabel() {
-      return computerNetworkOwnerFor(process.env.DATA_DIR!, undefined);
+      return computerNetworkOwnerFor(resolvedDataDir(), undefined);
     }
 
     it("removes only its own labeled networks that no container uses", async () => {
@@ -2448,7 +2461,10 @@ describe("computer network reclaim", () => {
           expect.objectContaining({
             Name: botNet,
             Labels: {
-              "rakazo.computerOwner": computerNetworkOwnerFor(process.env.DATA_DIR!, undefined),
+              "rakazo.computerOwner": computerNetworkOwnerFor(
+                resolvedDataDir(),
+                undefined,
+              ),
               "rakazo.botId": "bot",
             },
             ...(egress === "restricted"

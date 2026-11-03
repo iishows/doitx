@@ -2,7 +2,6 @@
 import base64
 import ctypes
 import errno
-import fcntl
 import importlib.machinery
 import importlib.util
 import json
@@ -715,6 +714,7 @@ class ControlArgvTest(unittest.TestCase):
         self.assertEqual(run.call_args.kwargs["timeout"], control.FOCUS_COMPLETION_SEC)
         self.assertGreater(control.FOCUS_COMPLETION_SEC, control.LAUNCH_SPAWN_POLL_SEC)
 
+    @unittest.skipUnless(sys.platform.startswith("linux"), "needs a POSIX shell")
     def test_slow_focus_is_not_reported_before_the_wrapper_exits(self):
         with tempfile.TemporaryDirectory() as tmp:
             script = Path(tmp) / "rakazo-focus-or-launch"
@@ -854,7 +854,12 @@ class ControlArgvTest(unittest.TestCase):
         finally:
             control.NATIVE_CAPTURES.clear()
 
+    @unittest.skipUnless(
+        sys.platform.startswith("linux"), "compiles and loads a Linux shared object"
+    )
     def test_xcapture_survives_dead_display_socket_and_xio_error(self):
+        import fcntl
+
         source = Path(__file__).with_name("xcapture.c")
         key = ["env", "DISPLAY=:100", "xdotool", "key", "--clearmodifiers", "a"]
         with tempfile.TemporaryDirectory() as tmp:
@@ -1164,6 +1169,7 @@ class ScriptTest(unittest.TestCase):
                     proc.wait()
 
 
+@unittest.skipUnless(sys.platform.startswith("linux"), "runs the Debian user-env shell script")
 class ComputerUserEnvTest(unittest.TestCase):
     def run_user_env(self, root, before=""):
         computer = Path(__file__).parent
@@ -1221,6 +1227,7 @@ import ctypes
 import textwrap
 
 
+@unittest.skipUnless(sys.platform.startswith("linux"), "compiles and loads a Linux shared object")
 class XcaptureKeyTest(unittest.TestCase):
     """Level-0 keysyms go through XTest; shifted names are left for xdotool."""
 

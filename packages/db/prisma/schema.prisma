@@ -1340,6 +1340,10 @@ model Computer {
   executionLeaseExpiresAt DateTime?
   executionFence          Int                      @default(0)
   screenUrl               String?
+  /// How many runs may execute on this computer at once. Null means inherit the
+  /// instance default (RAKAZO_MAX_RUNS_PER_COMPUTER, itself defaulting to 1), so a
+  /// single team computer is not oversubscribed by several bots at once.
+  maxRunsPerComputer      Int?
   /// When the computer last started running; bounds how long it can stay up in one stretch.
   runningSince            DateTime?
   createdAt               DateTime                 @default(now())

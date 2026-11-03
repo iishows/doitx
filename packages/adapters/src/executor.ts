@@ -71,7 +71,7 @@ import {
   renewComputerExecutionLease,
   screenLeaseIdForRun,
 } from "./computer-lifecycle.js";
-import { teamBotWorkspaceDirectory } from "./computer-support.js";
+import { teamBotWorkspaceDirectory, toComputerRef } from "./computer-support.js";
 import { checkpointRunComputerWorkspace } from "./computer-workspace.js";
 import {
   connectedContext,
@@ -143,6 +143,7 @@ import {
   requeueRunAfterShutdown,
   setupFailureStreak,
   startNextWaitingRun,
+  startNextWaitingRunForComputer,
   writeComputerRunRequeue,
 } from "./run-lifecycle.js";
 import {
@@ -316,6 +317,7 @@ export function createRunExecutor(deps: ExecutorDeps) {
           runId,
           botId: run.botId,
           resumeHeldLease,
+          pressure: await observeComputerPressure(deps, leaseTarget.computerId, run),
         });
         if (!computerLease && leaseTarget.computer?.scope === "dedicated") {
           computerLease = await acquireDedicatedScreenLeaseFence(deps.prisma, {
@@ -328,11 +330,12 @@ export function createRunExecutor(deps: ExecutorDeps) {
         }
       } catch (error) {
         if (!(error instanceof ComputerBusyError)) throw error;
-        // Maintenance or suspension sends no release, so only a held lease waits for one.
+        // Maintenance or suspension sends no release, so only a live lease waits for one.
+        // The slot is per computer, so a lease held by another bot counts too: releasing
+        // it hands the slot on through startNextWaitingRunForComputer.
         const heldByAnotherRun = await deps.prisma.computerExecutionLease.findFirst({
           where: {
             computerId: leaseTarget.computerId,
-            botId: run.botId,
             runId: { not: runId },
             expiresAt: { gt: new Date() },
           },
@@ -1773,6 +1776,12 @@ export function createRunExecutor(deps: ExecutorDeps) {
             await startNextWaitingRun(deps, run.botId, runId).catch((error) =>
               getLogger().error("start next waiting run", error),
             );
+            // The slot is per computer, so a bot other than this one may be next in line.
+            if (computerLease) {
+              await startNextWaitingRunForComputer(deps, computerLease.computerId, runId).catch(
+                (error) => getLogger().error("start next waiting computer run", error),
+              );
+            }
           }
         }
         if (deps.shutdownSignal?.aborted) {
@@ -1792,4 +1801,41 @@ export function createRunExecutor(deps: ExecutorDeps) {
       }
     },
   };
+}
+
+/**
+ * The computer's live pressure, or null when the provider cannot say.
+ *
+ * Admission treats a missing reading as "no pressure", so a supervisor that is down, a
+ * provider without the metric, or a slow probe must never stop a run from starting: the
+ * static per-computer ceiling still applies. Pressure only ever tightens admission.
+ */
+async function observeComputerPressure(
+  deps: ExecutorDeps,
+  computerId: string,
+  run: { id: string; spaceId: string; botId: string; userId: string },
+): Promise<{ memRatio: number; throttledRatio: number; oomKills: number } | null> {
+  if (!deps.sandbox?.observePressure) return null;
+  try {
+    const computer = await deps.prisma.computer.findUnique({
+      where: { id: computerId },
+      select: { homeKey: true, kind: true, providerRef: true },
+    });
+    if (!computer?.providerRef) return null;
+    return await deps.sandbox.observePressure(toComputerRef(computer), {
+      operationId: "computer-pressure",
+      traceId: run.id,
+      spaceId: run.spaceId,
+      userId: run.userId,
+      botId: run.botId,
+      runId: run.id,
+      signal: deps.shutdownSignal ?? new AbortController().signal,
+    });
+  } catch (error) {
+    getLogger().warn("computer pressure observation failed", {
+      "computer.id": computerId,
+      "error.detail": error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 }

@@ -56,6 +56,8 @@ function computer(state: ComputerStatus["state"]): ComputerStatus {
     busyBotName: null,
     canUpdate: false,
     terminalAvailable: false,
+    maxRunsPerComputer: 1,
+    maxRunsPerComputerOverride: false,
   };
 }
 

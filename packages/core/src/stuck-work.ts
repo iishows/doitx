@@ -15,6 +15,14 @@ export const TAKEOVER_WAIT_EXPIRE_AFTER_MS = 30 * 60 * 1000;
 /** Marker on a thread.meta event so a reminder is sent once per waiting episode. */
 export const STUCK_WORK_NOTICE = "stuck";
 
+/** A running run that has shown the user nothing new for this long gets a reminder.
+ *  The user is watching a spinner, so silence is worse here than in a queue. */
+export const STALLED_RUN_NOTIFY_AFTER_MS = 30 * 60 * 1000;
+
+/** Cancel a running run that stays silent this long. A slow task can legitimately think for
+ *  a while, so this only fires well past the reminder, when nothing has landed at all. */
+export const STALLED_RUN_EXPIRE_AFTER_MS = 2 * 60 * 60 * 1000;
+
 export const STUCK_WORK_STATUSES = ["queued", "waiting_input", "waiting_takeover"] as const;
 export type StuckWorkStatus = (typeof STUCK_WORK_STATUSES)[number];
 
@@ -56,6 +64,23 @@ export function isAgedStuckWork(
   return stuckWorkAgeMs(updatedAt, new Date(now)) >= STUCK_WORK_NOTIFY_AFTER_MS;
 }
 
+/**
+ * What to do about a working run that has shown the user nothing for a while.
+ *
+ * Age is measured from the last user-visible output, not the run's updatedAt: a running
+ * run's row is touched by its own lease heartbeat every minute, so updatedAt says nothing
+ * about progress and would never look old. `silentForMs` is now minus the newest bot
+ * message or artifact for the run.
+ */
+export function stalledRunAction(input: {
+  silentForMs: number;
+  alreadyNotified: boolean;
+}): StuckWorkAction {
+  if (input.silentForMs >= STALLED_RUN_EXPIRE_AFTER_MS) return "expire";
+  if (input.silentForMs >= STALLED_RUN_NOTIFY_AFTER_MS && !input.alreadyNotified) return "notify";
+  return "none";
+}
+
 export function stuckWorkExpiredNonce(runId: string): string {
   return `stuck-expired:${runId}`;
 }
@@ -75,6 +100,9 @@ export function stuckWorkStatusMessage(status: StuckWorkStatus): string {
 export function stuckWorkStatusMessages(): readonly string[] {
   return STUCK_WORK_STATUSES.map((status) => stuckWorkStatusMessage(status));
 }
+
+/** Status line left in the thread when a run is cancelled for going quiet. */
+export const STALLED_RUN_MESSAGE = "Stopped. This ran for a long time without showing anything.";
 
 export type StuckAttentionKind = "help" | "takeover" | "failure";
 
@@ -113,6 +141,32 @@ export function stuckWorkStoppedNotification(
     kind: "failure",
     title: `${botLabel(botName)} stopped`,
     body: stuckWorkStatusMessage(status),
+  };
+}
+
+/** Reminder for a running run that has gone quiet while the user watches a spinner. */
+export function stalledRunReminder(botName: string): {
+  kind: "help";
+  title: string;
+  body: string;
+} {
+  const name = botLabel(botName);
+  return {
+    kind: "help",
+    title: `${name} has gone quiet`,
+    body: "It is still running but has not shown anything new for a while.",
+  };
+}
+
+export function stalledRunStoppedNotification(botName: string): {
+  kind: "failure";
+  title: string;
+  body: string;
+} {
+  return {
+    kind: "failure",
+    title: `${botLabel(botName)} stopped`,
+    body: STALLED_RUN_MESSAGE,
   };
 }
 

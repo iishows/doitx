@@ -30,6 +30,7 @@ import {
 import { WebView } from "react-native-webview";
 import { ComputerKeyboardBar } from "../components/computer-keyboard-bar";
 import { ComputerMaintenanceActions } from "../components/computer-maintenance-actions";
+import { ComputerMaxRunsRow } from "../components/computer-max-runs-row";
 import { ComputerModePicker } from "../components/computer-mode-picker";
 import { GlassIconButton } from "../components/glass-icon-button";
 import { NativeActionButton } from "../components/native-action-button";
@@ -580,6 +581,13 @@ export default function Computer() {
       {computer ? (
         <ComputerMaintenanceActions
           botId={botId ?? ""}
+          computer={computer}
+          onChanged={refreshAfterMaintenance}
+        />
+      ) : null}
+      {computer && botId ? (
+        <ComputerMaxRunsRow
+          botId={botId}
           computer={computer}
           onChanged={refreshAfterMaintenance}
         />

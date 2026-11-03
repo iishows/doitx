@@ -97,6 +97,15 @@ import type {
 export interface SandboxProvider {
   /** True when every running minute is billed, so the active-lifetime cap applies. */
   billsWhileRunning?(computer: ComputerRef): boolean;
+  /**
+   * Live resource pressure of the machine behind a computer, where the provider can report
+   * it. Admission uses it to hold back new runs on a machine that is already starved; a
+   * provider that omits it is treated as unpressured.
+   */
+  observePressure?(
+    computer: ComputerRef,
+    context: AdapterContext,
+  ): Promise<{ memRatio: number; throttledRatio: number; oomKills: number }>;
   describe(): AdapterDescriptor<SandboxCapabilities>;
   /** Workspace directory operations for hosts without the standard Unix command tools. */
   workspaceDirectories?(

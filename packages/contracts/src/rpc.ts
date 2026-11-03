@@ -641,6 +641,15 @@ export const appContract = {
     releaseInterrupted: oc
       .input(z.object({ id: Id, workersStopped: z.literal(true) }))
       .output(z.object({ ok: z.literal(true) })),
+    maxRuns: oc
+      .input(
+        z.object({
+          botId: Id,
+          /** How many runs may share this computer at once; null clears the override. */
+          maxRunsPerComputer: z.number().int().min(1).nullable(),
+        }),
+      )
+      .output(z.object({ maxRunsPerComputer: z.number().int().min(1) })),
     dismissUpdate: oc.input(z.object({ id: Id })).output(z.object({ ok: z.literal(true) })),
     takeover: oc.input(botId).output(z.object({ leaseId: Id, expiresAt: z.string() })),
     release: oc

@@ -1283,6 +1283,10 @@ export const ComputerStatusSchema = z.object({
   busyBotName: z.string().nullable(),
   canUpdate: z.boolean(),
   terminalAvailable: z.boolean(),
+  /** How many runs may share this computer at once, after any override or instance default. */
+  maxRunsPerComputer: z.number().int().min(1),
+  /** True when this computer carries its own value rather than inheriting the default. */
+  maxRunsPerComputerOverride: z.boolean(),
 });
 export type ComputerStatus = z.infer<typeof ComputerStatusSchema>;
 

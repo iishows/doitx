@@ -975,11 +975,13 @@ class PageBrowserTest(unittest.TestCase):
                 with self.subTest(path=path), self.assertRaisesRegex(RuntimeError, "your folder or shared/"):
                     helper.resolve_upload_paths([path], home, ["bots/b1", "shared"])
 
-    def test_upload_rejects_fifo_without_opening_it(self):
+    def test_upload_rejects_non_regular_file_without_opening_it(self):
+        # A directory is non-regular on every platform, so this still checks that such a
+        # target is refused before it is opened without needing a POSIX FIFO.
         import tempfile
         with tempfile.TemporaryDirectory() as home:
-            os.mkfifo(Path(home, "pipe"))
-            with patch("builtins.open", side_effect=AssertionError("must not open FIFO")):
+            Path(home, "pipe").mkdir()
+            with patch("builtins.open", side_effect=AssertionError("must not open it")):
                 with self.assertRaisesRegex(RuntimeError, "Not a regular file: pipe"):
                     helper.resolve_upload_paths(["pipe"], home)
 

@@ -20,6 +20,8 @@ export const QUEUE_HOLDING_RUN_STATUSES = ACTIVE_RUN_STATUSES.filter(
   (status) => status !== "waiting_input",
 );
 const TERMINAL: RunStatus[] = ["completed", "failed", "cancelled"];
+/** Runs that will never execute again, so anything they still hold is reclaimable. */
+export const TERMINAL_RUN_STATUSES: readonly RunStatus[] = TERMINAL;
 /**
  * These turns carry their own prompt and must not take a user message as steering.
  * Routine and webhook runs are not the conversation, and neither is a wake from another bot:

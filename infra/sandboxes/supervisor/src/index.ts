@@ -399,6 +399,50 @@ app.get("/computers/:id", async (c) => {
   }
 });
 
+/**
+ * Resource pressure of one computer, read from its cgroup. The scheduler uses it to hold
+ * back new runs when the single container behind a shared computer is memory-starved or
+ * CPU-throttled. Metrics are reported raw so the caller owns the thresholds.
+ */
+app.get("/computers/:id/pressure", async (c) => {
+  const id = c.req.param("id");
+  let container: Docker.Container;
+  try {
+    const managed = await managedContainer(
+      id,
+      c.req.header("x-rakazo-bot-id"),
+      c.req.header("x-rakazo-space-id"),
+    );
+    if (!managed.info.State.Running) return c.json({ error: "computer is not running" }, 409);
+    container = managed.container;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ error: message }, 404);
+  }
+  // cgroup v2 exposes these as plain files under /sys/fs/cgroup.
+  const read = await runContainerCommand(
+    container,
+    [
+      "sh",
+      "-c",
+      [
+        "cat /sys/fs/cgroup/memory.current 2>/dev/null",
+        "echo ---",
+        "cat /sys/fs/cgroup/memory.max 2>/dev/null",
+        "echo ---",
+        "grep -E '^(nr_periods|nr_throttled) ' /sys/fs/cgroup/cpu.stat 2>/dev/null",
+        "echo ---",
+        "grep -E '^oom_kill ' /sys/fs/cgroup/memory.events 2>/dev/null",
+      ].join("; "),
+    ],
+    { timeoutMs: 10_000 },
+  );
+  if (read.code !== 0) {
+    return c.json({ error: read.stderr || "could not read computer pressure" }, 503);
+  }
+  return c.json(parsePressure(read.stdout));
+});
+
 app.post("/computers/:id/exec", async (c) => {
   const id = c.req.param("id");
   const body = z
@@ -2011,6 +2055,34 @@ async function inspectSupervisorContainer() {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Turn the cgroup dump from `/computers/:id/pressure` into numbers.
+ *
+ * cgroup v2 reports `memory.max` as the literal "max" when no limit is set, and a computer
+ * with no limit cannot be memory-starved, so its ratio is 0 rather than a division by
+ * infinity. A cpu.stat with no periods yet cannot be throttled, so its ratio is 0 too.
+ */
+export function parsePressure(stdout: string) {
+  const [memory, maximum, cpu, events] = stdout.split("---");
+  const num = (text: string | undefined, key: string): number | null => {
+    const match = new RegExp(`^${key}\\s+(\\d+)\\s*$`, "m").exec(text ?? "");
+    return match ? Number(match[1]) : null;
+  };
+  const currentText = (memory ?? "").trim();
+  const current = /^\d+$/.test(currentText) ? Number(currentText) : null;
+  const limitText = (maximum ?? "").trim();
+  const limit = /^\d+$/.test(limitText) ? Number(limitText) : null;
+  const periods = num(cpu, "nr_periods") ?? 0;
+  const throttled = num(cpu, "nr_throttled") ?? 0;
+  return {
+    memRatio: limit && limit > 0 && current !== null ? current / limit : 0,
+    memBytes: current ?? 0,
+    memLimitBytes: limit,
+    throttledRatio: periods > 0 ? throttled / periods : 0,
+    oomKills: num(events, "oom_kill") ?? 0,
+  };
 }
 
 async function runContainerCommand(

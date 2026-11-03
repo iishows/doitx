@@ -237,6 +237,13 @@ export class HostAwareSandbox implements SandboxProvider {
     return this.route(computer).billsWhileRunning?.(computer) ?? false;
   }
 
+  /** Forwarded only when the routed provider reports pressure; others stay unpressured. */
+  observePressure(computer: ComputerRef, context: AdapterContext) {
+    const route = this.route(computer);
+    if (!route.observePressure) return Promise.resolve({ memRatio: 0, throttledRatio: 0, oomKills: 0 });
+    return route.observePressure(computer, context);
+  }
+
   keepAlive(computer: ComputerRef) {
     return this.route(computer).keepAlive?.(computer) ?? Promise.resolve();
   }

@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_SUPERVISOR_FILE_REQUEST_BYTES,
   MAX_SUPERVISOR_REQUEST_BYTES,
+  parsePressure,
   resolveDockerSocketPath,
   supervisorApp,
   supervisorFileWriteSchema,
@@ -1303,5 +1304,50 @@ describe("computer command identity", () => {
       "NPM_CONFIG_PREFIX=/home/rakazo/.local",
       "PIP_USER=1",
     ]);
+  });
+});
+
+describe("computer pressure", () => {
+  // Captured from a live cgroup v2 computer container.
+  const dump = (memory: string, maximum: string, cpu: string, events: string) =>
+    `${memory}\n---\n${maximum}\n---\n${cpu}\n---\n${events}\n`;
+
+  it("reports memory use and CPU throttling as ratios", () => {
+    expect(
+      parsePressure(
+        dump(
+          "314142720",
+          "5368709120",
+          "usage_usec 101345186\nnr_periods 126229\nnr_throttled 47\n",
+          "oom_kill 0\n",
+        ),
+      ),
+    ).toEqual({
+      memRatio: 314142720 / 5368709120,
+      memBytes: 314142720,
+      memLimitBytes: 5368709120,
+      throttledRatio: 47 / 126229,
+      oomKills: 0,
+    });
+  });
+
+  it("treats an unlimited computer as never memory-starved", () => {
+    const pressure = parsePressure(dump("314142720", "max", "nr_periods 10\nnr_throttled 0\n", ""));
+    expect(pressure.memRatio).toBe(0);
+    expect(pressure.memLimitBytes).toBeNull();
+  });
+
+  it("does not divide by zero before any CPU period has run", () => {
+    const pressure = parsePressure(dump("100", "200", "nr_periods 0\nnr_throttled 0\n", ""));
+    expect(pressure.throttledRatio).toBe(0);
+  });
+
+  it("counts OOM kills and survives a missing file", () => {
+    expect(parsePressure(dump("100", "200", "", "oom_kill 3\n")).oomKills).toBe(3);
+    expect(parsePressure("\n---\n\n---\n\n---\n")).toMatchObject({
+      memRatio: 0,
+      throttledRatio: 0,
+      oomKills: 0,
+    });
   });
 });

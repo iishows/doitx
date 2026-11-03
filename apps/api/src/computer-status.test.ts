@@ -64,6 +64,32 @@ describe("toComputerStatus", () => {
   });
 });
 
+describe("toComputerStatus max runs", () => {
+  const base = {
+    kind: "fake",
+    state: "running",
+    scope: "team",
+    controlHolder: "none",
+    homeRevision: "r1",
+  } as const;
+
+  it("reports the instance default with no override when the column is unset", () => {
+    for (const computer of [{ ...base }, { ...base, maxRunsPerComputer: null }]) {
+      expect(toComputerStatus("bot-1", computer)).toMatchObject({
+        maxRunsPerComputer: 1,
+        maxRunsPerComputerOverride: false,
+      });
+    }
+  });
+
+  it("reports the computer's own value as an override", () => {
+    expect(toComputerStatus("bot-1", { ...base, maxRunsPerComputer: 4 })).toMatchObject({
+      maxRunsPerComputer: 4,
+      maxRunsPerComputerOverride: true,
+    });
+  });
+});
+
 describe("executionBlocksUserTakeover", () => {
   const now = Date.parse("2026-08-25T12:00:00.000Z");
 

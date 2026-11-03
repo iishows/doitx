@@ -52,11 +52,15 @@ describe("reconcileStuckWork", () => {
     const eventFindMany = vi.fn(async () => []);
     const prisma = {
       run: {
-        findMany: vi.fn(async () => [
-          candidate("queued", 1),
-          { id: "partial", updatedAt: age(30) },
-        ]),
+        // Only the waiting scan matches; the running-run scan sees no running runs here.
+        findMany: vi.fn(async (args?: { where?: { status?: string } }) =>
+          args?.where?.status === "running"
+            ? []
+            : [candidate("queued", 1), { id: "partial", updatedAt: age(30) }],
+        ),
       },
+      message: { groupBy: vi.fn(async () => []) },
+      artifact: { groupBy: vi.fn(async () => []) },
       event: { findMany: eventFindMany },
     } as unknown as PrismaClient;
     const { jobs, enqueue } = publisher();
@@ -484,12 +488,15 @@ describe("reconcileStuckWork", () => {
     const seen: unknown[] = [];
     const prisma = {
       run: {
-        findMany: vi.fn(async (args: { where?: { AND?: unknown[] } }) => {
+        findMany: vi.fn(async (args: { where?: { status?: string; AND?: unknown[] } }) => {
+          if (args.where?.status === "running") return [];
           seen.push(args.where);
           const paged = JSON.stringify(args.where).includes(first.id);
           return paged ? [second] : [first];
         }),
       },
+      message: { groupBy: vi.fn(async () => []) },
+      artifact: { groupBy: vi.fn(async () => []) },
       event: {
         findMany: vi.fn(async () => [
           {
@@ -593,13 +600,19 @@ function noticePrisma(run: ReturnType<typeof candidate>, stamps: NoticeStamp[]) 
   let nextId = 0;
   const prisma = {
     run: {
-      findMany: vi.fn(async () => [run]),
+      // The waiting scan and the running-run scan share this fake; each only sees its own
+      // status, as the real query's status filter would decide.
+      findMany: vi.fn(async (args?: { where?: { status?: string } }) =>
+        args?.where?.status === "running" ? [] : [run],
+      ),
       findUnique: vi.fn(async () => ({
         status: run.status,
         updatedAt: run.updatedAt,
         startedAt: null,
       })),
     },
+    message: { groupBy: vi.fn(async () => []) },
+    artifact: { groupBy: vi.fn(async () => []) },
     event: {
       findMany: vi.fn(async () => stamps.map((stamp) => stamp)),
       findFirst: vi.fn(async () => stamps.find((stamp) => stamp.runId === run.id) ?? null),
@@ -664,7 +677,9 @@ function expireClient(run: ReturnType<typeof candidate>, options?: { cancelled?:
       create: vi.fn(async () => ({ id: "message-expired", seq: 1 })),
       findFirst: vi.fn(async () => null),
       findMany: vi.fn(async () => []),
+      groupBy: vi.fn(async () => []),
     },
+    artifact: { groupBy: vi.fn(async () => []) },
     event: {
       findMany: vi.fn(async () => []),
       create: vi.fn(async () => ({ seq: 8 })),

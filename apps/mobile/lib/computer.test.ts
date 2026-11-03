@@ -32,6 +32,8 @@ function computer(overrides: Partial<ComputerStatus> = {}): ComputerStatus {
     busyBotName: null,
     canUpdate: true,
     terminalAvailable: true,
+    maxRunsPerComputer: 1,
+    maxRunsPerComputerOverride: false,
     ...overrides,
   };
 }
