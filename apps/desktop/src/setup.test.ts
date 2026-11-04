@@ -20,6 +20,7 @@ const srcDir = path.dirname(fileURLToPath(import.meta.url));
 const setupBody = readFileSync(path.join(srcDir, "setup.html"), "utf8").match(
   /<body>([\s\S]*)<\/body>/,
 )?.[1];
+const setupI18nScript = readFileSync(path.join(srcDir, "setup-i18n.js"), "utf8");
 const setupScript = readFileSync(path.join(srcDir, "setup.js"), "utf8");
 
 interface Deferred<T> {
@@ -81,6 +82,8 @@ interface Harness {
   pushStackState: (state: DesktopLocalStackState) => void;
   /** Payloads received by `save`. */
   saves: DesktopSetup[];
+  /** Themes sent to the main process, in call order. */
+  themes: Array<"light" | "dark">;
 }
 
 function mount(saved: DesktopSetup | null): Harness {
@@ -91,6 +94,7 @@ function mount(saved: DesktopSetup | null): Harness {
   const stackStateCalls: Array<Deferred<DesktopLocalStackState>> = [];
   const pushListeners: Array<(state: DesktopLocalStackState) => void> = [];
   const saves: DesktopSetup[] = [];
+  const themes: Array<"light" | "dark"> = [];
 
   const bridge: RakazoSetup = {
     platform: "linux",
@@ -110,6 +114,10 @@ function mount(saved: DesktopSetup | null): Harness {
     },
     quit: () => Promise.resolve(),
     openLink: () => Promise.resolve(),
+    setTheme: (theme) => {
+      themes.push(theme);
+      return Promise.resolve();
+    },
     stack: {
       state: () => {
         const call = deferred<DesktopLocalStackState>();
@@ -123,7 +131,8 @@ function mount(saved: DesktopSetup | null): Harness {
     },
   };
   (window as { rakazoSetup?: RakazoSetup }).rakazoSetup = bridge;
-  // Run the plain script the same way setup.html's script tag does.
+  // Run the plain scripts the same way setup.html's script tags do.
+  new Function(setupI18nScript)();
   new Function(setupScript)();
 
   const initState = stateCalls.shift();
@@ -145,6 +154,7 @@ function mount(saved: DesktopSetup | null): Harness {
       for (const listener of pushListeners) listener(state);
     },
     saves,
+    themes,
   };
 }
 
@@ -162,6 +172,51 @@ describe("setup", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     delete (window as { rakazoSetup?: RakazoSetup }).rakazoSetup;
+    localStorage.clear();
+  });
+
+  it("renders the system language and offers every supported locale", async () => {
+    await boot(null);
+
+    expect(document.documentElement.lang).toBe("en");
+    expect(document.documentElement.dir).toBe("ltr");
+    expect(document.querySelector(".heading")?.textContent).toBe("Welcome to Doitx");
+    const options = element<HTMLSelectElement>("setup-locale").options;
+    expect(options).toHaveLength(14);
+    expect(options[0]?.textContent).toBe("English");
+  });
+
+  it("switches language, direction, and persistence from the picker", async () => {
+    await boot(null);
+    const select = element<HTMLSelectElement>("setup-locale");
+
+    select.value = "zh-CN";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+
+    expect(document.documentElement.lang).toBe("zh-CN");
+    expect(document.querySelector(".heading")?.textContent).toBe("欢迎使用 Doitx");
+    expect(element("continue").textContent).toBe("继续");
+    expect(localStorage.getItem("rakazo.setupLocale")).toBe("zh-CN");
+
+    select.value = "he";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+    expect(document.documentElement.dir).toBe("rtl");
+  });
+
+  it("toggles and persists the theme, and tells the main process", async () => {
+    const ui = await boot(null);
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(ui.themes).toEqual(["dark"]);
+
+    element<HTMLButtonElement>("theme-toggle").click();
+    await flush();
+
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(localStorage.getItem("rakazo.setupTheme")).toBe("light");
+    expect(ui.themes).toEqual(["dark", "light"]);
+    expect(element("theme-toggle").getAttribute("aria-label")).toBe("Switch to dark theme");
   });
 
   it("keeps an address edited while the connection check is pending", async () => {
@@ -251,6 +306,25 @@ describe("setup", () => {
 
     expect(element("status").textContent).toBe("");
     expect(element<HTMLButtonElement>("continue").disabled).toBe(false);
+  });
+
+  it("leaves the form usable when the language changes after leaving This computer", async () => {
+    const ui = await boot(null);
+    selectMode("new");
+    submitForm();
+    await flush();
+    selectMode("cloud");
+    await flush();
+    expect(element<HTMLButtonElement>("continue").disabled).toBe(false);
+
+    const select = element<HTMLSelectElement>("setup-locale");
+    select.value = "zh-CN";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+
+    expect(element<HTMLButtonElement>("continue").disabled).toBe(false);
+    expect(element("continue").textContent).toBe("继续");
+    ui.startResult.resolve(stackState("starting"));
   });
 
   it("re-attaches to the running stack after returning to This computer", async () => {

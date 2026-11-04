@@ -1495,6 +1495,12 @@ app.whenReady().then(async () => {
     if (!fromSetupWindow(event) || !isDesktopSetupLink(link)) return;
     await shell.openExternal(DOCKER_INSTALL_LINKS[link]);
   });
+  ipcMain.handle("desktop.setup.theme", (event, theme: unknown) => {
+    if (!fromSetupWindow(event)) return;
+    // Match webLightTokens.background / webDarkTokens.background from @rakazo/ui-tokens.
+    if (theme === "light") setupWindow?.setBackgroundColor("#FCFCFC");
+    else if (theme === "dark") setupWindow?.setBackgroundColor("#161616");
+  });
   ipcMain.handle("desktop.setup.stack.state", (event) =>
     fromSetupWindow(event) ? localStack.state() : null,
   );

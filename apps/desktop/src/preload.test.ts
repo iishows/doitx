@@ -119,6 +119,7 @@ describe("setup preload bridge", () => {
       "platform",
       "quit",
       "save",
+      "setTheme",
       "stack",
       "state",
       "test",
@@ -130,6 +131,7 @@ describe("setup preload bridge", () => {
     await bridge.save({ mode: "new", serverUrl: "http://127.0.0.1:5173" });
     await bridge.quit();
     await bridge.openLink("orbstack");
+    await bridge.setTheme("light");
     await bridge.stack.state();
     await bridge.stack.start();
     expect(invoke.mock.calls.map(([channel]) => channel)).toEqual([
@@ -138,6 +140,7 @@ describe("setup preload bridge", () => {
       "desktop.setup.save",
       "desktop.setup.quit",
       "desktop.setup.openLink",
+      "desktop.setup.theme",
       "desktop.setup.stack.state",
       "desktop.setup.stack.start",
     ]);

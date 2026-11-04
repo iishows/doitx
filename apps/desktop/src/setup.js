@@ -1,5 +1,6 @@
 (() => {
   const bridge = window.rakazoSetup;
+  const i18n = window.rakazoSetupI18n;
   document.documentElement.dataset.platform = bridge?.platform ?? "browser";
 
   const form = document.getElementById("setup");
@@ -18,15 +19,19 @@
   const checkButton = document.getElementById("check");
   const continueButton = document.getElementById("continue");
   const quitButton = document.getElementById("quit");
+  const localeSelect = document.getElementById("setup-locale");
+  const themeToggle = document.getElementById("theme-toggle");
 
   const STACK_POLL_MS = 1000;
-  const PHASE_LABELS = {
-    "checking-docker": "Getting ready…",
-    preparing: "Getting ready…",
-    pulling: "Downloading Doitx…",
-    starting: "Starting Doitx…",
-    "waiting-healthy": "Almost ready…",
-    ready: "Doitx is ready.",
+  const LOCALE_STORAGE_KEY = "rakazo.setupLocale";
+  const THEME_STORAGE_KEY = "rakazo.setupTheme";
+  const PHASE_KEYS = {
+    "checking-docker": "phaseGettingReady",
+    preparing: "phaseGettingReady",
+    pulling: "phaseDownloading",
+    starting: "phaseStarting",
+    "waiting-healthy": "phaseAlmostReady",
+    ready: "phaseReady",
   };
   const TERMINAL_PHASES = new Set([
     "idle",
@@ -61,16 +66,107 @@
   let detailsOpenedByFailure = false;
   /** Resolves the poll wait early when the main process pushes a new state. */
   let wakePoll = null;
+  /** Last status line, kept as a key so switching language can re-render it. */
+  let lastStatus = null;
+  let currentLocale = i18n.matchLocale(readStored(LOCALE_STORAGE_KEY) ?? navigator.language);
+  let currentTheme = readInitialTheme();
+
+  function readStored(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  function writeStored(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // A blocked storage area only costs persistence, not the current choice.
+    }
+  }
+
+  function readInitialTheme() {
+    const stored = readStored(THEME_STORAGE_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+    return typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+  }
+
+  function t(key, vars) {
+    const table = i18n.MESSAGES[currentLocale] ?? i18n.MESSAGES.en;
+    const message = table[key] ?? i18n.MESSAGES.en[key] ?? key;
+    if (vars === undefined) return message;
+    return message.replace(/\{(\w+)\}/g, (whole, name) => vars[name] ?? whole);
+  }
 
   function selectedMode() {
     const checked = form.querySelector('input[name="mode"]:checked');
     return checked === null ? "cloud" : checked.value;
   }
 
-  function setStatus(message, tone) {
-    status.textContent = message;
-    if (tone === undefined) status.removeAttribute("data-tone");
-    else status.setAttribute("data-tone", tone);
+  function renderStatus() {
+    if (lastStatus === null) return;
+    status.textContent = lastStatus.key ? t(lastStatus.key, lastStatus.vars) : lastStatus.text;
+    if (lastStatus.tone === undefined) status.removeAttribute("data-tone");
+    else status.setAttribute("data-tone", lastStatus.tone);
+  }
+
+  function setStatus(key, vars, tone) {
+    lastStatus = { key, vars, tone };
+    renderStatus();
+  }
+
+  /** Main-process errors are already English prose; keep them as-is across locale changes. */
+  function setStatusText(text, tone) {
+    lastStatus = { text, tone };
+    renderStatus();
+  }
+
+  function clearStatus() {
+    lastStatus = null;
+    status.textContent = "";
+    status.removeAttribute("data-tone");
+  }
+
+  function applyTheme(theme, persist) {
+    currentTheme = theme;
+    document.documentElement.dataset.theme = theme;
+    const label = t(theme === "light" ? "switchToDark" : "switchToLight");
+    themeToggle.setAttribute("aria-label", label);
+    themeToggle.setAttribute("title", label);
+    if (persist) writeStored(THEME_STORAGE_KEY, theme);
+    if (typeof bridge?.setTheme === "function") void bridge.setTheme(theme);
+  }
+
+  function applyLocale(locale) {
+    currentLocale = locale;
+    const root = document.documentElement;
+    root.lang = locale;
+    root.dir = i18n.RTL_LOCALES.has(locale) ? "rtl" : "ltr";
+    document.title = t("appTitle");
+
+    for (const node of document.querySelectorAll("[data-i18n]")) {
+      node.textContent = t(node.dataset.i18n);
+    }
+    for (const node of document.querySelectorAll("[data-i18n-aria-label]")) {
+      node.setAttribute("aria-label", t(node.dataset.i18nAriaLabel));
+    }
+    for (const node of document.querySelectorAll("[data-i18n-title]")) {
+      node.setAttribute("title", t(node.dataset.i18nTitle));
+    }
+
+    localeSelect.value = locale;
+    // The toggle's own label depends on both theme and language.
+    applyTheme(currentTheme, false);
+    renderStatus();
+    // Re-render the live stack so its phase, size, and button match the new language.
+    // Only while "This computer" owns the form: renderStack also resets the busy state.
+    if (selectedMode() === "new" && lastStack !== null) renderStack(lastStack);
+    else if (selectedMode() !== "new") continueButton.textContent = t("continue");
   }
 
   function setBusy(busy) {
@@ -88,8 +184,8 @@
     panelNew.hidden = mode !== "new";
     panelExisting.hidden = mode !== "existing";
     checkButton.hidden = mode !== "existing";
-    if (mode !== "new") continueButton.textContent = "Continue";
-    setStatus("");
+    if (mode !== "new") continueButton.textContent = t("continue");
+    clearStatus();
   }
 
   function isDockerPhase(phase) {
@@ -133,7 +229,7 @@
 
   function renderDetails(stack) {
     const bytes = stack.phase === "pulling" ? downloadedBytes(stack) : 0;
-    stackDetail.textContent = bytes > 0 ? `${formatBytes(bytes)} downloaded` : "";
+    stackDetail.textContent = bytes > 0 ? t("downloaded", { size: formatBytes(bytes) }) : "";
 
     // A new attempt clears the output, so drop an expansion the person did not ask for.
     if (stack.phase === "checking-docker" && detailsOpenedByFailure) {
@@ -160,11 +256,12 @@
     const { phase } = stack;
     stackSection.hidden = phase === "idle";
     if (phase === "idle") {
-      continueButton.textContent = "Continue";
+      continueButton.textContent = t("continue");
       return;
     }
     const failed = isDockerPhase(phase) || phase === "failed";
-    stackPhase.textContent = (failed ? stack.message : PHASE_LABELS[phase]) ?? "";
+    const phaseKey = PHASE_KEYS[phase];
+    stackPhase.textContent = failed ? stack.message : phaseKey ? t(phaseKey) : "";
     if (failed) stackPhase.setAttribute("data-tone", "error");
     else if (phase === "ready") stackPhase.setAttribute("data-tone", "ok");
     else stackPhase.removeAttribute("data-tone");
@@ -173,9 +270,9 @@
     renderDetails(stack);
     stackDockerHelp.hidden = !isDockerPhase(phase);
 
-    if (isDockerPhase(phase)) continueButton.textContent = "Check again";
-    else if (phase === "failed") continueButton.textContent = "Retry";
-    else continueButton.textContent = "Continue";
+    if (isDockerPhase(phase)) continueButton.textContent = t("checkAgain");
+    else if (phase === "failed") continueButton.textContent = t("retry");
+    else continueButton.textContent = t("continue");
     setBusy(!TERMINAL_PHASES.has(phase));
   }
 
@@ -183,12 +280,12 @@
     const generation = ++requestGeneration;
     setBusy(true);
     lockMode(true);
-    setStatus("Connecting…");
+    setStatus("connecting");
     try {
       const saved = await bridge.save({ mode, serverUrl: url });
-      if (!saved.ok) setStatus(saved.error ?? "Could not save that address.", "error");
+      if (!saved.ok) setStatusText(saved.error ?? t("saveFailed"), "error");
     } catch {
-      setStatus("Could not save that address. Try again.", "error");
+      setStatus("saveRetry", undefined, "error");
     } finally {
       lockMode(false);
       // A newer run may own the controls by now; only their owner unlocks them.
@@ -240,7 +337,7 @@
     } catch {
       // Only report a follow the person still sees; leaving "new" already handed the form back.
       if (selectedMode() === "new") {
-        setStatus("Could not follow the local stack. Try again.", "error");
+        setStatus("stackFollowFailed", undefined, "error");
         setBusy(false);
       }
     } finally {
@@ -250,7 +347,7 @@
 
   async function runStack() {
     const generation = ++requestGeneration;
-    setStatus("");
+    clearStatus();
     setBusy(true);
     try {
       // A queued start still reads `idle`; leave the panel as it is and let the follow render it.
@@ -260,7 +357,7 @@
       if (started !== null && started.phase !== "idle") renderStack(started);
     } catch {
       if (generation === requestGeneration) {
-        setStatus("Could not start the local stack. Try again.", "error");
+        setStatus("stackStartFailed", undefined, "error");
         setBusy(false);
       }
       return;
@@ -271,28 +368,28 @@
   async function check() {
     const value = serverUrl.value;
     if (value.trim() === "") {
-      setStatus("Enter a server address first.", "error");
+      setStatus("enterAddress", undefined, "error");
       return null;
     }
 
     const generation = ++requestGeneration;
     activeCheck = generation;
     setBusy(true);
-    setStatus("Checking…");
+    setStatus("checking");
     try {
       const result = await bridge.test(value);
       // The address or the mode changed under the test, so its result speaks for neither.
       if (generation !== requestGeneration) return result;
       if (result.ok) {
         serverUrl.value = result.url;
-        setStatus(`Doitx answered at ${result.url}.`, "ok");
+        setStatus("answered", { url: result.url }, "ok");
       } else {
-        setStatus(result.error ?? "Could not reach that address.", "error");
+        setStatusText(result.error ?? t("unreachable"), "error");
       }
       return result;
     } catch {
       if (generation === requestGeneration) {
-        setStatus("Could not run the connection check. Try again.", "error");
+        setStatus("checkFailed", undefined, "error");
       }
       return null;
     } finally {
@@ -321,7 +418,7 @@
     if (activeCheck === 0) return;
     requestGeneration++;
     activeCheck = 0;
-    setStatus("");
+    clearStatus();
     setBusy(false);
   });
 
@@ -338,6 +435,22 @@
   stackDockerHelp.addEventListener("click", (event) => {
     const link = event.target instanceof HTMLElement ? event.target.dataset.link : undefined;
     if (link) void bridge.openLink(link);
+  });
+
+  for (const locale of i18n.LOCALES) {
+    const option = document.createElement("option");
+    option.value = locale;
+    option.textContent = i18n.LABELS[locale];
+    localeSelect.append(option);
+  }
+
+  localeSelect.addEventListener("change", () => {
+    writeStored(LOCALE_STORAGE_KEY, localeSelect.value);
+    applyLocale(localeSelect.value);
+  });
+
+  themeToggle.addEventListener("click", () => {
+    applyTheme(currentTheme === "light" ? "dark" : "light", true);
   });
 
   quitButton.addEventListener("click", () => {
@@ -369,9 +482,12 @@
     });
   }
 
+  // Paint the saved or system choice before the first await; init then fills in state.
+  applyLocale(currentLocale);
+
   async function init() {
     if (bridge === undefined) {
-      setStatus("Setup bridge unavailable.", "error");
+      setStatus("bridgeUnavailable", undefined, "error");
       setBusy(true);
       return;
     }
@@ -398,7 +514,7 @@
       if (attached) document.getElementById("mode-new").checked = true;
       syncPanels();
       setBusy(false);
-      if (state.error) setStatus(state.error, "error");
+      if (state.error) setStatusText(state.error, "error");
       if (attached) {
         renderStack(stack);
         if (!TERMINAL_PHASES.has(stack.phase)) void followStack();
@@ -408,7 +524,7 @@
         continueButton.focus();
       }
     } catch {
-      setStatus("Setup could not start. Quit Doitx and try again.", "error");
+      setStatus("setupFailed", undefined, "error");
       setBusy(true);
     }
   }

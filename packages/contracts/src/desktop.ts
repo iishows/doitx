@@ -168,6 +168,8 @@ export interface RakazoSetup {
   quit: () => Promise<void>;
   /** Opens one of the Docker install pages in the system browser. */
   openLink: (link: DesktopSetupLink) => Promise<void>;
+  /** Keeps the native window background in step with the setup window's theme. */
+  setTheme: (theme: "light" | "dark") => Promise<void>;
   /** The Docker Compose stack this app installs and runs for mode `new`. */
   stack: {
     state: () => Promise<DesktopLocalStackState>;

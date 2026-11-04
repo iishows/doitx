@@ -87,12 +87,20 @@ function launch(extraEnv: Record<string, string> = {}) {
   });
 }
 
+/** Setup follows the OS language; pin English so assertions do not depend on the host locale. */
+async function firstSetupWindow() {
+  const setup = await app!.firstWindow();
+  const picker = setup.locator("#setup-locale");
+  if ((await picker.count()) > 0) await picker.selectOption("en");
+  return setup;
+}
+
 test("first run offers Doitx Cloud first, with local and existing instances", async () => {
   app = await launch();
   if (process.env.RAKAZO_E2E_EXECUTABLE) {
     expect(await app.evaluate(({ app }) => app.isPackaged)).toBe(true);
   }
-  const setup = await app.firstWindow();
+  const setup = await firstSetupWindow();
 
   await expect(setup.getByRole("heading", { name: "Welcome to Doitx" })).toBeVisible();
   await expect(setup.getByText("Choose which server this app should use.")).toBeVisible();
@@ -100,6 +108,19 @@ test("first run offers Doitx Cloud first, with local and existing instances", as
   await expect(setup.getByText("This computer")).toBeVisible();
   await expect(setup.getByText("Existing instance")).toBeVisible();
   await expect(setup.locator(".card")).toHaveCount(0);
+
+  await expect(setup.locator("#setup-locale")).toBeVisible();
+  await expect(setup.getByRole("button", { name: "Switch to light theme" })).toBeVisible();
+
+  // The picker translates this window; switch back so the rest of the suite reads English.
+  await setup.locator("#setup-locale").selectOption("zh-CN");
+  await expect(setup.getByRole("heading", { name: "欢迎使用 Doitx" })).toBeVisible();
+  await setup.locator("#setup-locale").selectOption("en");
+
+  await setup.getByRole("button", { name: "Switch to light theme" }).click();
+  await expect(setup.locator("html")).toHaveAttribute("data-theme", "light");
+  await setup.getByRole("button", { name: "Switch to dark theme" }).click();
+  await expect(setup.locator("html")).toHaveAttribute("data-theme", "dark");
 
   // Cloud is the default: one click opens the hosted app, with nothing to fill in.
   await expect(setup.getByRole("radio", { name: /Doitx Cloud/ })).toBeChecked();
@@ -154,7 +175,7 @@ test("first run offers Doitx Cloud first, with local and existing instances", as
 
 test("Doitx Cloud saves the hosted address and is reselected when saved", async () => {
   app = await launch();
-  const setup = await app.firstWindow();
+  const setup = await firstSetupWindow();
   await expect(setup.getByRole("radio", { name: /Doitx Cloud/ })).toBeChecked();
   await expect(setup.getByRole("button", { name: "Continue" })).toBeEnabled();
 
@@ -199,7 +220,7 @@ test("Doitx Cloud saves the hosted address and is reselected when saved", async 
 
 test("connecting to an existing instance verifies, saves, and opens it", async () => {
   app = await launch();
-  const setup = await app.firstWindow();
+  const setup = await firstSetupWindow();
 
   await setup.getByRole("radio", { name: /Existing instance/ }).check();
   await expect(setup.locator("#panel-new")).toBeHidden();
@@ -237,7 +258,7 @@ test("connecting to an existing instance verifies, saves, and opens it", async (
 
 test("Continue verifies and remembers the instance so setup does not run again", async () => {
   app = await launch();
-  const setup = await app.firstWindow();
+  const setup = await firstSetupWindow();
   await setup.getByRole("radio", { name: /Existing instance/ }).check();
   await setup.locator("#server-url").fill(serverUrl);
   const firstRun = await Promise.all([
@@ -265,7 +286,7 @@ test("Continue verifies and remembers the instance so setup does not run again",
 
 test("an unreachable address is reported instead of being saved", async () => {
   app = await launch();
-  const setup = await app.firstWindow();
+  const setup = await firstSetupWindow();
 
   await setup.getByRole("radio", { name: /Existing instance/ }).check();
   await setup.locator("#server-url").fill(closedUrl);
@@ -299,7 +320,7 @@ test("an HTTP error document is not accepted after a healthy probe", async () =>
 
   try {
     app = await launch();
-    const setup = await app.firstWindow();
+    const setup = await firstSetupWindow();
     await setup.getByRole("radio", { name: /Existing instance/ }).check();
     await setup.locator("#server-url").fill(`http://127.0.0.1:${address.port}`);
     await setup.getByRole("button", { name: "Continue" }).click();
@@ -335,7 +356,7 @@ test("a session-pending shell skeleton is not accepted as a ready app", async ()
 
   try {
     app = await launch();
-    const setup = await app.firstWindow();
+    const setup = await firstSetupWindow();
     await setup.getByRole("radio", { name: /Existing instance/ }).check();
     await setup.locator("#server-url").fill(`http://127.0.0.1:${address.port}`);
     await setup.getByRole("button", { name: "Continue" }).click();
@@ -387,7 +408,7 @@ for (const { name, surface } of [
 
     try {
       app = await launch();
-      const setup = await app.firstWindow();
+      const setup = await firstSetupWindow();
       await setup.getByRole("radio", { name: /Existing instance/ }).check();
       await setup.locator("#server-url").fill(`http://127.0.0.1:${address.port}`);
       const appWindow = await Promise.all([
@@ -436,7 +457,7 @@ test("a shell mount before workspace bootstrap is not accepted", async () => {
 
   try {
     app = await launch();
-    const setup = await app.firstWindow();
+    const setup = await firstSetupWindow();
     await setup.getByRole("radio", { name: /Existing instance/ }).check();
     await setup.locator("#server-url").fill(`http://127.0.0.1:${address.port}`);
     await setup.getByRole("button", { name: "Continue" }).click();
@@ -474,7 +495,7 @@ test("a session-ready marker without a route surface is not accepted", async () 
 
   try {
     app = await launch();
-    const setup = await app.firstWindow();
+    const setup = await firstSetupWindow();
     await setup.getByRole("radio", { name: /Existing instance/ }).check();
     await setup.locator("#server-url").fill(`http://127.0.0.1:${address.port}`);
     await setup.getByRole("button", { name: "Continue" }).click();
@@ -494,7 +515,7 @@ test("a session-ready marker without a route surface is not accepted", async () 
 
 test("a malformed address is rejected before anything is written", async () => {
   app = await launch();
-  const setup = await app.firstWindow();
+  const setup = await firstSetupWindow();
 
   await setup.getByRole("radio", { name: /Existing instance/ }).check();
   await setup.locator("#server-url").fill("not a server");
@@ -517,7 +538,7 @@ test("a generic web page is not accepted as a Doitx server", async () => {
 
   try {
     app = await launch();
-    const setup = await app.firstWindow();
+    const setup = await firstSetupWindow();
     await setup.getByRole("radio", { name: /Existing instance/ }).check();
     await setup.locator("#server-url").fill(`http://127.0.0.1:${address.port}`);
     await setup.getByRole("button", { name: "Continue" }).click();
@@ -548,7 +569,7 @@ test("the setup probe refuses redirects instead of following them", async () => 
 
   try {
     app = await launch();
-    const setup = await app.firstWindow();
+    const setup = await firstSetupWindow();
     await setup.getByRole("radio", { name: /Existing instance/ }).check();
     await setup.locator("#server-url").fill(`http://127.0.0.1:${address.port}`);
     await setup.getByRole("button", { name: "Continue" }).click();
@@ -574,7 +595,7 @@ test("an unreachable saved server falls back to setup with a recovery message", 
   );
 
   app = await launch();
-  const setup = await app.firstWindow();
+  const setup = await firstSetupWindow();
 
   await expect(setup.getByRole("heading", { name: "Welcome to Doitx" })).toBeVisible();
   await expect(setup.getByRole("radio", { name: /Existing instance/ })).toBeChecked();

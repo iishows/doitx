@@ -51,8 +51,22 @@ html[data-platform="darwin"] .titlebar {
   color: var(--muted-foreground);
 }
 
-.titlebar-quit {
+.titlebar-end {
   -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The drag region does not inherit, so every control opts out on its own. */
+.titlebar-quit,
+.titlebar-select,
+.theme-toggle {
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-quit,
+.titlebar-select {
   background: none;
   border: 0;
   color: var(--muted-foreground);
@@ -63,9 +77,32 @@ html[data-platform="darwin"] .titlebar {
   border-radius: 6px;
 }
 
-.titlebar-quit:hover {
+.titlebar-select {
+  max-width: 160px;
+}
+
+.titlebar-quit:hover,
+.titlebar-select:hover {
   color: var(--foreground);
   background: var(--accent);
+}
+
+.titlebar-select:focus-visible,
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.theme-icon-moon {
+  display: none;
+}
+
+html[data-theme="light"] .theme-icon-sun {
+  display: none;
+}
+
+html[data-theme="light"] .theme-icon-moon {
+  display: inline;
 }
 
 .shell {
