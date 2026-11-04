@@ -2672,6 +2672,10 @@ msgstr "Baixar {name}"
 msgid "Download CSV"
 msgstr "Baixar CSV"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Download Helix Router"
+msgstr "Baixar o Helix Router"
+
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr ""
@@ -2948,6 +2952,14 @@ msgstr "Filtros"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Find models"
+msgstr "Buscar modelos"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Finding…"
+msgstr "Buscando…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3774,6 +3786,10 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
 msgstr "Lista de modelos ok. {modelCount, plural, one {# modelo disponível} other {# modelos disponíveis}}. A conversa não foi testada."
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Models this endpoint serves"
+msgstr "Modelos que este endpoint serve"
 
 #: src/lib/cron.ts
 msgid "Monday"
@@ -4937,10 +4953,6 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "Linha"
-
-#: src/pages/model-settings/connection-controls.tsx
-msgid "Run a local model server"
-msgstr "Executar um servidor de modelos local"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

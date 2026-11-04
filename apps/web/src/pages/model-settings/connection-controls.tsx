@@ -22,6 +22,8 @@ export function ConnectionControls({
   connectKey,
   copyOAuthCode,
   credential,
+  findModels,
+  foundModels,
   gatewayId,
   isCloudflare,
   isCloudflareGateway,
@@ -57,6 +59,8 @@ export function ConnectionControls({
   | "connectKey"
   | "copyOAuthCode"
   | "credential"
+  | "findModels"
+  | "foundModels"
   | "gatewayId"
   | "isCloudflare"
   | "isCloudflareGateway"
@@ -329,11 +333,23 @@ export function ConnectionControls({
                 variant="outline"
                 size="sm"
                 disabled={busy || preflightTesting || (!keyOptional && apiKey.trim().length < 8)}
-                onClick={() => void testApiKeyConnection()}
+                onClick={() =>
+                  void (selected.provider === LOCAL_PROVIDER_ID
+                    ? findModels()
+                    : testApiKeyConnection())
+                }
               >
-                {modelPreflightTestingLabel(
-                  preflightTesting && preflightTarget === "api-key",
-                  "api-key",
+                {selected.provider === LOCAL_PROVIDER_ID ? (
+                  preflightTesting ? (
+                    <Trans>Finding…</Trans>
+                  ) : (
+                    <Trans>Find models</Trans>
+                  )
+                ) : (
+                  modelPreflightTestingLabel(
+                    preflightTesting && preflightTarget === "api-key",
+                    "api-key",
+                  )
                 )}
               </Button>
             ) : null}
@@ -375,12 +391,24 @@ export function ConnectionControls({
                 rel="noreferrer"
                 className="text-muted-foreground underline hover:text-foreground"
               >
-                <Trans>Run a local model server</Trans>
+                <Trans>Download Helix Router</Trans>
               </a>
             </p>
           ) : null}
           {preflightTarget === "api-key" ? (
             <ModelPreflightFeedback success={preflightSuccess} failure={preflightFailure} />
+          ) : null}
+          {foundModels && foundModels.length > 0 ? (
+            <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={t`Models this endpoint serves`}>
+              {foundModels.map((id) => (
+                <li
+                  key={id}
+                  className="rounded-md border border-border px-2 py-0.5 font-mono text-xs text-foreground"
+                >
+                  {id}
+                </li>
+              ))}
+            </ul>
           ) : null}
         </div>
       ) : null}

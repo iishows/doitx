@@ -22,6 +22,7 @@ const models = vi.hoisted(() => ({
   disconnect: vi.fn(),
   rename: vi.fn(),
   setDefault: vi.fn(),
+  probeCatalog: vi.fn(),
   probeOpenAiCompatible: vi.fn(),
   beginOAuth: vi.fn(),
   cancelOAuth: vi.fn(),
@@ -694,6 +695,44 @@ it("shows Cloudflare account and gateway fields for a new and a saved connection
     ).toBe("gateway-1");
   } finally {
     await saved.unmount();
+  }
+});
+
+it("lists the local endpoint's models when asked", async () => {
+  vi.mocked(rpc.me).mockResolvedValue(account("local", "local-endpoint"));
+  models.list.mockResolvedValue([
+    {
+      provider: "local",
+      providerName: "Local (self-hosted endpoint)",
+      id: "local-endpoint",
+      label: "Local endpoint",
+      billing: "Your server",
+      auth: "api-key" as const,
+      placeholder: true,
+      catalogProbe: true,
+    },
+  ]);
+  models.credentials.mockResolvedValue([
+    {
+      id: "cred-local",
+      provider: "local",
+      label: "Local",
+      hasKey: false,
+      isDefault: true,
+      modelId: "local-endpoint",
+    },
+  ]);
+  models.probeCatalog.mockResolvedValue({ models: ["qwen3:4b", "llama3.1:8b"] });
+
+  const view = await renderSettings();
+  try {
+    await manage();
+    await click(buttons(view.container, "Find models")[0]);
+    expect(models.probeCatalog).toHaveBeenCalledWith({ provider: "local", apiKey: "" });
+    expect(view.container.textContent).toContain("qwen3:4b");
+    expect(view.container.textContent).toContain("llama3.1:8b");
+  } finally {
+    await view.unmount();
   }
 });
 

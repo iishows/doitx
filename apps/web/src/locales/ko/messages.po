@@ -2672,6 +2672,10 @@ msgstr "{name} 다운로드"
 msgid "Download CSV"
 msgstr "CSV 다운로드"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Download Helix Router"
+msgstr "Helix Router 다운로드"
+
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr ""
@@ -2948,6 +2952,14 @@ msgstr "필터"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Find models"
+msgstr "모델 찾기"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Finding…"
+msgstr "찾는 중…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3774,6 +3786,10 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
 msgstr "모델 목록이 정상입니다. {modelCount, plural, one {모델 #개} other {모델 #개}}를 사용할 수 있습니다. 채팅은 테스트하지 않았습니다."
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Models this endpoint serves"
+msgstr "이 엔드포인트가 제공하는 모델"
 
 #: src/lib/cron.ts
 msgid "Monday"
@@ -4937,10 +4953,6 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "행"
-
-#: src/pages/model-settings/connection-controls.tsx
-msgid "Run a local model server"
-msgstr "로컬 모델 서버 실행"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

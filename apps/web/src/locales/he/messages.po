@@ -2672,6 +2672,10 @@ msgstr "הורדת {name}"
 msgid "Download CSV"
 msgstr "הורדת CSV"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Download Helix Router"
+msgstr "הורדת Helix Router"
+
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr "מוריד…"
@@ -2948,6 +2952,14 @@ msgstr "מסננים"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Find models"
+msgstr "חיפוש מודלים"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Finding…"
+msgstr "מחפש…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3774,6 +3786,10 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
 msgstr "רשימת המודלים תקינה. {modelCount, plural, one {מודל אחד זמין} other {# מודלים זמינים}}. הצ׳אט לא נבדק."
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Models this endpoint serves"
+msgstr "המודלים שהנקודה הזו מגישה"
 
 #: src/lib/cron.ts
 msgid "Monday"
@@ -4937,10 +4953,6 @@ msgstr "רוטינות שרצות גם כשלא נמצאים"
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "שורה"
-
-#: src/pages/model-settings/connection-controls.tsx
-msgid "Run a local model server"
-msgstr "הפעלת שרת מודלים מקומי"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

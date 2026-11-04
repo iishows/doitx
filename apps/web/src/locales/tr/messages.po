@@ -2672,6 +2672,10 @@ msgstr "{name} indir"
 msgid "Download CSV"
 msgstr "CSV indir"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Download Helix Router"
+msgstr "Helix Router'ı indir"
+
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr ""
@@ -2948,6 +2952,14 @@ msgstr "Filtreler"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Find models"
+msgstr "Modelleri bul"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Finding…"
+msgstr "Aranıyor…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3774,6 +3786,10 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
 msgstr "Model listesi tamam. {modelCount, plural, one {# model} other {# model}} kullanılabilir. Sohbet test edilmedi."
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Models this endpoint serves"
+msgstr "Bu uç noktanın sunduğu modeller"
 
 #: src/lib/cron.ts
 msgid "Monday"
@@ -4937,10 +4953,6 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "Satır"
-
-#: src/pages/model-settings/connection-controls.tsx
-msgid "Run a local model server"
-msgstr "Yerel model sunucusu çalıştır"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

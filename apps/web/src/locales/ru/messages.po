@@ -2672,6 +2672,10 @@ msgstr "Скачать {name}"
 msgid "Download CSV"
 msgstr "Скачать CSV"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Download Helix Router"
+msgstr "Скачать Helix Router"
+
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr "Скачивание…"
@@ -2948,6 +2952,14 @@ msgstr "Фильтры"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Find models"
+msgstr "Найти модели"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Finding…"
+msgstr "Поиск…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3774,6 +3786,10 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
 msgstr "Список моделей в порядке. {modelCount, plural, one {Доступна # модель} few {Доступны # модели} many {Доступно # моделей} other {Доступно # модели}}. Чат не проверялся."
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Models this endpoint serves"
+msgstr "Модели этого эндпоинта"
 
 #: src/lib/cron.ts
 msgid "Monday"
@@ -4937,10 +4953,6 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "Строка"
-
-#: src/pages/model-settings/connection-controls.tsx
-msgid "Run a local model server"
-msgstr "Запустить локальный сервер моделей"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

@@ -2672,6 +2672,10 @@ msgstr "{name} डाउनलोड करें"
 msgid "Download CSV"
 msgstr "CSV डाउनलोड करें"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Download Helix Router"
+msgstr "Helix Router डाउनलोड करें"
+
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr ""
@@ -2948,6 +2952,14 @@ msgstr "फ़िल्टर"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Find models"
+msgstr "मॉडल खोजें"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Finding…"
+msgstr "खोज रहे हैं…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3774,6 +3786,10 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
 msgstr "मॉडल सूची ठीक है। {modelCount, plural, one {# मॉडल} other {# मॉडल}} उपलब्ध है। चैट का परीक्षण नहीं हुआ।"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Models this endpoint serves"
+msgstr "इस एंडपॉइंट द्वारा दिए गए मॉडल"
 
 #: src/lib/cron.ts
 msgid "Monday"
@@ -4937,10 +4953,6 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "पंक्ति"
-
-#: src/pages/model-settings/connection-controls.tsx
-msgid "Run a local model server"
-msgstr "स्थानीय मॉडल सर्वर चलाएँ"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

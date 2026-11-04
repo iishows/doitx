@@ -2673,6 +2673,10 @@ msgstr "下載 {name}"
 msgid "Download CSV"
 msgstr "下載 CSV"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Download Helix Router"
+msgstr "下載 Helix Router"
+
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
 msgstr "下載中…"
@@ -2949,6 +2953,14 @@ msgstr "篩選器"
 #: src/pages/PluginsOverlay.tsx
 msgid "Finance"
 msgstr ""
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Find models"
+msgstr "尋找模型"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Finding…"
+msgstr "正在尋找…"
 
 #: src/pages/shell/import-setup-card.tsx
 msgid "Finish setting up"
@@ -3775,6 +3787,10 @@ msgstr "按供應商成本計價的模型"
 #: src/lib/model-connection-preflight.ts
 msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} available. Chat was not tested."
 msgstr "模型清單正常。{modelCount, plural, one {# 個模型} other {# 個模型}}可用。未測試聊天。"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Models this endpoint serves"
+msgstr "此端點提供的模型"
 
 #: src/lib/cron.ts
 msgid "Monday"
@@ -4938,10 +4954,6 @@ msgstr "在你離線時執行的例行任務"
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "列"
-
-#: src/pages/model-settings/connection-controls.tsx
-msgid "Run a local model server"
-msgstr "執行本機模型伺服器"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

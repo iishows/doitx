@@ -27,6 +27,7 @@ import { useCopyText } from "../../lib/copy-text";
 import type { ModelCatalogEntry } from "../../lib/model-auth";
 import type { ModelPreflightFailure } from "../../lib/model-connection-preflight";
 import {
+  classifyModelConnectionFailure,
   loadStoredModelAuth,
   modelPreflightSuccessMessage,
   runModelConnectionPreflight,
@@ -107,6 +108,8 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   const [preflightTarget, setPreflightTarget] = useState<"api-key" | "sign-in" | null>(null);
   const [preflightSuccess, setPreflightSuccess] = useState<string | null>(null);
   const [preflightFailure, setPreflightFailure] = useState<ModelPreflightFailure | null>(null);
+  /** The local endpoint's own model ids, after "Find models"; null until asked. */
+  const [foundModels, setFoundModels] = useState<string[] | null>(null);
   const preflightRevisionRef = useRef(0);
   const refreshRevisionRef = useRef(0);
   const selectionRevisionRef = useRef(0);
@@ -293,6 +296,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     setPreflightTarget(null);
     setPreflightSuccess(null);
     setPreflightFailure(null);
+    setFoundModels(null);
   }
 
   function preflightStillCurrent(revision: number): boolean {
@@ -359,6 +363,37 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
       return;
     }
     setPreflightFailure(result.failure);
+  }
+
+  /**
+   * Lists the models the local endpoint actually serves, the way the upstream
+   * connection form did. `Test API key` answers pass/fail; this shows the ids.
+   */
+  async function findModels() {
+    if (!selected?.catalogProbe) return;
+    const revision = preflightRevisionRef.current;
+    setPreflightTarget("api-key");
+    setPreflightTesting(true);
+    setPreflightSuccess(null);
+    setPreflightFailure(null);
+    setFoundModels(null);
+    setError(null);
+    setNotice(null);
+    try {
+      const { models } = await rpc.models.probeCatalog({
+        provider: selected.provider,
+        apiKey,
+      });
+      if (!preflightStillCurrent(revision)) return;
+      setFoundModels(models);
+      // The list itself is the result; only an empty one needs saying out loud.
+      if (models.length === 0) setPreflightSuccess(modelPreflightSuccessMessage(0));
+    } catch (error) {
+      if (!preflightStillCurrent(revision)) return;
+      setPreflightFailure(classifyModelConnectionFailure(error, { modelId: selected.id }));
+    } finally {
+      if (preflightStillCurrent(revision)) setPreflightTesting(false);
+    }
   }
 
   async function testOAuthConnection() {
@@ -535,6 +570,8 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     disconnectCredential,
     disconnectName,
     error,
+    findModels,
+    foundModels,
     gatewayId,
     groups,
     handleClose,
