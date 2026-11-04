@@ -139,6 +139,17 @@ import { rpc } from "../lib/rpc";
 import { ModelSettingsOverlay } from "./ModelSettingsOverlay";
 
 const STORED_PLACEHOLDER = "Paste a replacement key";
+const localEndpointEntry = {
+  provider: "local",
+  providerName: "Local (self-hosted endpoint)",
+  id: "local-endpoint",
+  label: "Local endpoint",
+  billing: "Your server",
+  auth: "api-key" as const,
+  placeholder: true,
+  catalogProbe: true,
+};
+
 const deepseekEntry = {
   provider: "deepseek",
   providerName: "DeepSeek",
@@ -728,7 +739,11 @@ it("lists the local endpoint's models when asked", async () => {
   try {
     await manage();
     await click(buttons(view.container, "Find models")[0]);
-    expect(models.probeCatalog).toHaveBeenCalledWith({ provider: "local", apiKey: "" });
+    expect(models.probeCatalog).toHaveBeenCalledWith({
+      provider: "local",
+      apiKey: "",
+      credentialId: "cred-local",
+    });
     expect(view.container.textContent).toContain("qwen3:4b");
     expect(view.container.textContent).toContain("llama3.1:8b");
   } finally {
@@ -746,6 +761,57 @@ const compatibleCredential = {
   modelId: "model-a",
   enabledModelIds: ["model-a"],
 };
+
+it("probes a saved connection's models with the key the server stores", async () => {
+  vi.mocked(rpc.me).mockResolvedValue(account("local", "local-endpoint"));
+  models.list.mockResolvedValue([localEndpointEntry]);
+  models.credentials.mockResolvedValue([
+    {
+      id: "cred-local",
+      provider: "local",
+      label: "Local (self-hosted endpoint)",
+      hasKey: true,
+      isDefault: true,
+      modelId: "local-endpoint",
+    },
+  ]);
+  models.probeCatalog.mockResolvedValue({ models: ["qwen3:4b", "llama3.1:8b"] });
+
+  const view = await renderSettings();
+  try {
+    await openProvider("Local (self-hosted endpoint)");
+    await click(buttons(view.container, "Find models")[0]);
+    // The client sends no key; the server uses the connection's stored one.
+    expect(models.probeCatalog).toHaveBeenCalledWith({
+      provider: "local",
+      apiKey: "",
+      credentialId: "cred-local",
+    });
+    expect(view.container.textContent).toContain("qwen3:4b");
+  } finally {
+    await view.unmount();
+  }
+});
+
+it("deletes a connection from its Providers row", async () => {
+  models.credentials.mockResolvedValue([deepseekCredential, workCredential]);
+  const view = await renderSettings();
+  try {
+    const row = view.container.querySelector('[data-testid="model-provider-cred-deepseek-work"]');
+    const remove = row?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Delete DeepSeek (Work)"]',
+    );
+    if (!remove) throw new Error("Missing delete button");
+    await click(remove);
+    await click(buttons(view.container, "Delete")[0]);
+    expect(models.disconnect).toHaveBeenCalledWith({
+      provider: "deepseek",
+      credentialId: "cred-deepseek-work",
+    });
+  } finally {
+    await view.unmount();
+  }
+});
 
 it("offers a saved compatible model in the main picker and uses it", async () => {
   vi.mocked(rpc.me).mockResolvedValue(account("openai-compatible", "model-a"));

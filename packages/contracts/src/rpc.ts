@@ -378,6 +378,9 @@ export const appContract = {
           // Empty is allowed: the local endpoint is often keyless. Providers that need a
           // key still reject a short one server-side, so this is not the only check.
           apiKey: z.string().trim(),
+          // Probing a saved connection: the server uses that connection's stored key,
+          // which the client never holds.
+          credentialId: z.string().trim().min(1).optional(),
         }),
       )
       .output(z.object({ models: z.array(z.string()) })),

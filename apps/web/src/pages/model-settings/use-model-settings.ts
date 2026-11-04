@@ -24,7 +24,7 @@ import { fetchFresh } from "@rakazo/core/query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCopyText } from "../../lib/copy-text";
-import type { ModelCatalogEntry } from "../../lib/model-auth";
+import type { ModelCatalogEntry, ModelCredential } from "../../lib/model-auth";
 import type { ModelPreflightFailure } from "../../lib/model-connection-preflight";
 import {
   classifyModelConnectionFailure,
@@ -380,6 +380,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     if (!preflightStillCurrent(revision)) return;
     setPreflightTesting(false);
     if (result.ok) {
+      adoptFoundModels(result.discoveredModels);
       setPreflightSuccess(modelPreflightSuccessMessage(result.discoveredModels.length));
       return;
     }
@@ -387,10 +388,11 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   }
 
   /**
-   * Lists the models the local endpoint actually serves, the way the upstream
+   * Lists the models the endpoint actually serves, the way the upstream
    * connection form did. `Test API key` answers pass/fail; this shows the ids.
+   * `savedKey` probes the open connection's stored key, which the client never holds.
    */
-  async function findModels() {
+  async function findModels({ savedKey = false }: { savedKey?: boolean } = {}) {
     if (!selected?.catalogProbe) return;
     const revision = preflightRevisionRef.current;
     setPreflightTarget("api-key");
@@ -403,10 +405,13 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     try {
       const { models } = await rpc.models.probeCatalog({
         provider: selected.provider,
-        apiKey,
+        apiKey: savedKey ? "" : apiKey,
+        ...(savedKey && credential ? { credentialId: credential.id } : {}),
       });
       if (!preflightStillCurrent(revision)) return;
       adoptFoundModels(models);
+      // A saved connection's newly discovered models become selectable right away.
+      if (savedKey) void refresh({ keepForm: true }).catch(() => undefined);
       // The list itself is the result; only an empty one needs saying out loud.
       if (models.length === 0) setPreflightSuccess(modelPreflightSuccessMessage(0));
     } catch (error) {
@@ -520,24 +525,38 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     }
   }
 
-  async function disconnectCredential() {
-    if (!selected || !credential) return;
+  /**
+   * Deletes a connection from every Space, by id. The open connection defaults here so a
+   * provider row can delete its own connection without opening it first.
+   */
+  async function deleteConnection(target?: { credential: ModelCredential; name: string }) {
+    const entry = target?.credential ?? credential;
+    if (!entry) return;
+    const name = target?.name ?? disconnectName;
+    const provider = entry.provider;
     cancelOAuthAttempt();
     setError(null);
     setNotice(null);
     setPending("disconnect");
     try {
-      await rpc.models.disconnect({ provider: selected.provider, credentialId: credential.id });
-      setCredentialId(null);
-      setApiKey("");
-      setThinkingLevel(null);
+      await rpc.models.disconnect({ provider, credentialId: entry.id });
+      // Only clear the form when it edits the connection that is gone.
+      if (entry.id === credential?.id) {
+        setCredentialId(null);
+        setApiKey("");
+        setThinkingLevel(null);
+      }
       await refresh();
-      setNotice(t`Disconnected ${disconnectName}.`);
+      setNotice(t`Disconnected ${name}.`);
     } catch (err) {
       setError(errorText(err, t`Could not disconnect this provider`));
     } finally {
       setPending(null);
     }
+  }
+
+  function disconnectCredential() {
+    return deleteConnection();
   }
 
   function handleClose() {
@@ -588,6 +607,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     credentialByProvider,
     credentials,
     currentEntry,
+    deleteConnection,
     disconnectCredential,
     disconnectName,
     error,

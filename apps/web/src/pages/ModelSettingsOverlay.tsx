@@ -55,6 +55,7 @@ export function ModelSettingsOverlay({
     credential,
     credentialByProvider,
     credentials,
+    deleteConnection,
     disconnectCredential,
     disconnectName,
     error,
@@ -80,6 +81,11 @@ export function ModelSettingsOverlay({
   // Where the connection form opens: under a role's list, under a provider row, or at the
   // end of Providers when adding one. The rest of the page stays where it was.
   const [connectionAt, setConnectionAt] = useState<string | null>(null);
+  /** The connection a row's delete button asked about, until answered. */
+  const [deleteTarget, setDeleteTarget] = useState<{
+    credential: ModelCredential;
+    name: string;
+  } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     panelRef.current?.scrollIntoView?.({ block: "nearest" });
@@ -305,6 +311,9 @@ export function ModelSettingsOverlay({
                       `providers:${entry.id}`,
                     )
               }
+              onDelete={(entry) =>
+                setDeleteTarget({ credential: entry, name: connectionName(entry) })
+              }
               panel={
                 connectionAt?.startsWith("providers:")
                   ? panelFor(connectionAt === "providers:add")
@@ -321,6 +330,40 @@ export function ModelSettingsOverlay({
           <Trans>No model catalog is available.</Trans>
         </p>
       )}
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteTarget ? t`Delete ${deleteTarget.name}?` : null}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <Trans>This removes the connection from every space.</Trans>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              <Trans>Cancel</Trans>
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={pending === "disconnect"}
+              onClick={() => {
+                if (!deleteTarget) return;
+                if (connectionAt === `providers:${deleteTarget.credential.id}`) closeConnection();
+                setDeleteTarget(null);
+                void deleteConnection(deleteTarget);
+              }}
+            >
+              <Trans>Delete</Trans>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={confirmDisconnect} onOpenChange={setConfirmDisconnect}>
         <AlertDialogContent>
           <AlertDialogHeader>

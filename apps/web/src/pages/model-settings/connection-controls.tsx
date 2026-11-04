@@ -95,6 +95,8 @@ export function ConnectionControls({
     subscriptionSignIn &&
     credential?.authKind === "oauth" &&
     keyShownFor !== (selected?.provider ?? null);
+  // A saved connection probes with the key the server already stores; typing one probes that.
+  const probeSavedKey = Boolean(credential) && apiKey.trim().length === 0;
   // Opening the fold swaps the summary for the form, so focus moves to the key field.
   useEffect(() => {
     if (keyShownFor) document.getElementById("model-api-key")?.focus();
@@ -336,14 +338,18 @@ export function ConnectionControls({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={busy || preflightTesting || (!keyOptional && apiKey.trim().length < 8)}
+                disabled={
+                  busy ||
+                  preflightTesting ||
+                  (!probeSavedKey && !keyOptional && apiKey.trim().length < 8)
+                }
                 onClick={() =>
-                  void (selected.provider === LOCAL_PROVIDER_ID
-                    ? findModels()
+                  void (probeSavedKey || selected.provider === LOCAL_PROVIDER_ID
+                    ? findModels({ savedKey: probeSavedKey })
                     : testApiKeyConnection())
                 }
               >
-                {selected.provider === LOCAL_PROVIDER_ID ? (
+                {probeSavedKey || selected.provider === LOCAL_PROVIDER_ID ? (
                   preflightTesting ? (
                     <Trans>Finding…</Trans>
                   ) : (

@@ -13,7 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@rakazo/ui-web";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useRef, useState } from "react";
 import type { ModelCredential } from "../../lib/model-auth";
@@ -29,6 +29,7 @@ export function ProvidersSection({
   disabled,
   onAdd,
   onOpen,
+  onDelete,
   panel,
   panelAt,
 }: {
@@ -40,11 +41,14 @@ export function ProvidersSection({
   disabled?: boolean;
   onAdd: (provider: ConnectableProvider) => void;
   onOpen: (credential: ModelCredential) => void;
+  /** Asks before deleting the connection, from every Space. */
+  onDelete: (credential: ModelCredential) => void;
   /** The connection form, shown under the connection it belongs to or after the list. */
   panel?: ReactNode;
   /** The connection id the form belongs to, or "add" for a new one. */
   panelAt?: string | null;
 }) {
+  const { t } = useLingui();
   return (
     <section className="mb-8" data-testid="model-providers">
       <h3 className="mb-2.5 text-[15px] font-medium text-foreground">
@@ -56,25 +60,38 @@ export function ProvidersSection({
           .sort((left, right) => nameOf(left).localeCompare(nameOf(right)))
           .map((credential) => (
             <li key={credential.id} data-testid={`model-provider-${credential.id}`}>
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => onOpen(credential)}
-                className="flex min-h-[52px] w-full items-center gap-2.5 py-2 ps-3 pe-3 text-start outline-none first:rounded-t-xl hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <span className="min-w-0 flex-1 truncate text-[15px] text-foreground">
-                  {nameOf(credential)}
-                </span>
-                {credential.reconnectRequired ? (
-                  <span className="shrink-0 text-[13px] text-warning">
-                    <Trans>Sign in again</Trans>
+              <div className="flex items-center gap-1 pe-2">
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onOpen(credential)}
+                  className="flex min-h-[52px] min-w-0 flex-1 items-center gap-2.5 py-2 ps-3 pe-3 text-start outline-none first:rounded-t-xl hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[15px] text-foreground">
+                    {nameOf(credential)}
                   </span>
-                ) : null}
-                <ChevronRight
-                  className={`size-4 shrink-0 text-muted-foreground transition-transform ${panelAt === credential.id ? "rotate-90" : ""}`}
-                  aria-hidden
-                />
-              </button>
+                  {credential.reconnectRequired ? (
+                    <span className="shrink-0 text-[13px] text-warning">
+                      <Trans>Sign in again</Trans>
+                    </span>
+                  ) : null}
+                  <ChevronRight
+                    className={`size-4 shrink-0 text-muted-foreground transition-transform ${panelAt === credential.id ? "rotate-90" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  disabled={disabled}
+                  aria-label={t`Delete ${nameOf(credential)}`}
+                  onClick={() => onDelete(credential)}
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </Button>
+              </div>
               {panelAt === credential.id ? <div className="px-3 pb-3">{panel}</div> : null}
             </li>
           ))}

@@ -5,6 +5,7 @@ import {
   ModelSignInError,
   modelCredentialDto,
   oauthCredentialEmail,
+  parseModelSecret,
   prepareStoredModelAuth,
   probeCatalogProviderModels,
   probeOpenAiCompatibleModels,
@@ -16,7 +17,7 @@ import {
   storedOpenAiCompatibleProbeKey,
   UNAVAILABLE_MODEL_FOR_AUTH_MESSAGE,
 } from "@rakazo/adapters";
-import type { ThinkingLevel } from "@rakazo/contracts";
+import type { Actor, ThinkingLevel } from "@rakazo/contracts";
 import {
   backupChoiceKey,
   canonicalPiProviderId,
@@ -66,6 +67,28 @@ export function modelsRoutes(ctx: RouterContext) {
     validateRoleChoices,
     authed,
   } = ctx;
+
+  /** The key saved for a connection, so probing an existing one need not resend it. */
+  async function storedConnectionApiKey(
+    actor: Actor,
+    provider: string,
+    credentialId: string | undefined,
+  ): Promise<string> {
+    const target = await modelConnectionTarget(deps, actor, provider, credentialId);
+    if (!target) return "";
+    const secret = await deps.prisma.secret.findFirst({
+      where: { id: target.secretId, userId: actor.userId, spaceId: null },
+      select: { ciphertext: true },
+    });
+    if (!secret) return "";
+    try {
+      const parsed = parseModelSecret(await deps.secrets.load(secret.ciphertext, target.secretId));
+      return parsed.kind === "api_key" ? parsed.key : "";
+    } catch {
+      return "";
+    }
+  }
+
   return {
     models: {
       list: authed.models.list.handler(async ({ context }) => chatCatalog(context.actor)),
@@ -275,8 +298,11 @@ export function modelsRoutes(ctx: RouterContext) {
       ),
       probeCatalog: authed.models.probeCatalog.handler(async ({ context, input }) => {
         try {
+          const apiKey =
+            input.apiKey ||
+            (await storedConnectionApiKey(context.actor, input.provider, input.credentialId));
           const models = await probeCatalogProviderModels(
-            { provider: input.provider, apiKey: input.apiKey },
+            { provider: input.provider, apiKey },
             deps.modelConnectionFetch,
             context.signal,
           );
