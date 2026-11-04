@@ -138,6 +138,30 @@ export function sidebarGroupsForSpaces<TBot extends SidebarChat, TGroup extends 
   });
 }
 
+/**
+ * Accordion mode opens one space at a time: `openSpace` undefined follows the
+ * active space, a space id opens that one, null closes them all. A single-space
+ * roster keeps the per-section collapse it had before.
+ */
+export function isSidebarSectionCollapsed(
+  group: { key: string; title?: string | null; spaceId: string },
+  state: {
+    accordion: boolean;
+    activeSpaceId: string | undefined;
+    openSpace: string | null | undefined;
+    collapsedSections: ReadonlySet<string>;
+  },
+): boolean {
+  // A space with no bots yet renders one header standing for the space itself.
+  // It is an entry point, not a disclosure, so it always stays open.
+  if (!group.title) return false;
+  if (state.accordion) {
+    const open = state.openSpace === undefined ? state.activeSpaceId : state.openSpace;
+    return group.spaceId !== open;
+  }
+  return state.collapsedSections.has(group.key);
+}
+
 /** Count the unread flags the roster renders. Pass unfiltered groups for the app badge. */
 export function countUnreadChats(
   sections: readonly { bots: readonly { chat: { unread?: boolean } }[] }[],

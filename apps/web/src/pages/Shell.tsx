@@ -155,7 +155,8 @@ function SpaceShell() {
     setBootstrapMe,
     refreshBots,
   } = roster;
-  const { collapsedSidebarSections, toggleSidebarSection } = useSidebarExpansion(userId);
+  const { collapsedSidebarSections, openSpace, toggleSidebarSection, toggleSidebarSpace } =
+    useSidebarExpansion(userId, bootstrapMe?.spaceId);
   const [botsSidebarCollapsed, setBotsSidebarCollapsed] = useState(false);
   useEffect(() => {
     setBotsSidebarCollapsed(readBotsSidebarCollapsed(userId));
@@ -743,6 +744,9 @@ function SpaceShell() {
             setRenameSectionTarget={dialogs.setRenameSectionTarget}
             setDeleteSectionTarget={dialogs.setDeleteSectionTarget}
             toggleSidebarSection={toggleSidebarSection}
+            openSpace={openSpace}
+            searching={!miniSidebar && search.query.trim().length > 0}
+            toggleSidebarSpace={toggleSidebarSpace}
             inGroup={inGroup}
             active={active}
             activeGroup={activeGroup}

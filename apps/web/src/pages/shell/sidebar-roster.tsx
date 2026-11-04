@@ -26,10 +26,14 @@ import {
 } from "../../lib/roster-status";
 import type { RosterDropAction, RosterDropTarget } from "./roster-drop";
 import type { sidebarGroupsForSpaces } from "./space-sidebar";
+import { isSidebarSectionCollapsed } from "./space-sidebar";
 
 export function SidebarRoster({
   sidebarGroups,
   collapsedSidebarSections,
+  openSpace,
+  toggleSidebarSpace,
+  searching,
   bootstrapMe,
   botSections,
   spaces,
@@ -75,6 +79,9 @@ export function SidebarRoster({
   setRenameSectionTarget: (target: { section: BotSection; spaceId: string }) => void;
   setDeleteSectionTarget: (target: { section: BotSection; spaceId: string }) => void;
   toggleSidebarSection: (key: string) => void;
+  openSpace: string | null | undefined;
+  toggleSidebarSpace: (spaceId: string) => void;
+  searching: boolean;
   inGroup: boolean;
   active: Pick<Bot, "id"> | undefined;
   activeGroup: Pick<Group, "id"> | undefined;
@@ -94,7 +101,14 @@ export function SidebarRoster({
   return (
     <>
       {sidebarGroups.map((group, groupIndex) => {
-        const collapsed = Boolean(group.title) && collapsedSidebarSections.has(group.key);
+        const collapsed = isSidebarSectionCollapsed(group, {
+          // Search results span every space, so the accordion steps aside and a
+          // match in another space is never hidden behind a closed header.
+          accordion: Boolean(group.showLock) && !searching,
+          activeSpaceId: bootstrapMe?.spaceId,
+          openSpace,
+          collapsedSections: collapsedSidebarSections,
+        });
         const groupBotIds = group.bots.flatMap((item) =>
           item.kind === "bot" ? [item.chat.id] : [],
         );
@@ -117,7 +131,9 @@ export function SidebarRoster({
             key={group.key}
             open={mini || !collapsed}
             onOpenChange={() => {
-              if (!mini) toggleSidebarSection(group.key);
+              if (mini) return;
+              if (group.showLock && !searching) toggleSidebarSpace(group.spaceId);
+              else toggleSidebarSection(group.key);
             }}
             data-sidebar-group={group.key}
             className={`flex flex-col gap-0.5 ${mini && groupIndex > 0 ? "mt-2 border-t border-sidebar-border pt-2" : ""}`}
@@ -159,6 +175,18 @@ export function SidebarRoster({
                       onClick={() => {
                         if (group.emptySpaceId) {
                           openSpaceChat(group.emptySpaceId, "/onboarding");
+                          return;
+                        }
+                        // A header named after its space also switches to it, so
+                        // the accordion never opens a space you are not in. While
+                        // searching every space's matches are listed, so the
+                        // header must not move the user to another space.
+                        if (
+                          group.showLock &&
+                          !searching &&
+                          group.spaceId !== bootstrapMe?.spaceId
+                        ) {
+                          openSpaceChat(group.spaceId, "/app");
                         }
                       }}
                       onContextMenu={

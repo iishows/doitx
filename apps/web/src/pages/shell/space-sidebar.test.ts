@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { commitSpaceRename, countUnreadChats, sidebarGroupsForSpaces } from "./space-sidebar";
+import {
+  commitSpaceRename,
+  countUnreadChats,
+  isSidebarSectionCollapsed,
+  sidebarGroupsForSpaces,
+} from "./space-sidebar";
 
 function chat(id: string, name: string) {
   return {
@@ -199,4 +204,85 @@ it("counts unread bots and groups from the sidebar across spaces", () => {
   input[0]!.bots[0]!.unread = true;
   expect(countUnreadChats(sidebarGroupsForSpaces(input, ""))).toBe(3);
   expect(countUnreadChats([])).toBe(0);
+});
+
+describe("isSidebarSectionCollapsed", () => {
+  const group = (spaceId: string, extra: { title?: string | null; key?: string } = {}) => ({
+    key: extra.key ?? `space:${spaceId}:section:a`,
+    title: extra.title === undefined ? "Work" : extra.title,
+    spaceId,
+  });
+  const none = new Set<string>();
+
+  it("keeps the per-section collapse when only one space is listed", () => {
+    const state = {
+      accordion: false,
+      activeSpaceId: "s1",
+      openSpace: undefined,
+      collapsedSections: none,
+    };
+    expect(isSidebarSectionCollapsed(group("s1"), state)).toBe(false);
+    expect(
+      isSidebarSectionCollapsed(group("s1"), {
+        ...state,
+        collapsedSections: new Set(["space:s1:section:a"]),
+      }),
+    ).toBe(true);
+  });
+
+  it("never collapses a header without a title", () => {
+    expect(
+      isSidebarSectionCollapsed(group("s1", { title: null }), {
+        accordion: true,
+        activeSpaceId: "s2",
+        openSpace: undefined,
+        collapsedSections: none,
+      }),
+    ).toBe(false);
+  });
+
+  it("allows a titleless section header in a single-space roster", () => {
+    expect(
+      isSidebarSectionCollapsed(group("s1", { title: null }), {
+        accordion: false,
+        activeSpaceId: "s1",
+        openSpace: undefined,
+        collapsedSections: none,
+      }),
+    ).toBe(false);
+  });
+
+  it("follows the active space until a space is chosen", () => {
+    const state = {
+      accordion: true,
+      activeSpaceId: "s1",
+      openSpace: undefined,
+      collapsedSections: none,
+    };
+    expect(isSidebarSectionCollapsed(group("s1"), state)).toBe(false);
+    expect(isSidebarSectionCollapsed(group("s2"), state)).toBe(true);
+  });
+
+  it("opens the chosen space and folds the rest", () => {
+    const state = {
+      accordion: true,
+      activeSpaceId: "s1",
+      openSpace: "s2",
+      collapsedSections: none,
+    };
+    expect(isSidebarSectionCollapsed(group("s2"), state)).toBe(false);
+    expect(isSidebarSectionCollapsed(group("s1"), state)).toBe(true);
+    expect(isSidebarSectionCollapsed(group("s3"), state)).toBe(true);
+  });
+
+  it("folds every space once all are closed", () => {
+    const state = {
+      accordion: true,
+      activeSpaceId: "s1",
+      openSpace: null,
+      collapsedSections: none,
+    };
+    expect(isSidebarSectionCollapsed(group("s1"), state)).toBe(true);
+    expect(isSidebarSectionCollapsed(group("s2"), state)).toBe(true);
+  });
 });

@@ -40,12 +40,29 @@ function readCollapsedSidebarSections(userId: string | null | undefined): Set<st
   return readCollapsedIdSet(collapsedSidebarSectionsStorageKey(userId));
 }
 
-export function useSidebarExpansion(userId: string | null | undefined) {
+export function useSidebarExpansion(userId: string | null | undefined, activeSpaceId?: string) {
   const [collapsedSidebarSections, setCollapsedSidebarSections] = useState(() => new Set<string>());
+  // With several spaces the roster is an accordion: undefined follows the
+  // active space, a space id opens that one, null closes them all. Not
+  // persisted — a space reached by a switch must arrive expanded.
+  const [openSpace, setOpenSpace] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     setCollapsedSidebarSections(readCollapsedSidebarSections(userId));
   }, [userId]);
+  useEffect(() => {
+    setOpenSpace(undefined);
+  }, [activeSpaceId]);
+
+  const toggleSidebarSpace = useCallback(
+    (spaceId: string) => {
+      setOpenSpace((previous) => {
+        const open = previous === undefined ? activeSpaceId : previous;
+        return open === spaceId ? null : spaceId;
+      });
+    },
+    [activeSpaceId],
+  );
   const toggleSidebarSection = useCallback(
     (key: string) => {
       setCollapsedSidebarSections((previous) =>
@@ -56,6 +73,8 @@ export function useSidebarExpansion(userId: string | null | undefined) {
   );
   return {
     collapsedSidebarSections,
+    openSpace,
     toggleSidebarSection,
+    toggleSidebarSpace,
   };
 }
