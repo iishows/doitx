@@ -39,7 +39,7 @@ async function* teamConfigArchiveFiles(
 }
 
 export function teamConfigFilename(now = new Date()): string {
-  return `rakazo-team-config-${now.toISOString().slice(0, 10)}.zip`;
+  return `doitx-team-config-${now.toISOString().slice(0, 10)}.zip`;
 }
 
 /**

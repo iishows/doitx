@@ -89,6 +89,9 @@ describe("team-config export route", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/zip");
     expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("content-disposition")).toContain(
+      `attachment; filename="doitx-team-config-`,
+    );
     expect(consumeTeamConfigToken).toHaveBeenCalledWith("good");
 
     const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
