@@ -821,7 +821,7 @@ export function BotSettings({
                   onChange={(e) => setWebhookCallbackUrl(e.target.value)}
                   onBlur={() => void enqueueSave()}
                   placeholder="https://example.com/rakazo/replies"
-                  disabled={saving}
+                  readOnly={saving}
                 />
                 <p className="text-xs text-muted-foreground">
                   <Trans>
@@ -860,12 +860,12 @@ export function BotSettings({
                     onChange={(e) => setProxyUrl(e.target.value)}
                     onBlur={() => void enqueueSave()}
                     placeholder="socks5://proxy.example.com:1080"
-                    disabled={saving}
+                    readOnly={saving}
                   />
                   <p className="text-xs text-muted-foreground">
                     <Trans>
-                      http, https, socks5 or socks5h. Only this bot's browser uses it, so bots on the
-                      same computer keep separate addresses.
+                      http, https, socks5 or socks5h. Only this bot's browser uses it, so bots on
+                      the same computer keep separate addresses.
                     </Trans>
                   </p>
                 </div>
@@ -881,7 +881,7 @@ export function BotSettings({
                       value={proxyUsername}
                       onChange={(e) => setProxyUsername(e.target.value)}
                       onBlur={() => void enqueueSave()}
-                      disabled={saving}
+                      readOnly={saving}
                     />
                   </div>
                   <div className="space-y-2">
@@ -899,7 +899,7 @@ export function BotSettings({
                       placeholder={
                         savedProxyRef.current.hasCredentials ? t`Leave blank to keep it` : ""
                       }
-                      disabled={saving}
+                      readOnly={saving}
                     />
                   </div>
                 </div>
