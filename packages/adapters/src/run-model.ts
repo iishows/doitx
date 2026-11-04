@@ -4,7 +4,9 @@ import type {
   AgentRuntime,
   ModelCredentialFailedState,
   ModelCredentialRetireReason,
+  SecretStore,
 } from "@rakazo/adapter-kit";
+import { SecretStoreUnavailableError } from "@rakazo/adapter-kit";
 import {
   CLOUDFLARE_AI_GATEWAY_CONFIG_MESSAGE,
   CLOUDFLARE_WORKERS_AI_PROVIDER_ID,
@@ -137,6 +139,24 @@ function assertCompatibleModelEnabled(
   }
 }
 
+/**
+ * Reads a saved model credential. A store outage propagates, since a later attempt can read it.
+ * An undecryptable ciphertext — a changed `ENCRYPTION_KEY` or a damaged row — cannot be fixed
+ * by retrying and is not a provider failure, so the run stops before the model and asks for the
+ * connection again instead of repeating the cipher error.
+ */
+export async function loadModelCredential(
+  secretStore: Pick<SecretStore, "load">,
+  secret: { id: string; ciphertext: string },
+): Promise<string> {
+  try {
+    return await secretStore.load(secret.ciphertext, secret.id);
+  } catch (error) {
+    if (error instanceof SecretStoreUnavailableError) throw error;
+    throw new UnavailableModelForAuthError(MISSING_MODEL_RUN_ERROR);
+  }
+}
+
 export async function modelCreditBillingEnabled(deps: ExecutorDeps): Promise<boolean> {
   if (deps.billingEnabled !== undefined) return deps.billingEnabled;
   return (
@@ -236,7 +256,7 @@ async function resolveModelKeyMaterial(
         cloudflareProviderEnv({ provider });
         return { apiKey: deploymentKeyFor(deps, provider), redact: [] };
       }
-      const plaintext = await deps.secretStore.load(row.ciphertext, row.id);
+      const plaintext = await loadModelCredential(deps.secretStore, row);
       registerSecrets?.(secretValuesToRedact(parseModelSecret(plaintext)));
       const persist = persistStoredModelSecret(
         deps.prisma,
