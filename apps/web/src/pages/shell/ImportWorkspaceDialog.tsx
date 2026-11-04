@@ -10,7 +10,7 @@ import {
   DialogTitle,
   Spinner,
 } from "@rakazo/ui-web";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   createTeamConfigBots,
   previewTeamConfig,
@@ -43,10 +43,6 @@ export function ImportWorkspaceDialog({
   const [ticked, setTicked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const busy = reading || creating;
-
-  useEffect(() => {
-    fileInput.current?.click();
-  }, []);
 
   async function choose(file: File) {
     setError(null);
@@ -107,7 +103,18 @@ export function ImportWorkspaceDialog({
           }}
         />
 
-        {reading ? <Spinner /> : null}
+        {preview ? null : (
+          <Button
+            variant="outline"
+            className="rounded-full"
+            disabled={busy}
+            data-testid="import-workspace-choose"
+            onClick={() => fileInput.current?.click()}
+          >
+            {reading ? <Spinner /> : null}
+            <Trans>Choose file</Trans>
+          </Button>
+        )}
 
         {error ? (
           <p

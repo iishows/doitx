@@ -114,6 +114,24 @@ async function chooseFile() {
 }
 
 describe("ImportWorkspaceDialog", () => {
+  // A browser only opens a file chooser from a user gesture, so the dialog must offer a control
+  // that does it. Without one the dialog opens onto nothing and can never be used.
+  it("opens the file chooser from a visible control", async () => {
+    await render();
+    const input = view().querySelector<HTMLInputElement>('[data-testid="import-workspace-file"]')!;
+    let clicked = 0;
+    input.click = () => {
+      clicked += 1;
+    };
+    const choose = view().querySelector<HTMLButtonElement>(
+      '[data-testid="import-workspace-choose"]',
+    )!;
+    await act(async () => {
+      choose.click();
+    });
+    expect(clicked).toBe(1);
+  });
+
   it("reads and previews into the space the menu belongs to", async () => {
     teamConfigPreview.mockResolvedValue(preview);
     await render();
