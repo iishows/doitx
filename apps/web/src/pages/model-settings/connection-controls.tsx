@@ -28,6 +28,7 @@ export function ConnectionControls({
   isCloudflare,
   isCloudflareGateway,
   keyOptional,
+  modelId,
   oauth,
   oauthPending,
   pasteCode,
@@ -38,6 +39,7 @@ export function ConnectionControls({
   preflightTarget,
   preflightTesting,
   selected,
+  selectFoundModel,
   setAccountId,
   setGatewayId,
   setPasteCode,
@@ -65,6 +67,7 @@ export function ConnectionControls({
   | "isCloudflare"
   | "isCloudflareGateway"
   | "keyOptional"
+  | "modelId"
   | "oauth"
   | "oauthPending"
   | "pasteCode"
@@ -75,6 +78,7 @@ export function ConnectionControls({
   | "preflightTarget"
   | "preflightTesting"
   | "selected"
+  | "selectFoundModel"
   | "setAccountId"
   | "setGatewayId"
   | "setPasteCode"
@@ -401,11 +405,19 @@ export function ConnectionControls({
           {foundModels && foundModels.length > 0 ? (
             <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={t`Models this endpoint serves`}>
               {foundModels.map((id) => (
-                <li
-                  key={id}
-                  className="rounded-md border border-border px-2 py-0.5 font-mono text-xs text-foreground"
-                >
-                  {id}
+                <li key={id}>
+                  <button
+                    type="button"
+                    aria-pressed={modelId === id}
+                    onClick={() => selectFoundModel(id)}
+                    className={`rounded-md border px-2 py-0.5 font-mono text-xs ${
+                      modelId === id
+                        ? "border-foreground text-foreground"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {id}
+                  </button>
                 </li>
               ))}
             </ul>

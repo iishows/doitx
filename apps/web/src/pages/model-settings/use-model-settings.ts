@@ -305,6 +305,10 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
 
   function updateApiKey(nextApiKey: string) {
     setApiKey(nextApiKey);
+    // A probed id belongs to the list that key returned; another key lists again.
+    if (!catalog.some((entry) => entry.provider === provider && entry.id === modelId)) {
+      setModelId("");
+    }
     invalidatePreflight();
   }
 
@@ -339,6 +343,21 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     setNotice(null);
   }
 
+  /** Adopts the first id a probe listed, the way the upstream form preselects one. */
+  function adoptFoundModels(models: string[]) {
+    setFoundModels(models);
+    if (models.length > 0 && !models.includes(modelId)) setModelId(models[0]!);
+  }
+
+  /** Picks one of the ids "Find models" listed for the connection's own model. */
+  function selectFoundModel(nextModelId: string) {
+    setModelId(nextModelId);
+    setPreflightFailure(null);
+    setPreflightSuccess(null);
+    setError(null);
+    setNotice(null);
+  }
+
   async function testApiKeyConnection() {
     if (!selected?.catalogProbe) return;
     const revision = preflightRevisionRef.current;
@@ -348,11 +367,13 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     setPreflightFailure(null);
     setError(null);
     setNotice(null);
+    // Check the model the connection will run, not the provider's catalog stand-in:
+    // an unconfigured endpoint has no model yet, so nothing is checked against the list.
     const result = await runModelConnectionPreflight({
       authKind: "api-key",
       provider: selected.provider,
       apiKey,
-      modelId: selected.id,
+      modelId: modelId.trim() || undefined,
       catalogProbe: true,
       probeCatalog: rpc.models.probeCatalog,
     });
@@ -385,7 +406,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
         apiKey,
       });
       if (!preflightStillCurrent(revision)) return;
-      setFoundModels(models);
+      adoptFoundModels(models);
       // The list itself is the result; only an empty one needs saying out loud.
       if (models.length === 0) setPreflightSuccess(modelPreflightSuccessMessage(0));
     } catch (error) {
@@ -602,6 +623,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     selectedConnectionName,
     selectedProviderName,
     selectionRevisionRef,
+    selectFoundModel,
     setAccountId,
     setConfirmDisconnect,
     setContextWindow,

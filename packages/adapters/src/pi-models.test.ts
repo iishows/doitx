@@ -321,6 +321,20 @@ describe("Pi model catalog", () => {
     }
   });
 
+  it("keeps the local probe pinned when the container reaches the host by name", async () => {
+    // The desktop app runs the API in a container; Docker resolves this name to the
+    // host that serves the endpoint, so the catalog must still be able to probe it.
+    vi.stubEnv("RAKAZO_LOCAL_MODELS_URL", "http://host.docker.internal:3456/v1");
+    vi.resetModules();
+    const { catalogProviderProbeBaseUrl: probeBaseUrl, listPiCatalog: list } = await import(
+      "./pi-models.js"
+    );
+    expect(probeBaseUrl("local")).toBe("http://host.docker.internal:3456/v1");
+    expect(list().filter((entry) => entry.provider === "local").every((entry) => entry.catalogProbe)).toBe(
+      true,
+    );
+  });
+
   it("keeps caller-supplied public endpoints gated", async () => {
     const previous = process.env.RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC;
     process.env.RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC = "0";

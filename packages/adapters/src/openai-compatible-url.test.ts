@@ -260,20 +260,22 @@ it("keeps API-key-only HTTPS copy separate from header-aware copy", () => {
 });
 
 describe("pinned local probe origin", () => {
-  it("matches only the exact loopback origin, any path", () => {
+  it("matches this machine's endpoint from the host and from a container", () => {
     expect(isPinnedLocalProbeOrigin("http://127.0.0.1:3456")).toBe(true);
     expect(isPinnedLocalProbeOrigin("http://127.0.0.1:3456/v1")).toBe(true);
     expect(isPinnedLocalProbeOrigin(new URL("http://127.0.0.1:3456/v1/models"))).toBe(true);
+    // Docker's name for the same machine; the container's own 127.0.0.1 is not it.
+    expect(isPinnedLocalProbeOrigin("http://host.docker.internal:3456/v1")).toBe(true);
   });
 
   it("refuses every near miss", () => {
     for (const raw of [
       "http://127.0.0.1:11434/v1", // a different local server, e.g. Ollama
       "http://127.0.0.1/v1", // default port
-      "http://localhost:3456/v1", // a different hostname
+      "http://localhost:3456/v1", // ambiguous inside a container
       "https://127.0.0.1:3456/v1", // cleartext only
       "http://192.168.1.5:3456/v1", // LAN address
-      "http://host.docker.internal:3456/v1",
+      "http://host.docker.internal:8000/v1", // a different port
       "https://router.doitx.ai/v1",
       "not a url",
     ]) {
@@ -284,6 +286,9 @@ describe("pinned local probe origin", () => {
   it("opens the pinned origin without opening the whole private range", () => {
     const pinned = { allowPinnedLocalOrigin: true };
     expect(() => assertAllowedOpenAiCompatibleUrl("http://127.0.0.1:3456/v1", pinned)).not.toThrow();
+    expect(() =>
+      assertAllowedOpenAiCompatibleUrl("http://host.docker.internal:3456/v1", pinned),
+    ).not.toThrow();
     // A different private host still needs the operator's blanket permission.
     expect(() => assertAllowedOpenAiCompatibleUrl("http://10.0.0.7:3456/v1", pinned)).toThrow(
       PRIVATE_MODEL_ENDPOINT_MESSAGE,

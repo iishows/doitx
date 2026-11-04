@@ -26,7 +26,10 @@ import {
   pickCatalogModelId,
 } from "./model-providers.js";
 
-type CatalogModel = Pick<ModelCatalogEntry, "provider" | "id" | "recommended" | "thinkingLevels">;
+type CatalogModel = Pick<
+  ModelCatalogEntry,
+  "provider" | "id" | "recommended" | "thinkingLevels" | "placeholder"
+>;
 type DefaultModel = { defaultProvider: string | null; defaultModel: string | null };
 
 /** What a connection form edits, as the strings and toggles its fields hold. */
@@ -167,7 +170,10 @@ export type ModelConnectRequest =
  */
 export function modelConnectRequest(input: {
   form: ConnectionFormDraft;
-  selected: Pick<ModelCatalogEntry, "provider" | "providerName" | "id" | "thinkingLevels">;
+  selected: Pick<
+    ModelCatalogEntry,
+    "provider" | "providerName" | "id" | "thinkingLevels" | "placeholder"
+  >;
   credential?: Pick<ModelCredential, "modelId" | "thinkingLevel">;
   credentialId: string | null;
   settingsOnly?: boolean;
@@ -182,7 +188,12 @@ export function modelConnectRequest(input: {
   // with an empty key: the server still answers a probe, which discovers its models.
   const keyless = selected.provider === LOCAL_PROVIDER_ID;
   const savingLimitOnly = !compatible && !newKey && !keyless;
-  const activeModelId = compatible ? modelId : selected.id;
+  // The form's id wins: a probe can discover a model the catalog has not listed yet,
+  // and that is the one to save. A placeholder stands in for models a probe discovers,
+  // so it is never saved as a model itself.
+  const activeModelId = compatible
+    ? modelId
+    : modelId || (selected.placeholder ? "" : selected.id);
   if (compatible) {
     if (!baseUrl || !modelId) return { status: "incomplete" };
   } else if (savingLimitOnly) {
@@ -244,7 +255,7 @@ export function modelConnectRequest(input: {
   }
   const modelChanged = (credential?.modelId ?? null) !== (activeModelId || null);
   const storedThinking =
-    credential?.modelId === selected.id ? (credential.thinkingLevel ?? null) : null;
+    credential?.modelId === activeModelId ? (credential.thinkingLevel ?? null) : null;
   return {
     status: "ready",
     savingLimitOnly,
@@ -255,7 +266,7 @@ export function modelConnectRequest(input: {
       ...(isCloudflareModelProvider(selected.provider)
         ? { accountId: form.accountId.trim(), gatewayId: form.gatewayId.trim() }
         : {}),
-      modelId: selected.id,
+      ...(activeModelId ? { modelId: activeModelId } : {}),
       // A limits-only save leaves the stored effort alone while the model and effort stay
       // put. Changing either sends the clamped level, including null, so the previous
       // model's effort is not reused.

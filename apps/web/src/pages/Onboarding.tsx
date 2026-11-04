@@ -129,6 +129,8 @@ export function OnboardingPage() {
   const [modelId, setModelId] = useState("");
   const modelIdRef = useRef(modelId);
   modelIdRef.current = modelId;
+  /** Ids a probe listed for the selected provider, until it is saved. */
+  const [foundModels, setFoundModels] = useState<string[]>([]);
   const [apiKey, setApiKey] = useState("");
   const [accountId, setAccountId] = useState("");
   const [gatewayId, setGatewayId] = useState("");
@@ -206,6 +208,8 @@ export function OnboardingPage() {
     !isCloudflare || cloudflareModelRouting({ provider, accountId, gatewayId }) !== undefined;
   const subscriptionSignIn = selected?.signIn !== undefined && providerAuth !== "key";
   const acceptsKey = selected?.auth !== "oauth" && providerAuth !== "sign-in";
+  // The local endpoint is often keyless, so its key field may stay empty.
+  const keyOptional = provider === LOCAL_PROVIDER_ID;
   const signInLabel = selected?.oauthLabel ?? t`Sign in`;
   const canSaveModel = Boolean(
     selected &&
@@ -213,7 +217,7 @@ export function OnboardingPage() {
       !oauthPending &&
       cloudflareRoutingReady &&
       acceptsKey &&
-      apiKey.trim(),
+      (apiKey.trim() || keyOptional),
   );
   // Subscriptions and the common API providers first; every other provider follows.
   const providerOptions = useMemo(() => {
@@ -239,10 +243,16 @@ export function OnboardingPage() {
     () => [...providerOptions.main, ...providerOptions.rest],
     [providerOptions],
   );
-  const modelItems = useMemo(
-    () => modelsForProvider.map((entry) => ({ value: entry.id, label: entry.label })),
-    [modelsForProvider],
-  );
+  // A provider's catalog stand-in is never a model to choose; a probe's listed ids join here.
+  const modelOptions = useMemo(() => {
+    const options = modelsForProvider
+      .filter((entry) => !entry.placeholder)
+      .map((entry) => ({ value: entry.id, label: entry.label }));
+    for (const id of foundModels) {
+      if (!options.some((option) => option.value === id)) options.push({ value: id, label: id });
+    }
+    return options;
+  }, [modelsForProvider, foundModels]);
 
   function invalidatePreflight() {
     preflightRevisionRef.current += 1;
@@ -250,10 +260,15 @@ export function OnboardingPage() {
     setPreflightTarget(null);
     setPreflightSuccess(null);
     setPreflightFailure(null);
+    setFoundModels([]);
   }
 
   function updateApiKey(nextApiKey: string) {
     setApiKey(nextApiKey);
+    // A probed id belongs to the list that key returned; another key lists again.
+    if (!catalog.some((entry) => entry.provider === provider && entry.id === modelId)) {
+      setModelId("");
+    }
     invalidatePreflight();
   }
 
@@ -286,17 +301,22 @@ export function OnboardingPage() {
     setPreflightFailure(null);
     setError(null);
     setNotice(null);
+    // Check the model this connection will run, never the provider's catalog stand-in.
     const result = await runModelConnectionPreflight({
       authKind: "api-key",
       provider: selected.provider,
       apiKey,
-      modelId: selected.id,
+      modelId: modelId.trim() || undefined,
       catalogProbe: true,
       probeCatalog: rpc.models.probeCatalog,
     });
     if (!preflightStillCurrent(revision)) return;
     setPreflightTesting(false);
     if (result.ok) {
+      setFoundModels(result.discoveredModels);
+      if (result.discoveredModels.length > 0 && !result.discoveredModels.includes(modelId)) {
+        setModelId(result.discoveredModels[0]!);
+      }
       setPreflightSuccess(modelPreflightSuccessMessage(result.discoveredModels.length));
       return;
     }
@@ -307,10 +327,10 @@ export function OnboardingPage() {
     if (!canSaveModel) return;
     setError(null);
     try {
-      if (apiKey) {
+      if (apiKey || keyOptional) {
         await rpc.models.connect({
           provider,
-          apiKey,
+          ...(apiKey ? { apiKey } : {}),
           ...(isCloudflare ? { accountId: accountId.trim(), gatewayId: gatewayId.trim() } : {}),
           modelId,
           label: selected?.providerName ?? provider,
@@ -593,6 +613,8 @@ export function OnboardingPage() {
                   >
                     {subscriptionSignIn ? (
                       <Trans>Or paste an API key</Trans>
+                    ) : keyOptional ? (
+                      <Trans>API key (optional)</Trans>
                     ) : (
                       <Trans>API key</Trans>
                     )}
@@ -600,7 +622,7 @@ export function OnboardingPage() {
                       id={`${fieldId}-api-key`}
                       value={apiKey}
                       onChange={(e) => updateApiKey(e.target.value)}
-                      placeholder="sk-…"
+                      placeholder={keyOptional ? t`Not needed for a keyless server` : "sk-…"}
                       type="password"
                       autoComplete="new-password"
                       className="mt-2"
@@ -613,7 +635,7 @@ export function OnboardingPage() {
                       type="button"
                       variant="outline"
                       className="mt-3"
-                      disabled={preflightTesting || apiKey.trim().length < 8}
+                      disabled={preflightTesting || (!keyOptional && apiKey.trim().length < 8)}
                       onClick={() => void testApiKeyConnection()}
                     >
                       {modelPreflightTestingLabel(
@@ -630,31 +652,31 @@ export function OnboardingPage() {
                   </>
                 ) : null}
                 {/* The model is chosen once the account is connected; sign-in uses the default. */}
-                {acceptsKey && apiKey.trim() ? (
+                {acceptsKey && modelOptions.length > 0 ? (
                   <div className="mt-6 block text-sm text-foreground">
                     <span className="font-medium">
                       <Trans>Model</Trans>
                     </span>
                     <Select
-                      value={selected?.id ?? modelId}
+                      value={modelId}
                       onValueChange={(value) => {
                         if (typeof value !== "string" || !value) return;
                         if (value === modelId) return;
                         cancelOAuthAttempt();
                         setModelId(value);
                         setThinkingLevel(null);
-                        invalidatePreflight();
+                        setPreflightFailure(null);
                       }}
-                      items={modelItems}
+                      items={modelOptions}
                     >
                       <SelectTrigger aria-label={t`Model`} className="mt-2 w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          {modelsForProvider.map((entry) => (
-                            <SelectItem key={`${entry.provider}:${entry.id}`} value={entry.id}>
-                              {entry.label}
+                          {modelOptions.map((option) => (
+                            <SelectItem key={`${provider}:${option.value}`} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectGroup>

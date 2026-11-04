@@ -238,16 +238,20 @@ describe("modelConnectRequest", () => {
     expect(
       modelConnectRequest({
         form: draft(),
-        selected: { provider: "local", providerName: "Local", id: "local-endpoint" },
+        selected: {
+          provider: "local",
+          providerName: "Local",
+          id: "local-endpoint",
+          placeholder: true,
+        },
         credentialId: null,
       }),
     ).toEqual({
       status: "ready",
       savingLimitOnly: false,
-      activeModelId: "local-endpoint",
+      activeModelId: "",
       input: {
         provider: "local",
-        modelId: "local-endpoint",
         thinkingLevel: null,
         maxTokens: null,
         label: "Local",
@@ -258,10 +262,34 @@ describe("modelConnectRequest", () => {
     expect(
       modelConnectRequest({
         form: draft({ apiKey: " sk-example-gateway-token " }),
-        selected: { provider: "local", providerName: "Local", id: "local-endpoint" },
+        selected: {
+          provider: "local",
+          providerName: "Local",
+          id: "local-endpoint",
+          placeholder: true,
+        },
         credentialId: null,
       }),
     ).toMatchObject({ status: "ready", input: { apiKey: "sk-example-gateway-token" } });
+  });
+
+  it("saves the model a probe discovered instead of the placeholder", () => {
+    const selected = {
+      provider: "doitx",
+      providerName: "Doitx Router",
+      id: "doitx-router",
+      placeholder: true,
+    };
+    expect(
+      modelConnectRequest({
+        form: draft({ apiKey: "sk-long-enough", modelId: " gpt-6-luna " }),
+        selected,
+        credentialId: null,
+      }),
+    ).toMatchObject({ activeModelId: "gpt-6-luna", input: { modelId: "gpt-6-luna" } });
+    expect(
+      modelConnectRequest({ form: draft({ apiKey: "sk-long-enough" }), selected, credentialId: null }),
+    ).toMatchObject({ activeModelId: "", input: {} });
   });
 
   it("connects a catalog key with the clamped effort and the makeDefault target", () => {

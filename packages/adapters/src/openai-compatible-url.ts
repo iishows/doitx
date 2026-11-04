@@ -56,10 +56,20 @@ export const PRIVATE_MODEL_ENDPOINT_MESSAGE =
 export const PINNED_LOCAL_PROBE_ORIGIN = "http://127.0.0.1:3456";
 
 /**
+ * Hostnames that all name this machine's own local model server. The desktop app runs
+ * the API in a container, where Docker resolves `host.docker.internal` back to the host
+ * that runs the endpoint; the container's `127.0.0.1` is the container itself.
+ */
+const PINNED_LOCAL_PROBE_HOSTS: ReadonlySet<string> = new Set([
+  "127.0.0.1",
+  "host.docker.internal",
+]);
+
+/**
  * Whether `raw` is the pinned local probe origin. Matches the origin only, so the
  * `/v1` suffix and any other path are accepted; a different host, scheme, or port
  * is not. The catalog pins the local probe to this one address because it is the
- * deployment's own loopback server, never a caller-supplied endpoint.
+ * deployment's own server, never a caller-supplied endpoint.
  */
 export function isPinnedLocalProbeOrigin(raw: string | URL): boolean {
   let url: URL;
@@ -72,7 +82,7 @@ export function isPinnedLocalProbeOrigin(raw: string | URL): boolean {
   return (
     url.protocol === pinned.protocol &&
     url.port === pinned.port &&
-    normalizeHost(url.hostname) === pinned.hostname
+    PINNED_LOCAL_PROBE_HOSTS.has(normalizeHost(url.hostname))
   );
 }
 

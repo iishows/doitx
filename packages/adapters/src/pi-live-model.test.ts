@@ -19,6 +19,9 @@ describe("liveModelSibling endpoint schemes", () => {
     // local model has to materialize from its sibling the same way an https one does.
     const models = managedAt("http://127.0.0.1:3456/v1");
     expect(liveModelSibling(models, "local", "llama-4")?.id).toBe("llama-4");
+    // The desktop app's API runs in a container, where Docker names this host.
+    const containerized = managedAt("http://host.docker.internal:3456/v1");
+    expect(liveModelSibling(containerized, "local", "llama-4")?.id).toBe("llama-4");
   });
 
   it("resolves a sibling on the router's https endpoint", () => {
