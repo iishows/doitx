@@ -140,7 +140,7 @@ msgstr ""
 #. placeholder {1}: bot.mcpServers
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "{0} routines · {1} servers"
-msgstr ""
+msgstr "{0} rotinas · {1} servidores"
 
 #. placeholder {0}: parts.amount
 #: src/components/ArtifactFileCard.tsx
@@ -430,7 +430,7 @@ msgstr "A saída de um comando"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "a name is taken, it is renamed"
-msgstr ""
+msgstr "um nome já está em uso, ele será renomeado"
 
 #. placeholder {0}: oauth.verificationUri.replace(/^https:\/\//, "")
 #: src/pages/model-settings/connection-controls.tsx
@@ -481,7 +481,7 @@ msgstr "Ações para {0}"
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Actions for space"
-msgstr ""
+msgstr "Ações do espaço"
 
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
@@ -654,7 +654,7 @@ msgstr "Todos os ${0} vão para o uso de modelos."
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "All bots"
-msgstr ""
+msgstr "Todos os bots"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -714,7 +714,7 @@ msgstr "Você já tem cadastro?"
 #. placeholder {2}: preview.counts.connections
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Also adds {0} sections, {1} skills and {2} connections."
-msgstr ""
+msgstr "Também adiciona {0} seções, {1} habilidades e {2} conexões."
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
@@ -1080,7 +1080,7 @@ msgstr ""
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Bots with servers needing credentials will not run until you add them."
-msgstr ""
+msgstr "Bots com servidores que exigem credenciais não serão executados até você adicioná-las."
 
 #: src/pages/Paywall.tsx
 msgid "Bots with their own computer and browser"
@@ -2315,11 +2315,11 @@ msgstr ""
 #. placeholder {0}: created.length
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created {0} bots."
-msgstr ""
+msgstr "{0} bots criados."
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created 1 bot."
-msgstr ""
+msgstr "1 bot criado."
 
 #: src/pages/GroupPanel.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2342,7 +2342,7 @@ msgstr "As credenciais são criptografadas e nunca são enviadas ao modelo."
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Credentials are never included; imported connections need authorising."
-msgstr ""
+msgstr "Credenciais nunca são incluídas; conexões importadas precisam ser autorizadas."
 
 #: src/pages/shell/import-status.ts
 msgid "Credentials: {names}"
@@ -2491,7 +2491,7 @@ msgstr "Excluir seção"
 #: src/pages/shell/shell-dialogs.tsx
 #: src/pages/SpaceSettingsPanel.tsx
 msgid "Delete space"
-msgstr ""
+msgstr "Excluir espaço"
 
 #: src/pages/SpaceSettingOverrides.tsx
 msgid "Delete this Space's credentials?"
@@ -2874,7 +2874,7 @@ msgstr "Exporte a lista desta semana do CRM e solte-a na pasta compartilhada"
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Export workspace configuration"
-msgstr ""
+msgstr "Exportar configuração do espaço de trabalho"
 
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -2999,7 +2999,7 @@ msgstr ""
 #. placeholder {0}: preview.sourceWorkspace
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "From {0}. Choose the bots to create."
-msgstr ""
+msgstr "De {0}. Escolha os bots a criar."
 
 #: src/components/integrations/skills-dialog.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -3190,11 +3190,11 @@ msgstr "Área de envio de imagem"
 #. placeholder {0}: ticked.size
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import {0} bots"
-msgstr ""
+msgstr "Importar {0} bots"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import 1 bot"
-msgstr ""
+msgstr "Importar 1 bot"
 
 #: src/components/AccountDataSettings.tsx
 #: src/pages/shell/agent-import.tsx
@@ -3207,11 +3207,11 @@ msgstr "Importar dados"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import into {spaceName}"
-msgstr ""
+msgstr "Importar para {spaceName}"
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Import workspace configuration"
-msgstr ""
+msgstr "Importar configuração do espaço de trabalho"
 
 #: src/lib/ticket-status.ts
 msgid "In progress"
@@ -3759,7 +3759,7 @@ msgstr "Opções do modelo"
 #. placeholder {0}: preview.droppedPreferences .map((item) => item.provider) .join(", ")
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Model preferences for {0} are skipped: connect those providers first."
-msgstr ""
+msgstr "As preferências de modelo para {0} são ignoradas: conecte esses provedores primeiro."
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -3876,7 +3876,7 @@ msgstr "Precisa de um ID de cliente OAuth"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "needs credentials"
-msgstr ""
+msgstr "precisa de credenciais"
 
 #: src/pages/ActivityList.tsx
 msgid "Needs input"
@@ -4344,7 +4344,7 @@ msgstr "Cole sua chave de API e teste novamente."
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/import-status.ts
 msgid "Paused"
-msgstr ""
+msgstr "Pausado"
 
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
@@ -5671,7 +5671,7 @@ msgstr "Testando…"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "That file is not a workspace archive."
-msgstr ""
+msgstr "Esse arquivo não é um arquivo de espaço de trabalho."
 
 #: src/pages/shell/composer-error.tsx
 msgid "The bot can use the file but won't see the picture."
@@ -5718,11 +5718,11 @@ msgstr "O provedor de memória selecionado não está disponível nesta compila�
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "The workspace could not be downloaded."
-msgstr ""
+msgstr "Não foi possível baixar o espaço de trabalho."
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "The workspace could not be imported."
-msgstr ""
+msgstr "Não foi possível importar o espaço de trabalho."
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Their own model is cleared. You can pick one again in each bot."

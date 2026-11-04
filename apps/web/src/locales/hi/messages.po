@@ -140,7 +140,7 @@ msgstr ""
 #. placeholder {1}: bot.mcpServers
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "{0} routines · {1} servers"
-msgstr ""
+msgstr "{0} रूटीन · {1} सर्वर"
 
 #. placeholder {0}: parts.amount
 #: src/components/ArtifactFileCard.tsx
@@ -430,7 +430,7 @@ msgstr "कमांड का आउटपुट"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "a name is taken, it is renamed"
-msgstr ""
+msgstr "नाम पहले से लिया है, इसे बदला जाएगा"
 
 #. placeholder {0}: oauth.verificationUri.replace(/^https:\/\//, "")
 #: src/pages/model-settings/connection-controls.tsx
@@ -481,7 +481,7 @@ msgstr "{0} के लिए कार्रवाइयां"
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Actions for space"
-msgstr ""
+msgstr "स्पेस के लिए क्रियाएँ"
 
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
@@ -654,7 +654,7 @@ msgstr "पूरे ${0} मॉडल उपयोग में जाते �
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "All bots"
-msgstr ""
+msgstr "सभी बॉट"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -714,7 +714,7 @@ msgstr "पहले से खाता है?"
 #. placeholder {2}: preview.counts.connections
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Also adds {0} sections, {1} skills and {2} connections."
-msgstr ""
+msgstr "{0} सेक्शन, {1} स्किल और {2} कनेक्शन भी जोड़ता है।"
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
@@ -1080,7 +1080,7 @@ msgstr ""
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Bots with servers needing credentials will not run until you add them."
-msgstr ""
+msgstr "जिन बॉट्स के सर्वर को क्रेडेंशियल चाहिए, वे तब तक नहीं चलेंगे जब तक आप उन्हें जोड़ नहीं देते।"
 
 #: src/pages/Paywall.tsx
 msgid "Bots with their own computer and browser"
@@ -2315,11 +2315,11 @@ msgstr ""
 #. placeholder {0}: created.length
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created {0} bots."
-msgstr ""
+msgstr "{0} बॉट बनाए गए।"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created 1 bot."
-msgstr ""
+msgstr "1 बॉट बनाया गया।"
 
 #: src/pages/GroupPanel.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2342,7 +2342,7 @@ msgstr "क्रेडेंशियल एन्क्रिप्टेड �
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Credentials are never included; imported connections need authorising."
-msgstr ""
+msgstr "क्रेडेंशियल कभी शामिल नहीं होते; आयातित कनेक्शन को अधिकृत करना होगा।"
 
 #: src/pages/shell/import-status.ts
 msgid "Credentials: {names}"
@@ -2491,7 +2491,7 @@ msgstr "अनुभाग हटाएँ"
 #: src/pages/shell/shell-dialogs.tsx
 #: src/pages/SpaceSettingsPanel.tsx
 msgid "Delete space"
-msgstr ""
+msgstr "स्पेस हटाएँ"
 
 #: src/pages/SpaceSettingOverrides.tsx
 msgid "Delete this Space's credentials?"
@@ -2874,7 +2874,7 @@ msgstr "CRM से इस सप्ताह की सूची एक्सप
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Export workspace configuration"
-msgstr ""
+msgstr "वर्कस्पेस कॉन्फ़िगरेशन निर्यात करें"
 
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -2999,7 +2999,7 @@ msgstr ""
 #. placeholder {0}: preview.sourceWorkspace
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "From {0}. Choose the bots to create."
-msgstr ""
+msgstr "{0} से। बनाने के लिए बॉट चुनें।"
 
 #: src/components/integrations/skills-dialog.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -3190,11 +3190,11 @@ msgstr "छवि अपलोड क्षेत्र"
 #. placeholder {0}: ticked.size
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import {0} bots"
-msgstr ""
+msgstr "{0} बॉट आयात करें"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import 1 bot"
-msgstr ""
+msgstr "1 बॉट आयात करें"
 
 #: src/components/AccountDataSettings.tsx
 #: src/pages/shell/agent-import.tsx
@@ -3207,11 +3207,11 @@ msgstr "डेटा आयात करें"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import into {spaceName}"
-msgstr ""
+msgstr "{spaceName} में आयात करें"
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Import workspace configuration"
-msgstr ""
+msgstr "वर्कस्पेस कॉन्फ़िगरेशन आयात करें"
 
 #: src/lib/ticket-status.ts
 msgid "In progress"
@@ -3759,7 +3759,7 @@ msgstr "मॉडल विकल्प"
 #. placeholder {0}: preview.droppedPreferences .map((item) => item.provider) .join(", ")
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Model preferences for {0} are skipped: connect those providers first."
-msgstr ""
+msgstr "{0} के लिए मॉडल प्राथमिकताएँ छोड़ दी जाती हैं: पहले उन प्रदाताओं को कनेक्ट करें।"
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -3876,7 +3876,7 @@ msgstr "OAuth क्लाइंट ID चाहिए"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "needs credentials"
-msgstr ""
+msgstr "क्रेडेंशियल चाहिए"
 
 #: src/pages/ActivityList.tsx
 msgid "Needs input"
@@ -4344,7 +4344,7 @@ msgstr "अपनी API कुंजी पेस्ट करें, फिर
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/import-status.ts
 msgid "Paused"
-msgstr ""
+msgstr "रोका गया"
 
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
@@ -5671,7 +5671,7 @@ msgstr "परीक्षण हो रहा है…"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "That file is not a workspace archive."
-msgstr ""
+msgstr "यह फ़ाइल वर्कस्पेस आर्काइव नहीं है।"
 
 #: src/pages/shell/composer-error.tsx
 msgid "The bot can use the file but won't see the picture."
@@ -5718,11 +5718,11 @@ msgstr "चयनित मेमोरी प्रोवाइडर इस �
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "The workspace could not be downloaded."
-msgstr ""
+msgstr "वर्कस्पेस डाउनलोड नहीं किया जा सका।"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "The workspace could not be imported."
-msgstr ""
+msgstr "वर्कस्पेस आयात नहीं किया जा सका।"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Their own model is cleared. You can pick one again in each bot."

@@ -126,6 +126,52 @@ describe("lingui catalogs", () => {
     }
   });
 
+  it("translates the workspace import and export strings in every locale", () => {
+    // A workspace travels between deployments and people, so its menu entries and
+    // its import dialog are the last place a member should meet untranslated copy.
+    const messages = [
+      "Export workspace configuration",
+      "Import workspace configuration",
+      "The workspace could not be downloaded.",
+      "Import into {spaceName}",
+      "Credentials are never included; imported connections need authorising.",
+      "Choose file",
+      "That file is not a workspace archive.",
+      "The workspace could not be imported.",
+      "From {0}. Choose the bots to create.",
+      "{0} routines · {1} servers",
+      "needs credentials",
+      "a name is taken, it is renamed",
+      "Also adds {0} sections, {1} skills and {2} connections.",
+      "Model preferences for {0} are skipped: connect those providers first.",
+      "Bots with servers needing credentials will not run until you add them.",
+      "Import 1 bot",
+      "Import {0} bots",
+      "Created 1 bot.",
+      "Created {0} bots.",
+    ];
+    for (const locale of UI_LOCALES.filter((entry) => entry !== "en")) {
+      const catalog = readFileSync(
+        fileURLToPath(new URL(`../locales/${locale}/messages.po`, import.meta.url)),
+        "utf8",
+      );
+      for (const message of messages) {
+        const entry = catalog
+          .split("\n\n")
+          .find((block) => block.includes(`msgid ${JSON.stringify(message)}\n`));
+        const translated = entry?.match(/msgstr "(.+)"/)?.[1];
+        expect(translated, `${locale}: ${message}`).toBeTruthy();
+        // Dutch spells "routines" and "servers" the same way, so that one is a real translation.
+        if (locale !== "nl" || message !== "{0} routines · {1} servers") {
+          expect(translated, `${locale}: ${message}`).not.toBe(message);
+        }
+        expect(translated?.match(/\{\w+\}/g) ?? [], `${locale}: ${message}`).toEqual(
+          message.match(/\{\w+\}/g) ?? [],
+        );
+      }
+    }
+  });
+
   beforeEach(() => {
     i18n.load("en", {});
     i18n.activate("en");

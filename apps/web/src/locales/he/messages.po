@@ -140,7 +140,7 @@ msgstr "שעות סיכום של {0}"
 #. placeholder {1}: bot.mcpServers
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "{0} routines · {1} servers"
-msgstr ""
+msgstr "{0} שגרות · {1} שרתים"
 
 #. placeholder {0}: parts.amount
 #: src/components/ArtifactFileCard.tsx
@@ -430,7 +430,7 @@ msgstr ""
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "a name is taken, it is renamed"
-msgstr ""
+msgstr "השם תפוס, הוא ישונה"
 
 #. placeholder {0}: oauth.verificationUri.replace(/^https:\/\//, "")
 #: src/pages/model-settings/connection-controls.tsx
@@ -714,7 +714,7 @@ msgstr "כבר יש חשבון?"
 #. placeholder {2}: preview.counts.connections
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Also adds {0} sections, {1} skills and {2} connections."
-msgstr ""
+msgstr "מוסיף גם {0} מדורים, {1} מיומנויות ו-{2} חיבורים."
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
@@ -1080,7 +1080,7 @@ msgstr ""
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Bots with servers needing credentials will not run until you add them."
-msgstr ""
+msgstr "בוטים עם שרתים שדורשים פרטי גישה לא יפעלו עד שתוסיפו אותם."
 
 #: src/pages/Paywall.tsx
 msgid "Bots with their own computer and browser"
@@ -2315,11 +2315,11 @@ msgstr "נוצר"
 #. placeholder {0}: created.length
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created {0} bots."
-msgstr ""
+msgstr "נוצרו {0} בוטים."
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Created 1 bot."
-msgstr ""
+msgstr "נוצר בוט אחד."
 
 #: src/pages/GroupPanel.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2342,7 +2342,7 @@ msgstr "פרטי הגישה מוצפנים ולעולם לא נשלחים למו
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Credentials are never included; imported connections need authorising."
-msgstr ""
+msgstr "פרטי גישה אף פעם לא נכללים; יש לאשר חיבורים מיובאים."
 
 #: src/pages/shell/import-status.ts
 msgid "Credentials: {names}"
@@ -2874,7 +2874,7 @@ msgstr "לייצא את הרשימה של השבוע מה-CRM ולשים אות�
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Export workspace configuration"
-msgstr ""
+msgstr "ייצוא תצורת סביבת עבודה"
 
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -2999,7 +2999,7 @@ msgstr "מ-{0}"
 #. placeholder {0}: preview.sourceWorkspace
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "From {0}. Choose the bots to create."
-msgstr ""
+msgstr "מתוך {0}. בחרו את הבוטים ליצירה."
 
 #: src/components/integrations/skills-dialog.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -3190,11 +3190,11 @@ msgstr "אזור העלאת תמונה"
 #. placeholder {0}: ticked.size
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import {0} bots"
-msgstr ""
+msgstr "ייבא {0} בוטים"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import 1 bot"
-msgstr ""
+msgstr "ייבא בוט אחד"
 
 #: src/components/AccountDataSettings.tsx
 #: src/pages/shell/agent-import.tsx
@@ -3207,11 +3207,11 @@ msgstr "ייבוא נתונים"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Import into {spaceName}"
-msgstr ""
+msgstr "ייבא אל {spaceName}"
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Import workspace configuration"
-msgstr ""
+msgstr "ייבוא תצורת סביבת עבודה"
 
 #: src/lib/ticket-status.ts
 msgid "In progress"
@@ -3759,7 +3759,7 @@ msgstr "אפשרויות מודל"
 #. placeholder {0}: preview.droppedPreferences .map((item) => item.provider) .join(", ")
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Model preferences for {0} are skipped: connect those providers first."
-msgstr ""
+msgstr "העדפות מודל עבור {0} מדולגות: חברו את הספקים האלה קודם."
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -3876,7 +3876,7 @@ msgstr "נדרש מזהה לקוח OAuth"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "needs credentials"
-msgstr ""
+msgstr "דורש פרטי גישה"
 
 #: src/pages/ActivityList.tsx
 msgid "Needs input"
@@ -5671,7 +5671,7 @@ msgstr "בודק…"
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "That file is not a workspace archive."
-msgstr ""
+msgstr "הקובץ הזה אינו ארכיון סביבת עבודה."
 
 #: src/pages/shell/composer-error.tsx
 msgid "The bot can use the file but won't see the picture."
@@ -5718,11 +5718,11 @@ msgstr "ספק הזיכרון שנבחר אינו זמין בגרסה הזו."
 
 #: src/pages/shell/shell-dialogs.tsx
 msgid "The workspace could not be downloaded."
-msgstr ""
+msgstr "לא ניתן היה להוריד את סביבת העבודה."
 
 #: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "The workspace could not be imported."
-msgstr ""
+msgstr "לא ניתן היה לייבא את סביבת העבודה."
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Their own model is cleared. You can pick one again in each bot."
