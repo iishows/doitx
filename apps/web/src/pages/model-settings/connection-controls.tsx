@@ -1,4 +1,5 @@
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
+import { DOITX_PROVIDER_ID, LOCAL_PROVIDER_ID } from "@rakazo/contracts";
 import { Button, Disclosure, Input } from "@rakazo/ui-web";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -24,6 +25,7 @@ export function ConnectionControls({
   gatewayId,
   isCloudflare,
   isCloudflareGateway,
+  keyOptional,
   oauth,
   oauthPending,
   pasteCode,
@@ -58,6 +60,7 @@ export function ConnectionControls({
   | "gatewayId"
   | "isCloudflare"
   | "isCloudflareGateway"
+  | "keyOptional"
   | "oauth"
   | "oauthPending"
   | "pasteCode"
@@ -297,6 +300,8 @@ export function ConnectionControls({
                 <Trans>Replace API key</Trans>
               ) : subscriptionSignIn ? (
                 <Trans>Or paste an API key</Trans>
+              ) : keyOptional ? (
+                <Trans>API key (optional)</Trans>
               ) : (
                 <Trans>API key</Trans>
               )}
@@ -304,7 +309,13 @@ export function ConnectionControls({
                 id="model-api-key"
                 value={apiKey}
                 onChange={(event) => updateApiKey(event.target.value)}
-                placeholder={credential?.hasKey ? t`Paste a replacement key` : "sk-…"}
+                placeholder={
+                  credential?.hasKey
+                    ? t`Paste a replacement key`
+                    : keyOptional
+                      ? t`Not needed for a keyless server`
+                      : "sk-…"
+                }
                 type="password"
                 autoComplete="new-password"
                 className="mt-2 h-10 text-foreground"
@@ -317,7 +328,7 @@ export function ConnectionControls({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={busy || preflightTesting || apiKey.trim().length < 8}
+                disabled={busy || preflightTesting || (!keyOptional && apiKey.trim().length < 8)}
                 onClick={() => void testApiKeyConnection()}
               >
                 {modelPreflightTestingLabel(
@@ -330,7 +341,9 @@ export function ConnectionControls({
               type="button"
               variant="secondary"
               size="sm"
-              disabled={busy || !cloudflareRoutingReady || apiKey.trim().length < 8}
+              disabled={
+                busy || !cloudflareRoutingReady || (!keyOptional && apiKey.trim().length < 8)
+              }
               onClick={() => void connectKey()}
             >
               {pending === "connect" ? (
@@ -342,6 +355,30 @@ export function ConnectionControls({
               )}
             </Button>
           </div>
+          {selected?.provider === DOITX_PROVIDER_ID && !credential?.hasKey ? (
+            <p className="mt-3 text-[13px] leading-[1.5]">
+              <a
+                href="https://router.doitx.ai"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground underline hover:text-foreground"
+              >
+                <Trans>Get an API key</Trans>
+              </a>
+            </p>
+          ) : null}
+          {selected?.provider === LOCAL_PROVIDER_ID && !credential?.hasKey ? (
+            <p className="mt-3 text-[13px] leading-[1.5]">
+              <a
+                href="https://github.com/iishows/helix-router/releases"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground underline hover:text-foreground"
+              >
+                <Trans>Run a local model server</Trans>
+              </a>
+            </p>
+          ) : null}
           {preflightTarget === "api-key" ? (
             <ModelPreflightFeedback success={preflightSuccess} failure={preflightFailure} />
           ) : null}

@@ -168,9 +168,11 @@ describe("connect-time model check", () => {
   });
 
   it("skips a model the catalog cannot resolve", async () => {
+    // The local endpoint and the router resolve an undeclared id from a sibling. A
+    // user-supplied endpoint pins no probe and bundles no sibling, so it resolves none.
     const fetchImpl = vi.fn<typeof fetch>();
     await verifyModelServesAgents(
-      { provider: "local", id: "undeclared-model", apiKey },
+      { provider: "openai-compatible", id: "undeclared-model", apiKey },
       { fetch: fetchImpl },
     );
     expect(fetchImpl).not.toHaveBeenCalled();

@@ -794,6 +794,10 @@ msgstr "自分のキーで、あらゆるモデルを"
 msgid "API key"
 msgstr "APIキー"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "API キー（任意）"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "{provider}のAPIキー"
@@ -1231,10 +1235,6 @@ msgstr "チャット設定"
 msgid "Chat with your bot from Slack."
 msgstr "Slackからボットとチャットできます。"
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr "ChatGPTサブスクリプション"
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "チャット"
@@ -1318,6 +1318,7 @@ msgstr "バックアップを選択"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "ファイルを選択"
 
@@ -1329,10 +1330,6 @@ msgstr "フォルダを選択"
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
 msgstr "Doitxの使い方を選択"
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
-msgstr "Claudeサブスクリプション"
 
 #: src/components/AskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3026,6 +3023,10 @@ msgstr "一般"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "友だちがトライアルを開始するたびに、1か月無料になります。"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "API キーを取得"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr "準備中"
@@ -4097,6 +4098,10 @@ msgstr "Doitxのカタログにありません"
 msgid "Not in the plugin catalog"
 msgstr "プラグインカタログにありません"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "キー不要のサーバーでは不要"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "今はしない"
@@ -4932,6 +4937,10 @@ msgstr "不在中に実行されるルーティン"
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "行"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "ローカルモデルサーバーを実行"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

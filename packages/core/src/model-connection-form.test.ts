@@ -232,6 +232,38 @@ describe("modelConnectRequest", () => {
     ).toEqual({ status: "invalid", field: "contextWindow" });
   });
 
+  it("connects the keyless local endpoint without a key", () => {
+    // The local endpoint is often keyless, so an empty key is a complete form: the
+    // server still answers the models probe, which is what lists its models.
+    expect(
+      modelConnectRequest({
+        form: draft(),
+        selected: { provider: "local", providerName: "Local", id: "local-endpoint" },
+        credentialId: null,
+      }),
+    ).toEqual({
+      status: "ready",
+      savingLimitOnly: false,
+      activeModelId: "local-endpoint",
+      input: {
+        provider: "local",
+        modelId: "local-endpoint",
+        thinkingLevel: null,
+        maxTokens: null,
+        label: "Local",
+        credentialId: null,
+      },
+    });
+    // A local endpoint behind a gateway still takes the real key.
+    expect(
+      modelConnectRequest({
+        form: draft({ apiKey: " sk-example-gateway-token " }),
+        selected: { provider: "local", providerName: "Local", id: "local-endpoint" },
+        credentialId: null,
+      }),
+    ).toMatchObject({ status: "ready", input: { apiKey: "sk-example-gateway-token" } });
+  });
+
   it("connects a catalog key with the clamped effort and the makeDefault target", () => {
     expect(
       modelConnectRequest({

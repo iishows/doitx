@@ -9,9 +9,11 @@ import {
   MODEL_KEY_REJECTED_ERROR,
 } from "@rakazo/contracts";
 import { DOITX_SEED_MODEL_ID } from "./pi-doitx-provider.js";
+import { LOCAL_SEED_MODEL_ID } from "./pi-local-provider.js";
 import { createManagedModels, MANAGED_PROVIDER_IDS } from "./pi-managed-models.js";
 import { loadProviderOAuth, SUBSCRIPTION_SIGN_IN_PROVIDERS } from "./pi-oauth.js";
 import { probeOpenAiCompatibleModels } from "./pi-openai-compatible-provider.js";
+import { isPinnedLocalProbeOrigin } from "./openai-compatible-url.js";
 import { MODEL_CONNECT_TIMEOUT_MS } from "./pi-runtime-limits.js";
 
 export type PiCatalogAuth = "api-key" | "oauth" | "both";
@@ -33,10 +35,18 @@ export type PiCatalogEntry = {
   /** The model reads images. Left out where a connection setting decides it. */
   images?: boolean;
   placeholder?: boolean;
-  /** Provider models share one pinned HTTPS models-list base URL. */
+  /** Provider models share one pinned models-list base URL (HTTPS, or the local origin). */
   catalogProbe?: boolean;
   live?: true;
 };
+
+/** Whether `id` is `provider`'s stand-in for models a probe has not listed yet. */
+function isSeedModelId(providerId: string, id: string): boolean {
+  return (
+    (providerId === DOITX_PROVIDER_ID && id === DOITX_SEED_MODEL_ID) ||
+    (providerId === LOCAL_PROVIDER_ID && id === LOCAL_SEED_MODEL_ID)
+  );
+}
 
 /**
  * Product defaults for new connections; only exact catalog IDs are recommended. A provider
@@ -211,6 +221,10 @@ export async function probeCatalogProviderModels(
   return probeOpenAiCompatibleModels({ baseUrl, apiKey: input.apiKey }, fetchImpl, signal, {
     allowPublic: true,
     catalogProbe: true,
+    // The local endpoint is loopback, which the URL policy refuses by default. Clear
+    // that refusal for the pinned origin only — an operator-configured LAN address
+    // still needs the same authorization any other private endpoint does.
+    allowPinnedLocalOrigin: isPinnedLocalProbeOrigin(baseUrl),
   });
 }
 
@@ -221,7 +235,6 @@ function pinnedCatalogProbeBaseUrl(
   providerId: string,
   models: ReadonlyArray<{ api: string; baseUrl?: string }>,
 ): string | null {
-  if (providerId === LOCAL_PROVIDER_ID) return null;
   const urls = new Set<string>();
   for (const model of models) {
     if (!CATALOG_PROBE_APIS.has(model.api) || !model.baseUrl) continue;
@@ -234,7 +247,12 @@ function pinnedCatalogProbeBaseUrl(
     } catch {
       return null;
     }
-    if (url.protocol !== "https:" || url.username || url.password) return null;
+    if (url.username || url.password) return null;
+    // HTTPS everywhere, plus cleartext only for the pinned local origin. The local
+    // endpoint is this machine's own server, and the deployment's `docker-compose`
+    // reaches it over plain HTTP, so it is the one address whose http form a probe
+    // may use. Every other cleartext URL stays unprobeable.
+    if (url.protocol !== "https:" && !isPinnedLocalProbeOrigin(url)) return null;
     urls.add(trimmed);
   }
   if (urls.size !== 1) return null;
@@ -297,9 +315,10 @@ function buildPiCatalog(): PiCatalogEntry[] {
         signIn: signInMeta?.mode,
         reasoning: Boolean(model.reasoning),
         thinkingLevels,
-        // The router's seed stands in for models a live probe discovers, so it is
-        // not offered as a model itself; real entries carry their declared images.
-        ...(provider.id === DOITX_PROVIDER_ID && model.id === DOITX_SEED_MODEL_ID
+        // A seed stands in for models a live probe discovers, so it is not offered as
+        // a model itself; real entries carry their declared images. Both the router and
+        // the local endpoint ship one.
+        ...(isSeedModelId(provider.id, model.id)
           ? { placeholder: true }
           : { images: model.input.includes("image") }),
         ...(probeBaseUrl ? { catalogProbe: true } : {}),

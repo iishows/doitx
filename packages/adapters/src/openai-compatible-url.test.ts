@@ -3,6 +3,7 @@ import {
   assertAllowedOpenAiCompatibleRequestUrl,
   assertAllowedOpenAiCompatibleUrl,
   assertHttpsForKeyedOpenAiCompatibleUrl,
+  isPinnedLocalProbeOrigin,
   normalizeOpenAiCompatibleBaseUrl,
   openAiCompatAllowPublicHosts,
   PRIVATE_MODEL_ENDPOINT_MESSAGE,
@@ -256,4 +257,43 @@ it("keeps API-key-only HTTPS copy separate from header-aware copy", () => {
   expect(() => assertHttpsForKeyedOpenAiCompatibleUrl(url, undefined, true)).toThrow(
     "OpenAI-compatible endpoints that send an API key or custom headers must use HTTPS.",
   );
+});
+
+describe("pinned local probe origin", () => {
+  it("matches only the exact loopback origin, any path", () => {
+    expect(isPinnedLocalProbeOrigin("http://127.0.0.1:3456")).toBe(true);
+    expect(isPinnedLocalProbeOrigin("http://127.0.0.1:3456/v1")).toBe(true);
+    expect(isPinnedLocalProbeOrigin(new URL("http://127.0.0.1:3456/v1/models"))).toBe(true);
+  });
+
+  it("refuses every near miss", () => {
+    for (const raw of [
+      "http://127.0.0.1:11434/v1", // a different local server, e.g. Ollama
+      "http://127.0.0.1/v1", // default port
+      "http://localhost:3456/v1", // a different hostname
+      "https://127.0.0.1:3456/v1", // cleartext only
+      "http://192.168.1.5:3456/v1", // LAN address
+      "http://host.docker.internal:3456/v1",
+      "https://router.doitx.ai/v1",
+      "not a url",
+    ]) {
+      expect(isPinnedLocalProbeOrigin(raw)).toBe(false);
+    }
+  });
+
+  it("opens the pinned origin without opening the whole private range", () => {
+    const pinned = { allowPinnedLocalOrigin: true };
+    expect(() => assertAllowedOpenAiCompatibleUrl("http://127.0.0.1:3456/v1", pinned)).not.toThrow();
+    // A different private host still needs the operator's blanket permission.
+    expect(() => assertAllowedOpenAiCompatibleUrl("http://10.0.0.7:3456/v1", pinned)).toThrow(
+      PRIVATE_MODEL_ENDPOINT_MESSAGE,
+    );
+    expect(() => assertAllowedOpenAiCompatibleUrl("http://192.168.1.5:3456/v1", pinned)).toThrow(
+      PRIVATE_MODEL_ENDPOINT_MESSAGE,
+    );
+    // A different port on the same host is not the pinned origin either.
+    expect(() => assertAllowedOpenAiCompatibleUrl("http://127.0.0.1:11434/v1", pinned)).toThrow(
+      PRIVATE_MODEL_ENDPOINT_MESSAGE,
+    );
+  });
 });

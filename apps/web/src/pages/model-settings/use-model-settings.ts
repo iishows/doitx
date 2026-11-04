@@ -7,6 +7,7 @@ import {
   DEFAULT_MODEL_CONTEXT_WINDOW,
   DEFAULT_MODEL_MAX_TOKENS,
   isCloudflareModelProvider,
+  LOCAL_PROVIDER_ID,
   MAX_MODEL_CONTEXT_WINDOW,
   MAX_MODEL_MAX_TOKENS,
 } from "@rakazo/contracts";
@@ -268,6 +269,9 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   // Space still bills the host while this provider matches; model id alone is not credentials.
   const usingServerCredentials = provider === me?.hostCredentialProvider;
   const acceptsKey = selected?.auth !== "oauth";
+  // The local endpoint is often keyless, so its connect and test buttons stay live
+  // with the key field empty; other providers need a real key to save or probe.
+  const keyOptional = selected?.provider === LOCAL_PROVIDER_ID;
   const subscriptionSignIn = selected?.signIn !== undefined;
   // Effort levels for the staged catalog model — "off" stays out, matching the
   // per-bot Thinking picker.
@@ -538,6 +542,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     invalidatePreflight,
     isCloudflare,
     isCloudflareGateway,
+    keyOptional,
     loading,
     maxImagesPerPrompt,
     maxTokens,

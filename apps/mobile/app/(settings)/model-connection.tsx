@@ -6,6 +6,7 @@ import {
   DEFAULT_MODEL_CONTEXT_WINDOW,
   DEFAULT_MODEL_MAX_TOKENS,
   isCloudflareModelProvider,
+  LOCAL_PROVIDER_ID,
   MAX_MODEL_CONTEXT_WINDOW,
   MAX_MODEL_MAX_TOKENS,
 } from "@rakazo/contracts";
@@ -227,6 +228,9 @@ export default function ModelConnection() {
   const cloudflareRoutingReady =
     !isCloudflare || cloudflareModelRouting({ provider, accountId, gatewayId }) !== undefined;
   const acceptsKey = selected?.auth !== "oauth";
+  // The local endpoint is often keyless, so its connect button stays live with the
+  // key field empty; other providers need a real key to save.
+  const keyOptional = selected?.provider === LOCAL_PROVIDER_ID;
   const subscriptionSignIn = selected?.signIn !== undefined;
   const _reasoningEffortValue = thinkingLevel ? thinkingLevelLabel(thinkingLevel, t) : t("Default");
   const busy = pending !== null || oauthPending;
@@ -678,7 +682,7 @@ export default function ModelConnection() {
             disabled={
               busy ||
               !cloudflareRoutingReady ||
-              (gatewayOnlySave ? !gatewayDirty : apiKey.trim().length < 8)
+              (gatewayOnlySave ? !gatewayDirty : !keyOptional && apiKey.trim().length < 8)
             }
             label={
               pending === "connect" && feedbackAnchor === "connection"

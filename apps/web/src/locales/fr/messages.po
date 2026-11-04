@@ -794,6 +794,10 @@ msgstr ""
 msgid "API key"
 msgstr "Clé API"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "Clé API (facultatif)"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "Clé API pour {provider}"
@@ -1231,10 +1235,6 @@ msgstr "Paramètres de discussion"
 msgid "Chat with your bot from Slack."
 msgstr "Discutez avec votre bot depuis Slack."
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr ""
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "Discussions"
@@ -1318,6 +1318,7 @@ msgstr "Choisir une sauvegarde"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "Choisir un fichier"
 
@@ -1328,10 +1329,6 @@ msgstr "Choisir un dossier"
 #: src/components/ModelCredits.tsx
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
-msgstr ""
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
 msgstr ""
 
 #: src/components/AskCard.tsx
@@ -3026,6 +3023,10 @@ msgstr "Général"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "Obtenez un mois gratuit pour chaque ami qui commence un essai."
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "Obtenir une clé API"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr "Préparation en cours"
@@ -4097,6 +4098,10 @@ msgstr "Absent du catalogue de Doitx"
 msgid "Not in the plugin catalog"
 msgstr "Pas dans le catalogue de plugins"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "Inutile pour un serveur sans clé"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "Pas maintenant"
@@ -4932,6 +4937,10 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "Ligne"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "Lancer un serveur de modèles local"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

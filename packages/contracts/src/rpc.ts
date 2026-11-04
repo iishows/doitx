@@ -375,7 +375,9 @@ export const appContract = {
       .input(
         z.object({
           provider: z.string().trim().min(1),
-          apiKey: z.string().trim().min(8),
+          // Empty is allowed: the local endpoint is often keyless. Providers that need a
+          // key still reject a short one server-side, so this is not the only check.
+          apiKey: z.string().trim(),
         }),
       )
       .output(z.object({ models: z.array(z.string()) })),

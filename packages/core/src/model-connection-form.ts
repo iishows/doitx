@@ -9,6 +9,7 @@ import type {
 import {
   DEFAULT_MODEL_CONTEXT_WINDOW,
   isCloudflareModelProvider,
+  LOCAL_PROVIDER_ID,
   ModelHeaderRowsSchema,
   modelHeadersInput,
   OPENAI_COMPATIBLE_PROVIDER_ID,
@@ -177,13 +178,16 @@ export function modelConnectRequest(input: {
   const baseUrl = form.baseUrl.trim();
   const modelId = form.modelId.trim();
   const newKey = settingsOnly ? "" : form.apiKey.trim();
-  const savingLimitOnly = !compatible && !newKey;
+  // The local endpoint is often keyless, so a first connection there may be saved
+  // with an empty key: the server still answers a probe, which discovers its models.
+  const keyless = selected.provider === LOCAL_PROVIDER_ID;
+  const savingLimitOnly = !compatible && !newKey && !keyless;
   const activeModelId = compatible ? modelId : selected.id;
   if (compatible) {
     if (!baseUrl || !modelId) return { status: "incomplete" };
   } else if (savingLimitOnly) {
     if (!credential) return { status: "incomplete" };
-  } else if (newKey.length < 8) {
+  } else if (!keyless && newKey.length < 8) {
     return { status: "incomplete" };
   }
   const maxTokens = form.maxTokens.trim() ? parseModelMaxTokens(form.maxTokens) : undefined;

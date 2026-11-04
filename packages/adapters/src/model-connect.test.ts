@@ -212,6 +212,41 @@ describe("built-in provider output limits", () => {
   });
 });
 
+describe("keyless local endpoint", () => {
+  it("saves a first connection with no key at all", () => {
+    // The local endpoint is usually keyless and names its models by probe rather than
+    // by entry, so a connection has to exist before any model can be listed.
+    expect(parseModelSecret(connectAsOwner({ provider: "local", maxTokens: 2048 }))).toEqual({
+      kind: "api_key",
+      key: "local",
+      maxTokens: 2048,
+    });
+  });
+
+  it("stores a real key instead when the endpoint authenticates", () => {
+    expect(
+      parseModelSecret(connectAsOwner({ provider: "local", apiKey: "sk-example-gateway-token" })),
+    ).toEqual({ kind: "api_key", key: "sk-example-gateway-token" });
+  });
+
+  it("keeps the saved key when a later save names none", () => {
+    const saved = connectAsOwner({ provider: "local", apiKey: "sk-example-gateway-token" });
+    expect(parseModelSecret(connectAsOwner({ provider: "local", maxTokens: 4096 }, saved))).toEqual(
+      {
+        kind: "api_key",
+        key: "sk-example-gateway-token",
+        maxTokens: 4096,
+      },
+    );
+  });
+
+  it("still rejects a short key on a provider that needs one", () => {
+    expect(() => connectAsOwner({ provider: "anthropic", apiKey: "short" })).toThrow(
+      /8 characters/,
+    );
+  });
+});
+
 describe("openai-codex API key guard", () => {
   const codexOauth = serializeModelSecret({
     kind: "oauth",

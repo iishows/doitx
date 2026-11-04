@@ -794,6 +794,10 @@ msgstr ""
 msgid "API key"
 msgstr "Clave de API"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "Clave de API (opcional)"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "Clave de API de {provider}"
@@ -1231,10 +1235,6 @@ msgstr "Configuración del chat"
 msgid "Chat with your bot from Slack."
 msgstr "Chatea con tu bot desde Slack."
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr ""
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "Chats"
@@ -1318,6 +1318,7 @@ msgstr "Elegir copia de seguridad"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "Elegir archivo"
 
@@ -1328,10 +1329,6 @@ msgstr "Elegir carpeta"
 #: src/components/ModelCredits.tsx
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
-msgstr ""
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
 msgstr ""
 
 #: src/components/AskCard.tsx
@@ -3026,6 +3023,10 @@ msgstr "General"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "Consigue un mes gratis por cada amigo que empiece una prueba."
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "Obtener una clave de API"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr ""
@@ -4097,6 +4098,10 @@ msgstr "No está en el catálogo de Doitx"
 msgid "Not in the plugin catalog"
 msgstr "No está en el catálogo de plugins"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "No se necesita para un servidor sin clave"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "Ahora no"
@@ -4932,6 +4937,10 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "Fila"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "Ejecutar un servidor de modelos local"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

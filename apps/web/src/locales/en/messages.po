@@ -794,6 +794,10 @@ msgstr "Any model, with your own key"
 msgid "API key"
 msgstr "API key"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "API key (optional)"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "API key for {provider}"
@@ -1231,10 +1235,6 @@ msgstr "Chat Settings"
 msgid "Chat with your bot from Slack."
 msgstr "Chat with your bot from Slack."
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr "ChatGPT subscription"
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "Chats"
@@ -1318,6 +1318,7 @@ msgstr "Choose backup"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "Choose file"
 
@@ -1329,10 +1330,6 @@ msgstr "Choose folder"
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
 msgstr "Choose how to use Doitx"
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
-msgstr "Claude subscription"
 
 #: src/components/AskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3026,6 +3023,10 @@ msgstr "General"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "Get a free month for each friend who starts a trial."
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "Get an API key"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr "Getting ready"
@@ -4097,6 +4098,10 @@ msgstr "Not in Doitx's catalog"
 msgid "Not in the plugin catalog"
 msgstr "Not in the plugin catalog"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "Not needed for a keyless server"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "Not now"
@@ -4932,6 +4937,10 @@ msgstr "Routines that run while you're away"
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "Row"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "Run a local model server"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

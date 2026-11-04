@@ -794,6 +794,10 @@ msgstr "כל מודל, עם מפתח משלך"
 msgid "API key"
 msgstr "מפתח API"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "מפתח API (אופציונלי)"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "מפתח API עבור {provider}"
@@ -1231,10 +1235,6 @@ msgstr "הגדרות צ׳אט"
 msgid "Chat with your bot from Slack."
 msgstr "שוחחו עם הבוט שלכם מ-Slack."
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr ""
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "צ׳אטים"
@@ -1318,6 +1318,7 @@ msgstr "בחירת גיבוי"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "בחירת קובץ"
 
@@ -1328,10 +1329,6 @@ msgstr "בחירת תיקייה"
 #: src/components/ModelCredits.tsx
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
-msgstr ""
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
 msgstr ""
 
 #: src/components/AskCard.tsx
@@ -3026,6 +3023,10 @@ msgstr "כללי"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "קבלו חודש חינם על כל חבר שמתחיל תקופת ניסיון."
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "קבלת מפתח API"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr "מתכונן"
@@ -4097,6 +4098,10 @@ msgstr "לא בקטלוג של Doitx"
 msgid "Not in the plugin catalog"
 msgstr "לא נמצא בקטלוג התוספים"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "לא נדרש לשרת ללא מפתח"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "לא עכשיו"
@@ -4932,6 +4937,10 @@ msgstr "רוטינות שרצות גם כשלא נמצאים"
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "שורה"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "הפעלת שרת מודלים מקומי"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

@@ -2,6 +2,7 @@ import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   LOCAL_PROVIDER_ID,
+  LOCAL_SEED_MODEL_ID,
   localBaseUrl,
   localProvider,
   registerLocalProvider,
@@ -32,15 +33,13 @@ function setModels(value: string | undefined) {
 }
 
 describe("local model provider", () => {
-  it("stays absent when no local models are configured", () => {
-    setModels(undefined);
-    expect(localProvider()).toBeUndefined();
-
-    // Blank and whitespace-only values are configuration noise, not a model id.
-    setModels("");
-    expect(localProvider()).toBeUndefined();
-    setModels("  ,  ,");
-    expect(localProvider()).toBeUndefined();
+  it("seeds the provider when no local models are configured", () => {
+    // The provider has to stay visible so its endpoint can be probed, so an
+    // unconfigured one carries a placeholder seed instead of disappearing.
+    for (const value of [undefined, "", "  ,  ,"]) {
+      setModels(value);
+      expect(localProvider()?.getModels().map((model) => model.id)).toEqual([LOCAL_SEED_MODEL_ID]);
+    }
   });
 
   it("exposes each configured model id verbatim", () => {
@@ -106,10 +105,10 @@ describe("local model provider", () => {
     expect(() => localProvider()).toThrow(/RAKAZO_LOCAL_MAX_TOKENS must be a positive integer/);
   });
 
-  it("registers onto a Models collection only when configured", () => {
+  it("registers onto a Models collection with a seed when unconfigured", () => {
     setModels(undefined);
     const bare = registerLocalProvider(builtinModels());
-    expect(bare.getProviders().some((p) => p.id === LOCAL_PROVIDER_ID)).toBe(false);
+    expect(bare.getModel(LOCAL_PROVIDER_ID, LOCAL_SEED_MODEL_ID)).toBeDefined();
 
     setModels("qwen3:4b");
     const withLocal = registerLocalProvider(builtinModels());

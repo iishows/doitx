@@ -8,6 +8,15 @@ import { declaredVisionModelIds, inputModalities } from "./model-modalities.js";
 /** The deployment's centrally managed OpenAI-compatible endpoint. */
 export { LOCAL_PROVIDER_ID };
 
+/**
+ * Stands in for the local endpoint's models until a probe lists them.
+ *
+ * An unconfigured local endpoint still needs a catalog entry: the entry is what
+ * carries the "discover models" affordance, and what a discovered model is appended
+ * after. Like the router's seed it is marked as a placeholder, so it is never run.
+ */
+export const LOCAL_SEED_MODEL_ID = "local-endpoint";
+
 /** Model ids the local server serves, declared by the operator. */
 export const LOCAL_MODELS_ENV = "RAKAZO_LOCAL_MODELS";
 
@@ -16,6 +25,14 @@ export const LOCAL_VISION_MODELS_ENV = "RAKAZO_LOCAL_VISION_MODELS";
 
 /** Bearer token for endpoints that authenticate, such as a gateway in front. */
 export const LOCAL_API_KEY_ENV = "RAKAZO_LOCAL_MODELS_API_KEY";
+
+/**
+ * The bearer sent to a local endpoint that names no key of its own.
+ *
+ * A keyless server ignores the header, so this keeps it working; the same value is
+ * stored for a connection saved without a key, so a probe has something to send.
+ */
+export const LOCAL_PLACEHOLDER_API_KEY = "local";
 
 export function localVisionModelIds(): ReadonlySet<string> {
   return declaredVisionModelIds(LOCAL_VISION_MODELS_ENV);
@@ -65,7 +82,7 @@ function localModelIds(): string[] {
  * An endpoint that does check it gets the operator's real token instead.
  */
 function localApiKey(): string {
-  return process.env[LOCAL_API_KEY_ENV]?.trim() || "local";
+  return process.env[LOCAL_API_KEY_ENV]?.trim() || LOCAL_PLACEHOLDER_API_KEY;
 }
 
 function localModel(id: string): Model<"openai-completions"> {
@@ -87,7 +104,8 @@ function localModel(id: string): Model<"openai-completions"> {
 
 export function localProvider(): Provider | undefined {
   const ids = localModelIds();
-  if (!ids.length) return undefined;
+  // An unconfigured endpoint is still offered: its seed keeps the provider visible so
+  // a user can probe it, instead of the whole provider vanishing until ops sets models.
   return createProvider({
     id: LOCAL_PROVIDER_ID,
     name: "Local (self-hosted endpoint)",
@@ -101,7 +119,7 @@ export function localProvider(): Provider | undefined {
         }),
       },
     },
-    models: ids.map(localModel),
+    models: (ids.length ? ids : [LOCAL_SEED_MODEL_ID]).map(localModel),
     api: openAICompletionsApi(),
   });
 }

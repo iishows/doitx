@@ -91,6 +91,16 @@ describe("pickCatalogModelId", () => {
   it("returns an empty string for an unknown provider", () => {
     expect(pickCatalogModelId(catalog, "nope", "openai/gpt-6-luna")).toBe("");
   });
+
+  it("never preselects a placeholder entry, even when it is the only one", () => {
+    const seeded = [
+      { provider: "doitx", id: "doitx-router", placeholder: true },
+      { provider: "doitx", id: "real-model" },
+    ];
+    expect(pickCatalogModelId(seeded, "doitx")).toBe("real-model");
+    expect(pickCatalogModelId(seeded, "doitx", "doitx-router")).toBe("real-model");
+    expect(pickCatalogModelId([seeded[0]!], "doitx")).toBe("");
+  });
 });
 
 describe("selectedProviderOutsideSearchResults", () => {

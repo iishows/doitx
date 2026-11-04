@@ -97,12 +97,19 @@ export function popularModelProvidersFirst<T>(
  * the exact id. This is only a preselection — the user still confirms the pick.
  */
 export function pickCatalogModelId(
-  catalog: readonly { provider: string; id: string; recommended?: boolean }[],
+  catalog: readonly {
+    provider: string;
+    id: string;
+    recommended?: boolean;
+    placeholder?: boolean;
+  }[],
   provider: string,
   preferredId?: string | null,
 ): string {
   const entries = catalog.filter(
-    (entry) => canonicalPiProviderId(entry.provider) === canonicalPiProviderId(provider),
+    (entry) =>
+      !entry.placeholder &&
+      canonicalPiProviderId(entry.provider) === canonicalPiProviderId(provider),
   );
   if (preferredId) {
     if (entries.some((entry) => entry.id === preferredId)) return preferredId;

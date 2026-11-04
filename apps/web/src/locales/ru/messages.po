@@ -794,6 +794,10 @@ msgstr ""
 msgid "API key"
 msgstr "API-ключ"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "Ключ API (необязательно)"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "API-ключ для {provider}"
@@ -1231,10 +1235,6 @@ msgstr "Настройки чата"
 msgid "Chat with your bot from Slack."
 msgstr "Общайтесь с ботом из Slack."
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr ""
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "Чаты"
@@ -1318,6 +1318,7 @@ msgstr "Выбрать резервную копию"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "Выбрать файл"
 
@@ -1328,10 +1329,6 @@ msgstr "Выбрать папку"
 #: src/components/ModelCredits.tsx
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
-msgstr ""
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
 msgstr ""
 
 #: src/components/AskCard.tsx
@@ -3026,6 +3023,10 @@ msgstr "Общие"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "Получайте бесплатный месяц за каждого друга, который начнёт пробный период."
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "Получить ключ API"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr "Подготовка"
@@ -4097,6 +4098,10 @@ msgstr "Нет в каталоге Doitx"
 msgid "Not in the plugin catalog"
 msgstr "Нет в каталоге плагинов"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "Не требуется для сервера без ключа"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "Не сейчас"
@@ -4932,6 +4937,10 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "Строка"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "Запустить локальный сервер моделей"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

@@ -52,7 +52,14 @@ export function overlayLiveCatalog(
 }
 
 export function trustedProviderModels(provider: string, ids: readonly string[]): boolean {
-  const bundled = listPiCatalog().filter((entry) => entry.provider === provider);
+  // A placeholder stands in for models a probe discovers, not a bundled model the
+  // registry knows. Counting it would raise the threshold above what a live list can
+  // ever match — the seed's own id is never in the router's list — and drop every
+  // discovered model. Excluding it also makes an unconfigured provider (no bundled
+  // models at all) trust any non-empty listing, which is the intent here.
+  const bundled = listPiCatalog().filter(
+    (entry) => entry.provider === provider && !entry.placeholder,
+  );
   const live = new Set(ids);
   return (
     live.size > 0 &&
@@ -73,6 +80,10 @@ export function liveCatalogEntry(provider: string, id: string): PiCatalogEntry |
     recommended: isRecommendedCatalogModel(provider, id),
     label: catalogModelLabel(id),
     live: true,
+    // The anchor is the provider's first entry, which for an unconfigured provider is
+    // its placeholder seed. A discovered model is real, so it must not inherit that
+    // flag — a placeholder is never offered to run.
+    placeholder: false,
     reasoning: model.reasoning,
     thinkingLevels: ["off"],
     images: model.input.includes("image"),
@@ -126,12 +137,18 @@ export function applyProviderLiveCatalog(
     }
   }
   // Explicitly filter retired entries before the overlay; absence otherwise means fallback.
+  // A placeholder is never a probed model, so it is never retired: it has to stay as the
+  // entry a provider's discovered models are appended after, and as what an unprobed
+  // provider still shows. It is dropped at the end once real models are known.
   const retained = base.filter((entry) => {
-    if (!entry.catalogProbe) return true;
+    if (entry.placeholder || !entry.catalogProbe) return true;
     const ids = effective(entry.provider, entry.id);
     return !ids || ids.has(entry.id) || selected.has(`${entry.provider}:${entry.id}`);
   });
-  return overlayLiveCatalog(retained, retained, (entry) => entry, additions);
+  const merged = overlayLiveCatalog(retained, retained, (entry) => entry, additions);
+  if (!additions.length) return merged;
+  const discovered = new Set(additions.map((entry) => entry.provider));
+  return merged.filter((entry) => !(entry.placeholder && discovered.has(entry.provider)));
 }
 
 export type ProviderCatalogCredential = {

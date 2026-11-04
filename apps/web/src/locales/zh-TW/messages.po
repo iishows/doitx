@@ -795,6 +795,10 @@ msgstr "使用自己的金鑰連接任何模型"
 msgid "API key"
 msgstr "API 金鑰"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "API 金鑰（選填）"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "{provider} 的 API 金鑰"
@@ -1232,10 +1236,6 @@ msgstr "聊天設定"
 msgid "Chat with your bot from Slack."
 msgstr "在 Slack 與你的機器人聊天。"
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr "ChatGPT 訂閱"
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "聊天"
@@ -1319,6 +1319,7 @@ msgstr "選擇備份"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "選擇檔案"
 
@@ -1330,10 +1331,6 @@ msgstr "選擇資料夾"
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
 msgstr "選擇 Doitx 的使用方式"
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
-msgstr "Claude 訂閱"
 
 #: src/components/AskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3027,6 +3024,10 @@ msgstr "一般"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "每有一位朋友開始試用，你就能獲得一個月免費。"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "取得 API 金鑰"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr "正在準備"
@@ -4098,6 +4099,10 @@ msgstr "不在 Doitx 目錄中"
 msgid "Not in the plugin catalog"
 msgstr "不在外掛程式目錄中"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "無金鑰伺服器無需填寫"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "暫不"
@@ -4933,6 +4938,10 @@ msgstr "在你離線時執行的例行任務"
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "列"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "執行本機模型伺服器"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

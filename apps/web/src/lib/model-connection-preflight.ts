@@ -1,5 +1,5 @@
 import { plural, t } from "@lingui/core/macro";
-import type { ModelCredential } from "@rakazo/contracts";
+import { LOCAL_PROVIDER_ID, type ModelCredential } from "@rakazo/contracts";
 
 type ModelPreflightOutcome =
   | "timeout"
@@ -261,7 +261,10 @@ export async function runModelConnectionPreflight(
   const trimmedKey = input.apiKey?.trim() ?? "";
   const trimmedModel = input.modelId?.trim() ?? "";
 
-  if (trimmedKey.length < 8) {
+  // The local endpoint is commonly keyless, so it is the one provider that may be
+  // probed with no key at all. Every other provider still requires a plausible one.
+  const keyOptional = input.provider === LOCAL_PROVIDER_ID;
+  if (!keyOptional && trimmedKey.length < 8) {
     return {
       ok: false,
       failure: {

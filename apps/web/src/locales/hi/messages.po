@@ -794,6 +794,10 @@ msgstr ""
 msgid "API key"
 msgstr "API कुंजी"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "API कुंजी (वैकल्पिक)"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "{provider} के लिए API कुंजी"
@@ -1231,10 +1235,6 @@ msgstr "चैट सेटिंग्स"
 msgid "Chat with your bot from Slack."
 msgstr "Slack से अपने बॉट से चैट करें।"
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr ""
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "चैट"
@@ -1318,6 +1318,7 @@ msgstr "बैकअप चुनें"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "फ़ाइल चुनें"
 
@@ -1328,10 +1329,6 @@ msgstr "फ़ोल्डर चुनें"
 #: src/components/ModelCredits.tsx
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
-msgstr ""
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
 msgstr ""
 
 #: src/components/AskCard.tsx
@@ -3026,6 +3023,10 @@ msgstr "सामान्य"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "ट्रायल शुरू करने वाले हर दोस्त के लिए एक महीना मुफ़्त पाएँ।"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "API कुंजी प्राप्त करें"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr ""
@@ -4097,6 +4098,10 @@ msgstr "Doitx के कैटलॉग में नहीं"
 msgid "Not in the plugin catalog"
 msgstr ""
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "बिना कुंजी वाले सर्वर के लिए आवश्यक नहीं"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "अभी नहीं"
@@ -4932,6 +4937,10 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "पंक्ति"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "स्थानीय मॉडल सर्वर चलाएँ"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

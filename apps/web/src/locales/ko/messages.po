@@ -794,6 +794,10 @@ msgstr ""
 msgid "API key"
 msgstr "API 키"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "API 키(선택 사항)"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "{provider}용 API 키"
@@ -1231,10 +1235,6 @@ msgstr "채팅 설정"
 msgid "Chat with your bot from Slack."
 msgstr "Slack에서 봇과 채팅하세요."
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr ""
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "채팅"
@@ -1318,6 +1318,7 @@ msgstr "백업 선택"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "파일 선택"
 
@@ -1328,10 +1329,6 @@ msgstr "폴더 선택"
 #: src/components/ModelCredits.tsx
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
-msgstr ""
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
 msgstr ""
 
 #: src/components/AskCard.tsx
@@ -3026,6 +3023,10 @@ msgstr "일반"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "친구가 체험을 시작할 때마다 한 달 무료 혜택을 받으세요."
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "API 키 받기"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr ""
@@ -4097,6 +4098,10 @@ msgstr "Doitx 카탈로그에 없음"
 msgid "Not in the plugin catalog"
 msgstr "플러그인 카탈로그에 없음"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "키가 없는 서버에는 필요하지 않습니다"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "나중에"
@@ -4932,6 +4937,10 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "행"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "로컬 모델 서버 실행"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

@@ -794,6 +794,10 @@ msgstr ""
 msgid "API key"
 msgstr "Chave de API"
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "API key (optional)"
+msgstr "Chave de API (opcional)"
+
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "Chave de API do {provider}"
@@ -1231,10 +1235,6 @@ msgstr "Configurações do chat"
 msgid "Chat with your bot from Slack."
 msgstr "Converse com seu bot pelo Slack."
 
-#: src/lib/localized-provider-hint.ts
-msgid "ChatGPT subscription"
-msgstr ""
-
 #: src/lib/identity-display.ts
 msgid "Chats"
 msgstr "Conversas"
@@ -1318,6 +1318,7 @@ msgstr "Escolher backup"
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
+#: src/pages/shell/ImportWorkspaceDialog.tsx
 msgid "Choose file"
 msgstr "Escolher arquivo"
 
@@ -1328,10 +1329,6 @@ msgstr "Escolher pasta"
 #: src/components/ModelCredits.tsx
 #: src/components/SubscriptionGate.tsx
 msgid "Choose how to use Doitx"
-msgstr ""
-
-#: src/lib/localized-provider-hint.ts
-msgid "Claude subscription"
 msgstr ""
 
 #: src/components/AskCard.tsx
@@ -3026,6 +3023,10 @@ msgstr "Geral"
 msgid "Get a free month for each friend who starts a trial."
 msgstr "Ganhe um mês grátis para cada amigo que iniciar um teste."
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Get an API key"
+msgstr "Obter uma chave de API"
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
 msgstr ""
@@ -4097,6 +4098,10 @@ msgstr "Fora do catálogo do Doitx"
 msgid "Not in the plugin catalog"
 msgstr ""
 
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Not needed for a keyless server"
+msgstr "Não é necessário para um servidor sem chave"
+
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "Agora não"
@@ -4932,6 +4937,10 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Row"
 msgstr "Linha"
+
+#: src/pages/model-settings/connection-controls.tsx
+msgid "Run a local model server"
+msgstr "Executar um servidor de modelos local"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Run at"

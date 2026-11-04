@@ -1,5 +1,6 @@
 import type { Api, Model, Models } from "@earendil-works/pi-ai";
 import { DEFAULT_MODEL_CONTEXT_WINDOW } from "@rakazo/contracts";
+import { isPinnedLocalProbeOrigin } from "./openai-compatible-url.js";
 
 /** Models endpoints often mix chat models with tools and media endpoints. */
 export function isChatModelId(id: string): boolean {
@@ -47,8 +48,10 @@ export function liveModelSibling(
   const urls = new Set(siblings.map((model) => model.baseUrl));
   if (urls.size !== 1 || siblings.length === 0) return undefined;
   const url = new URL(siblings[0]!.baseUrl);
-  if (url.protocol !== "https:" || url.username || url.password || /[{}]/.test(url.href))
-    return undefined;
+  // Cleartext is only ever the pinned local endpoint, which the deployment reaches
+  // over loopback http. Every other provider must be https.
+  if (url.username || url.password || /[{}]/.test(url.href)) return undefined;
+  if (url.protocol !== "https:" && !isPinnedLocalProbeOrigin(url)) return undefined;
   const prefixLength = (other: string) => {
     let n = 0;
     while (n < id.length && id[n] === other[n]) n++;

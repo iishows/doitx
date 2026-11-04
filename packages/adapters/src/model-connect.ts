@@ -7,6 +7,7 @@ import {
   cloudflareModelConfigMessage,
   cloudflareModelRouting,
   isCloudflareModelProvider,
+  LOCAL_PROVIDER_ID,
   MAX_ENABLED_MODEL_IDS,
   modelOutputLeavesInputRoom,
 } from "@rakazo/contracts";
@@ -14,6 +15,7 @@ import { enabledOpenAiCompatibleModelIds } from "./model-selection.js";
 import { modelIdSupportsImages, updateModelImageCapabilities } from "./model-vision.js";
 import { normalizeOpenAiCompatibleBaseUrl } from "./openai-compatible-url.js";
 import { modelCredentialAuthKind } from "./pi-catalog-availability.js";
+import { LOCAL_PLACEHOLDER_API_KEY } from "./pi-local-provider.js";
 import type { StoredModelSecret } from "./pi-oauth.js";
 import { CHATGPT_OAUTH_PROVIDER, parseModelSecret, serializeModelSecret } from "./pi-oauth.js";
 import {
@@ -198,6 +200,18 @@ export function buildModelConnectPlaintext(
   }
   if (input.provider === CHATGPT_OAUTH_PROVIDER) {
     throw new Error(CHATGPT_SUBSCRIPTION_REQUIRED_MESSAGE);
+  }
+  if (input.provider === LOCAL_PROVIDER_ID) {
+    // The local endpoint is often keyless, and its models are discovered rather than
+    // entered, so a connection may be saved with no key. Store the same placeholder
+    // the runtime sends, so the saved connection still has something to probe with.
+    return serializeModelSecret({
+      kind: "api_key",
+      key: LOCAL_PLACEHOLDER_API_KEY,
+      ...(maxTokens !== undefined ? { maxTokens } : {}),
+      ...limits,
+      ...routing,
+    });
   }
   throw new Error("API key must contain at least 8 characters");
 }

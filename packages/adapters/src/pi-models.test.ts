@@ -253,14 +253,19 @@ describe("Pi model catalog", () => {
     vi.resetModules();
   });
 
-  it("adds the local provider only once the operator configures models", async () => {
-    expect(listPiCatalog().some((entry) => entry.provider === "local")).toBe(false);
+  it("always offers the local provider, seeding it until the operator configures models", async () => {
+    // An unconfigured endpoint still needs an entry: it carries the discover-models
+    // affordance. The seed stands in for models a probe has not listed yet.
+    const seeded = listPiCatalog().filter((entry) => entry.provider === "local");
+    expect(seeded.map((entry) => entry.id)).toEqual(["local-endpoint"]);
+    expect(seeded[0]?.placeholder).toBe(true);
 
     vi.stubEnv("RAKAZO_LOCAL_MODELS", "qwen3");
     vi.resetModules();
     const { listPiCatalog: listConfiguredCatalog } = await import("./pi-models.js");
     const local = listConfiguredCatalog().filter((entry) => entry.provider === "local");
     expect(local.map((entry) => entry.id)).toEqual(["qwen3"]);
+    expect(local[0]?.placeholder).toBeUndefined();
     expect(local[0]).toMatchObject({
       providerName: "Local (self-hosted endpoint)",
       auth: "api-key",
@@ -296,24 +301,24 @@ describe("Pi model catalog", () => {
     expect(local.find((entry) => entry.id === "qwen3")?.images).toBe(false);
   });
 
-  it("pins the catalog probe to the router and nothing else", () => {
-    // Both deployment endpoints are fixed addresses, so neither is probeable this way.
-    for (const provider of ["local", "openai-compatible"]) {
-      expect(catalogProviderProbeBaseUrl(provider)).toBeNull();
-    }
+  it("pins the catalog probe to the router and the local endpoint", () => {
+    // Both managed endpoints list their models at run time. The router is https; the
+    // local endpoint is this machine's own loopback server, reached over plain http.
+    expect(catalogProviderProbeBaseUrl("doitx")).toBe("https://router.doitx.ai/v1");
+    expect(catalogProviderProbeBaseUrl("local")).toBe("http://127.0.0.1:3456/v1");
+    expect(
+      listPiCatalog()
+        .filter((entry) => entry.catalogProbe)
+        .every((entry) => entry.provider === "doitx" || entry.provider === "local"),
+    ).toBe(true);
+
+    // A user-supplied endpoint keeps its own address, so it has no pinned probe.
+    expect(catalogProviderProbeBaseUrl("openai-compatible")).toBeNull();
     // Providers removed from the managed catalog are no longer probeable.
     for (const provider of ["openrouter", "openai", "groq", "anthropic"]) {
       expect(catalogProviderProbeBaseUrl(provider)).toBeNull();
       expect(listPiCatalog().some((entry) => entry.provider === provider)).toBe(false);
     }
-    // The router lists its models at run time, so it is the one provider the
-    // catalog probes; every other entry is a bundled model that needs no probe.
-    expect(catalogProviderProbeBaseUrl("doitx")).toBe("https://router.doitx.ai/v1");
-    expect(
-      listPiCatalog()
-        .filter((entry) => entry.catalogProbe)
-        .every((entry) => entry.provider === "doitx"),
-    ).toBe(true);
   });
 
   it("keeps caller-supplied public endpoints gated", async () => {

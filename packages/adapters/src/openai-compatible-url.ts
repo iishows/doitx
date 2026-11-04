@@ -38,11 +38,43 @@ function isBlockedHostname(hostname: string): boolean {
 /**
  * Who may reach which model endpoints. `allowPrivate` comes from
  * operator configuration; absent means deny.
+ *
+ * `allowPinnedLocalOrigin` is narrower than `allowPrivate`: it clears the
+ * private-address refusal for exactly one cleartext origin — this machine's own
+ * local model server — so the catalog can probe it without opening LAN addresses.
  */
-export type OpenAiCompatibleUrlPolicy = { allowPublic?: boolean; allowPrivate?: boolean };
+export type OpenAiCompatibleUrlPolicy = {
+  allowPublic?: boolean;
+  allowPrivate?: boolean;
+  allowPinnedLocalOrigin?: boolean;
+};
 
 export const PRIVATE_MODEL_ENDPOINT_MESSAGE =
   "Private model endpoints require operator authorization.";
+
+/** The deployment's default local endpoint, and the only cleartext origin a probe may reach. */
+export const PINNED_LOCAL_PROBE_ORIGIN = "http://127.0.0.1:3456";
+
+/**
+ * Whether `raw` is the pinned local probe origin. Matches the origin only, so the
+ * `/v1` suffix and any other path are accepted; a different host, scheme, or port
+ * is not. The catalog pins the local probe to this one address because it is the
+ * deployment's own loopback server, never a caller-supplied endpoint.
+ */
+export function isPinnedLocalProbeOrigin(raw: string | URL): boolean {
+  let url: URL;
+  try {
+    url = typeof raw === "string" ? new URL(raw) : raw;
+  } catch {
+    return false;
+  }
+  const pinned = new URL(PINNED_LOCAL_PROBE_ORIGIN);
+  return (
+    url.protocol === pinned.protocol &&
+    url.port === pinned.port &&
+    normalizeHost(url.hostname) === pinned.hostname
+  );
+}
 
 export function assertAllowedOpenAiCompatibleUrl(
   raw: string,
@@ -95,8 +127,11 @@ export function assertAllowedOpenAiCompatibleRequestUrl(
   }
   const allowPublic = opts?.allowPublic ?? openAiCompatAllowPublicHosts();
   if (isPrivateOpenAiCompatibleHostname(hostname)) {
-    if (opts?.allowPrivate !== true) throw new Error(PRIVATE_MODEL_ENDPOINT_MESSAGE);
-    return url;
+    if (opts?.allowPrivate === true) return url;
+    // A pinned local origin is a known loopback address, not an arbitrary private host,
+    // so it clears this refusal without the operator opening the whole LAN.
+    if (opts?.allowPinnedLocalOrigin === true && isPinnedLocalProbeOrigin(url)) return url;
+    throw new Error(PRIVATE_MODEL_ENDPOINT_MESSAGE);
   }
   const builtInPublicHost =
     url.protocol === "https:" && url.port === "" && BUILT_IN_PUBLIC_MODEL_HOSTS.has(url.hostname);
