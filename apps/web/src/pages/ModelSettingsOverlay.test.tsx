@@ -433,6 +433,43 @@ it("shows a stored BYOK key when provider settings reopen", async () => {
   }
 });
 
+it("shows no output limit for a managed provider until one is saved", async () => {
+  vi.mocked(rpc.me).mockResolvedValue(account("doitx", "doitx-router"));
+  models.list.mockResolvedValue([
+    {
+      provider: "doitx",
+      providerName: "Doitx Router",
+      id: "doitx-router",
+      label: "Doitx Router",
+      billing: "Doitx",
+      auth: "api-key" as const,
+      placeholder: true,
+    },
+  ]);
+  models.credentials.mockResolvedValue([
+    {
+      id: "cred-doitx",
+      provider: "doitx",
+      label: "Doitx Router",
+      hasKey: true,
+      isDefault: true,
+      modelId: "doitx-router",
+    },
+  ]);
+
+  const view = await renderSettings();
+  try {
+    await manage();
+    const limit = view.container.querySelector<HTMLInputElement>(
+      'input[aria-label="Maximum output tokens"]',
+    );
+    if (!limit) throw new Error("Missing output limit field");
+    expect(limit.value).toBe("");
+  } finally {
+    await view.unmount();
+  }
+});
+
 it("saves an edited output limit without sending a half-typed replacement key", async () => {
   models.credentials.mockResolvedValue([deepseekCredential]);
 
