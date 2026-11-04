@@ -100,20 +100,28 @@ export function assertMcpStdioCommand(command: string, deps: Pick<RouterDeps, "e
   if (refusal) throw new ORPCError("BAD_REQUEST", { message: refusal });
 }
 
-export async function assertMcpRemoteEndpoint(
+/** Why this deployment would refuse to connect to an endpoint, or null when it would. */
+export async function mcpEndpointProblem(
   endpoint: string | null | undefined,
   deps: Pick<RouterDeps, "remoteConnectors" | "env">,
-): Promise<void> {
-  if (!endpoint) return;
+): Promise<string | null> {
+  if (!endpoint) return null;
   try {
     await assertSafeRemoteUrl(endpoint, deps.remoteConnectors?.resolveHostname, {
       allowPrivateEndpoint: mayUsePrivateEndpoint(deps),
     });
+    return null;
   } catch (error) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: error instanceof Error ? error.message : "MCP endpoint is invalid",
-    });
+    return error instanceof Error ? error.message : "MCP endpoint is invalid";
   }
+}
+
+export async function assertMcpRemoteEndpoint(
+  endpoint: string | null | undefined,
+  deps: Pick<RouterDeps, "remoteConnectors" | "env">,
+): Promise<void> {
+  const problem = await mcpEndpointProblem(endpoint, deps);
+  if (problem) throw new ORPCError("BAD_REQUEST", { message: problem });
 }
 
 /** A stdio server gets its OAuth grant through `{{oauth.*}}` references in env
@@ -268,12 +276,15 @@ export function createMcpServers(
     }
     return painted;
   };
+  /**
+   * Encrypts what the server needs. Endpoint policy is checked by the manual entry points
+   * (`routes/mcp.ts`); an import keeps the declaration and reports the problem as setup instead,
+   * so one unusable address cannot fail a whole import.
+   */
   const prepareMcpServer = async (actor: Actor, input: McpServerConfigInput) => {
-    await assertMcpRemoteEndpoint("endpoint" in input ? input.endpoint : null, deps);
     if (input.transport === "stdio") {
       assertMcpStdioCommand(input.command, deps);
       assertMcpOAuthTemplates(input.env, input.files ?? {}, Boolean(input.oauthClient));
-      await assertMcpRemoteEndpoint(input.oauthClient?.authorizationServer, deps);
     }
     const secretPayload = buildMcpCredentialBlob(input);
     return secretPayload

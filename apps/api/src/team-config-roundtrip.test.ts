@@ -35,6 +35,7 @@ function services(overrides: Partial<AgentImportServices> = {}): AgentImportServ
     mcpCredentialValues: async () => null,
     validateBotModel: async () => null,
     stdioAllowed: () => true,
+    mcpEndpointProblem: async () => null,
     prepareModelKey: async () => ({}),
     writeModelKey: async () => null,
     afterModelKey: () => undefined,

@@ -161,6 +161,11 @@ export function ImportWorkspaceDialog({
                       {t`${bot.routines} routines · ${bot.mcpServers} servers`}
                       {bot.needsCredentials ? ` · ${t`needs credentials`}` : ""}
                     </span>
+                    {bot.endpointProblems.length ? (
+                      <span className="block text-[12px] text-muted-foreground">
+                        {t`Needs setup: ${bot.endpointProblems.join(", ")}`}
+                      </span>
+                    ) : null}
                   </span>
                 </li>
               ))}

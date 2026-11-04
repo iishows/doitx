@@ -21,6 +21,7 @@ function services(overrides: Partial<AgentImportServices> = {}): AgentImportServ
     mcpCredentialValues: async () => null,
     validateBotModel: async () => "Connect that model provider first",
     stdioAllowed: () => true,
+    mcpEndpointProblem: async () => null,
     prepareModelKey: async () => ({}),
     writeModelKey: async () => null,
     afterModelKey: () => undefined,
@@ -128,6 +129,44 @@ describe("buildTeamConfigBot", () => {
       services(),
       actor,
       bot({ mcpServers: [{ key: "empty", name: "empty", requiresCredentials: false }] }),
+    );
+    expect(built.plan.mcpServers[0]!.status).toEqual({
+      kind: "unsupported",
+      reason: "unsupported_command",
+    });
+    expect(built.mcpConfigs.size).toBe(0);
+  });
+
+  it("keeps a connector whose address this deployment refuses, as a setup item", async () => {
+    const built = await buildTeamConfigBot(
+      services({ mcpEndpointProblem: async () => "Connector URL resolves to a private address" }),
+      actor,
+      bot({
+        mcpServers: [
+          {
+            key: "nas",
+            name: "nas",
+            endpoint: "https://mcp.home.example/rpc",
+            requiresCredentials: true,
+          },
+        ],
+      }),
+    );
+    expect(built.plan.mcpServers[0]!.status).toEqual({
+      kind: "needs_setup",
+      needs: [{ kind: "credentials", names: [] }, { kind: "endpoint" }],
+    });
+    expect(built.mcpConfigs.get("mcp:nas")?.config).toMatchObject({
+      transport: "streamable_http",
+      endpoint: "https://mcp.home.example/rpc",
+    });
+  });
+
+  it("refuses a command this deployment does not run", async () => {
+    const built = await buildTeamConfigBot(
+      services({ stdioAllowed: () => false }),
+      actor,
+      bot({ mcpServers: [{ key: "docs", name: "docs", command: "npx docs-server" }] }),
     );
     expect(built.plan.mcpServers[0]!.status).toEqual({
       kind: "unsupported",

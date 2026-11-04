@@ -49,7 +49,10 @@ interface SkillFixture {
 }
 
 /** An archive with the given bots and skills, so the test reads only what it needs. */
-function archive(bots: Array<{ key: string; name: string }>, skills: SkillFixture[] = []) {
+function archive(
+  bots: Array<{ key: string; name: string; mcpServers?: unknown[] }>,
+  skills: SkillFixture[] = [],
+) {
   const manifest = {
     format: TEAM_CONFIG_FORMAT,
     version: TEAM_CONFIG_VERSION,
@@ -66,7 +69,10 @@ function archive(bots: Array<{ key: string; name: string }>, skills: SkillFixtur
     { path: TEAM_CONFIG_MANIFEST_PATH, content: JSON.stringify(manifest) },
     ...bots.map((bot) => ({
       path: teamConfigBotPath(bot.key),
-      content: JSON.stringify(botBody(bot.key, bot.name)),
+      content: JSON.stringify({
+        ...botBody(bot.key, bot.name),
+        ...(bot.mcpServers ? { mcpServers: bot.mcpServers } : {}),
+      }),
     })),
     ...skills.map((skill) => ({
       path: teamConfigSkillPath(skill.key),
@@ -115,6 +121,7 @@ function services(overrides: Partial<AgentImportServices> = {}): {
       mcpCredentialValues: async () => null,
       validateBotModel: async () => "no",
       stdioAllowed: () => true,
+      mcpEndpointProblem: async () => null,
       prepareModelKey: async () => ({}),
       writeModelKey: async () => null,
       afterModelKey: () => undefined,
@@ -142,6 +149,24 @@ describe("previewTeamConfig", () => {
     expect(preview.bots).toEqual([
       expect.objectContaining({ key: "bot:1", name: "Writer", routines: 0, mcpServers: 0 }),
     ]);
+  });
+
+  it("names a connector whose address this deployment refuses", async () => {
+    const preview = await previewTeamConfig(
+      services({ mcpEndpointProblem: async () => "Connector URL resolves to a private address" })
+        .services,
+      actor,
+      {
+        files: archive([
+          {
+            key: "bot:1",
+            name: "Writer",
+            mcpServers: [{ key: "nas", name: "nas", endpoint: "https://mcp.home.example/rpc" }],
+          },
+        ]),
+      },
+    );
+    expect(preview.bots[0]).toEqual(expect.objectContaining({ endpointProblems: ["nas"] }));
   });
 
   it("writes nothing: a preview is safe to call as the user ticks bots", async () => {
@@ -180,6 +205,24 @@ describe("createTeamConfig", () => {
       model: "agentSkill",
       data: expect.objectContaining({ name: "Style", description: "Tone", content: "# Style" }),
     });
+  });
+
+  it("imports the bot when one of its connectors cannot run here", async () => {
+    const createBot = vi.fn(async () => ({ id: "bot-1", name: "Writer" }) as never);
+    const { services: svc } = services({ createBot });
+    const result = await createTeamConfig(svc, actor, {
+      files: archive([
+        {
+          key: "bot:1",
+          name: "Writer",
+          // Neither a command nor an endpoint: unsupported, and left out of the selection.
+          mcpServers: [{ key: "empty", name: "empty" }],
+        },
+      ]),
+      selection: { keys: ["bot:1"] },
+    });
+    expect(createBot).toHaveBeenCalledTimes(1);
+    expect(result.created).toEqual([{ key: "bot:1", name: "Writer" }]);
   });
 
   it("creates no bot when nothing is selected", async () => {

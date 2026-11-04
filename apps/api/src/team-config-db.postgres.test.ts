@@ -191,6 +191,7 @@ describePostgres("team-config export -> import against PostgreSQL", () => {
       connectedProviders: async () => new Set<string>(),
       mcpCredentialValues: async () => null,
       stdioAllowed: () => true,
+      mcpEndpointProblem: async () => null,
       prepareModelKey: async () => ({}),
       writeModelKey: async () => null,
       afterModelKey: () => undefined,

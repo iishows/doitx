@@ -24,6 +24,8 @@ export function useImportStatusText() {
       }
       case "local_paths":
         return t`Uses paths on your computer`;
+      case "endpoint":
+        return t`This address cannot be used here.`;
       case "requires": {
         const names = item.names.join(", ");
         return t`Needs: ${names}`;

@@ -3898,6 +3898,11 @@ msgstr "क्रेडेंशियल चाहिए"
 msgid "Needs input"
 msgstr "इनपुट चाहिए"
 
+#. placeholder {0}: bot.endpointProblems.join(", ")
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Needs setup: {0}"
+msgstr "सेटअप आवश्यक: {0}"
+
 #: src/pages/ActivityList.tsx
 msgid "Needs takeover"
 msgstr "नियंत्रण लेना ज़रूरी"
@@ -5763,6 +5768,10 @@ msgstr "सोच रहा है"
 #: src/pages/ModelRoleSettings.tsx
 msgid "Thinking: {0}"
 msgstr "सोच: {0}"
+
+#: src/pages/shell/import-status.ts
+msgid "This address cannot be used here."
+msgstr "इस पते का यहाँ उपयोग नहीं किया जा सकता।"
 
 #: src/lib/user-error.ts
 msgid "This app needs its own sign-in setup to connect."

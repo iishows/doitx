@@ -48,6 +48,7 @@ const preview = {
       routines: 2,
       mcpServers: 1,
       needsCredentials: true,
+      endpointProblems: ["nas"],
       nameTaken: false,
     },
     {
@@ -57,6 +58,7 @@ const preview = {
       routines: 0,
       mcpServers: 0,
       needsCredentials: false,
+      endpointProblems: [],
       nameTaken: true,
     },
   ],
@@ -141,6 +143,13 @@ describe("ImportWorkspaceDialog", () => {
     expect(view().textContent).toContain("Chief of Staff");
     expect(view().textContent).toContain("Writer");
     expect(view().textContent).toContain("2 routines · 1 servers");
+  });
+
+  it("names a connector whose address this deployment cannot use", async () => {
+    teamConfigPreview.mockResolvedValue(preview);
+    await render();
+    await chooseFile();
+    expect(view().textContent).toContain("Needs setup: nas");
   });
 
   it("ticks every bot by default", async () => {

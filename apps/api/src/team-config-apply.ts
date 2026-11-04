@@ -71,6 +71,13 @@ export async function previewTeamConfig<PreparedKey>(
       routines: built.plan.routines.length,
       mcpServers: built.plan.mcpServers.length,
       needsCredentials: bot.mcpServers.some((server) => server.requiresCredentials),
+      endpointProblems: built.plan.mcpServers
+        .filter(
+          (server) =>
+            server.status.kind === "needs_setup" &&
+            server.status.needs.some((need) => need.kind === "endpoint"),
+        )
+        .map((server) => server.name),
       nameTaken,
     });
   }
@@ -287,14 +294,19 @@ async function writeSpaceLevelItems(
   }
 }
 
-/** Everything the archive carried is pre-selected: the user ticked the bots they wanted. */
+/**
+ * Everything the archive carried is pre-selected: the user ticked the bots they wanted. A server
+ * this deployment cannot run is left out rather than selected, which would refuse the whole bot.
+ */
 function fullSelection(plan: AgentImportPlan): AgentImportSelection {
   return {
     instructions: plan.instructions.map((item) => item.id),
     memory: plan.memory.map((item) => ({ id: item.id, destination: "bot" as const })),
     skills: plan.skills.map((item) => item.id),
     model: plan.model !== null,
-    mcpServers: plan.mcpServers.map((item) => item.id),
+    mcpServers: plan.mcpServers
+      .filter((item) => item.status.kind !== "unsupported")
+      .map((item) => item.id),
     routines: plan.routines.map((item) => item.id),
     apiKeys: [],
   };

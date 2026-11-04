@@ -63,6 +63,7 @@ function services(overrides: Partial<AgentImportServices>): AgentImportServices 
     mcpCredentialValues: async () => null,
     validateBotModel: async () => "Connect that model provider first",
     stdioAllowed: () => false,
+    mcpEndpointProblem: async () => null,
     prepareModelKey: async () => ({}),
     writeModelKey: async () => ({ id: "cred-1", secretId: "secret-1", provider: "doitx" }),
     afterModelKey: () => undefined,

@@ -8,6 +8,8 @@ export const AgentImportNeedSchema = z.discriminatedUnion("kind", [
   /** A program a stdio server runs on the bot's computer. */
   z.object({ kind: z.literal("program"), name: z.string() }),
   z.object({ kind: z.literal("local_paths") }),
+  /** The connector's address cannot be used from this deployment; it needs a new one. */
+  z.object({ kind: z.literal("endpoint") }),
   /** Programs, variables or tools a skill declares it needs. */
   z.object({ kind: z.literal("requires"), names: z.array(z.string()) }),
   z.object({ kind: z.literal("turn_on") }),

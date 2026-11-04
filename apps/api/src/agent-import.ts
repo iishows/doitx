@@ -13,9 +13,11 @@ import type {
   AgentImportErrorReason,
   AgentImportFile,
   AgentImportMemoryDestination,
+  AgentImportNeed,
   AgentImportPlan,
   AgentImportSetupItem,
   AgentImportSetupState,
+  AgentImportStatus,
   AgentImportWarning,
   Bot,
   BotAvatarSet,
@@ -79,6 +81,8 @@ export type AgentImportServices<PreparedKey = unknown> = {
   /** `bots.update`'s model check; an error message or null. */
   validateBotModel: (actor: Actor, provider: string, modelId: string) => Promise<string | null>;
   stdioAllowed: (command: string) => boolean;
+  /** Why this deployment would refuse an MCP endpoint, or null when it would connect. */
+  mcpEndpointProblem: (endpoint: string) => Promise<string | null>;
   /** `models.connect`'s checks and encryption for a key, without writing it. */
   prepareModelKey: (
     actor: Actor,
@@ -126,6 +130,8 @@ type ImportRecord = {
     credentials?: string[];
     env?: string[];
     unverifiable?: boolean;
+    /** The address as imported; the item is only done once it has been changed. */
+    endpoint?: string;
   }[];
 };
 
@@ -135,6 +141,18 @@ function parsePlan(files: AgentImportFile[], skillFiles: SkillFiles): AgentImpor
   const plan = parseAgentImport(files, skillFiles);
   if ("error" in plan) throw new ORPCError("BAD_REQUEST", { message: plan.error });
   return plan;
+}
+
+/** An address this deployment refuses is a setup item, not a reason to fail the import. */
+async function withEndpointNeed(
+  services: AgentImportServices,
+  config: McpServerConfigInput,
+  status: AgentImportStatus,
+): Promise<AgentImportStatus> {
+  if (config.transport === "stdio") return status;
+  if ((await services.mcpEndpointProblem(config.endpoint)) === null) return status;
+  const existing: AgentImportNeed[] = status.kind === "needs_setup" ? status.needs : [];
+  return { kind: "needs_setup", needs: [...existing, { kind: "endpoint" }] };
 }
 
 async function takenNames(db: Reader, actor: Actor) {
@@ -212,18 +230,20 @@ async function buildPlan(
   }
 
   const slugs = new Set(taken.mcpSlugs);
-  const mcpServers = settings.mcpServers.map((server) => {
-    const slug = freeSlug(server.config.slug, slugs);
-    mcpConfigs.set(server.id, { ...server, slug });
-    return {
-      id: server.id,
-      title: server.title,
-      name: slug,
-      content: server.content,
-      warnings: server.warnings,
-      status: server.status,
-    };
-  });
+  const mcpServers = await Promise.all(
+    settings.mcpServers.map(async (server) => {
+      const slug = freeSlug(server.config.slug, slugs);
+      mcpConfigs.set(server.id, { ...server, slug });
+      return {
+        id: server.id,
+        title: server.title,
+        name: slug,
+        content: server.content,
+        warnings: server.warnings,
+        status: await withEndpointNeed(services, server.config, server.status),
+      };
+    }),
+  );
 
   const saved = (
     await services.prisma.user.findUnique({
@@ -587,6 +607,8 @@ export async function materializeImportedBot<PreparedKey>(
         status?.kind === "needs_setup"
           ? status.needs.flatMap((need) => (need.kind === kind ? need.names : []))
           : [];
+      const needsEndpoint =
+        status?.kind === "needs_setup" && status.needs.some((need) => need.kind === "endpoint");
       record.mcpServers.push({
         id: row.id,
         credentials: named("credentials"),
@@ -594,6 +616,7 @@ export async function materializeImportedBot<PreparedKey>(
         unverifiable:
           status?.kind === "needs_setup" &&
           status.needs.some((need) => need.kind === "program" || need.kind === "local_paths"),
+        ...(needsEndpoint && config.transport !== "stdio" ? { endpoint: config.endpoint } : {}),
       });
       if (status?.kind === "needs_setup") {
         setup.push({ kind: "mcp", serverId: row.id, name: row.slug, needs: status.needs });
@@ -704,7 +727,7 @@ export async function agentImportSetupState(
   const [servers, assigned, routines, imports] = await Promise.all([
     db.mcpServer.findMany({
       where: { ...owner, id: { in: input.serverIds } },
-      select: { id: true, secretId: true },
+      select: { id: true, secretId: true, endpoint: true },
     }),
     db.botMcpServer.findMany({
       where: { ...owner, botId: input.botId, serverId: { in: input.serverIds } },
@@ -732,6 +755,8 @@ export async function agentImportSetupState(
     if (!row || !need || !Array.isArray(need.credentials) || !Array.isArray(need.env)) {
       return false;
     }
+    // The imported address is the one this deployment refused; it is done once it changes.
+    if (need.endpoint !== undefined && row.endpoint === need.endpoint) return false;
     if (need.unverifiable) return "unverifiable";
     if (!given.has(id)) return false;
     if (need.credentials.length === 0 && need.env.length === 0) return true;

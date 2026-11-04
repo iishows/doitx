@@ -7,7 +7,7 @@ import { findModelCredential, Prisma } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import type { AgentImportServices } from "./agent-import.js";
 import type { createMcpServers } from "./mcp-servers.js";
-import { mcpCredentialRecords, mcpStdioPolicy } from "./mcp-servers.js";
+import { mcpCredentialRecords, mcpEndpointProblem, mcpStdioPolicy } from "./mcp-servers.js";
 import type { createModelConnector } from "./model-credentials.js";
 import { createImportedModelCredential, prepareModelCredential } from "./model-credentials.js";
 import type { RouterDeps } from "./router.js";
@@ -87,6 +87,7 @@ export function createAgentImportServices({
       return result.ok ? null : result.error;
     },
     stdioAllowed: (command) => !mcpStdioRefusal(command, mcpStdioPolicy(deps)),
+    mcpEndpointProblem: (endpoint) => mcpEndpointProblem(endpoint, deps),
     prepareModelKey: async (actor, input, signal) => {
       const connect = ModelConnectInputSchema.parse({ ...input, credentialId: null });
       const { plaintext } = await verifyModelConnection(actor, connect, signal);

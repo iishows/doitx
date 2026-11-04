@@ -141,6 +141,8 @@ describe("lingui catalogs", () => {
       "From {0}. Choose the bots to create.",
       "{0} routines · {1} servers",
       "needs credentials",
+      "Needs setup: {0}",
+      "This address cannot be used here.",
       "a name is taken, it is renamed",
       "Also adds {0} sections, {1} skills and {2} connections.",
       "Model preferences for {0} are skipped: connect those providers first.",

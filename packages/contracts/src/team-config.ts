@@ -284,6 +284,11 @@ export const TeamConfigBotPlanSchema = z.object({
    * until the user supplies credentials.
    */
   needsCredentials: z.boolean().default(false),
+  /**
+   * Connectors that are imported but whose address this deployment cannot use. They need a new
+   * address before they work; the archive still carries their definition.
+   */
+  endpointProblems: z.array(z.string()).default([]),
   /** A bot whose name is already taken here; it is created under a free name instead. */
   nameTaken: z.boolean().default(false),
 });

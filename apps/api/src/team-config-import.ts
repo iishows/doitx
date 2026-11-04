@@ -1,6 +1,7 @@
 import type { ImportedMcpServer } from "@rakazo/adapters";
 import type {
   Actor,
+  AgentImportNeed,
   AgentImportPlan,
   AgentImportStatus,
   CreateRoutineInput as CreateRoutineInputType,
@@ -67,17 +68,22 @@ function instructionPlan(bot: TeamConfigBot): AgentImportPlan["instructions"] {
 
 /**
  * MCP servers as the preview shows them, plus the config each is saved from. A server whose
- * archive entry has neither a command nor an endpoint cannot be run here and is refused.
+ * archive entry has neither a command nor an endpoint cannot be run here and is refused. An
+ * address this deployment refuses is kept as a setup item instead: the archive still carries the
+ * connector, and importing it must not fail the rest of the workspace.
  */
-function mcpServerPlan(bot: TeamConfigBot): {
+async function mcpServerPlan<PreparedKey>(
+  services: AgentImportServices<PreparedKey>,
+  bot: TeamConfigBot,
+): Promise<{
   plans: AgentImportPlan["mcpServers"];
   configs: Map<string, ImportedMcpServer & { slug: string }>;
-} {
+}> {
   const plans: AgentImportPlan["mcpServers"] = [];
   const configs = new Map<string, ImportedMcpServer & { slug: string }>();
   for (const server of bot.mcpServers) {
     const id = `mcp:${server.key}`;
-    const config = mcpConfig(server);
+    const config = mcpConfig(services, server);
     if (!config) {
       plans.push({
         id,
@@ -89,9 +95,13 @@ function mcpServerPlan(bot: TeamConfigBot): {
       });
       continue;
     }
-    const status: AgentImportStatus = server.requiresCredentials
-      ? { kind: "needs_setup", needs: [{ kind: "credentials", names: [] }] }
-      : { kind: "ready" };
+    const needs: AgentImportNeed[] = [];
+    if (server.requiresCredentials) needs.push({ kind: "credentials", names: [] });
+    if (config.transport !== "stdio" && (await services.mcpEndpointProblem(config.endpoint))) {
+      needs.push({ kind: "endpoint" });
+    }
+    const status: AgentImportStatus =
+      needs.length > 0 ? { kind: "needs_setup", needs } : { kind: "ready" };
     plans.push({
       id,
       title: server.name,
@@ -118,12 +128,16 @@ function mcpServerPlan(bot: TeamConfigBot): {
  * stores the command as one line, so it is split into program and arguments and both are checked
  * against the same policy the vendor import applies to a source's JSON.
  */
-function mcpConfig(server: TeamConfigMcpServer): McpServerConfigInput | null {
+function mcpConfig<PreparedKey>(
+  services: AgentImportServices<PreparedKey>,
+  server: TeamConfigMcpServer,
+): McpServerConfigInput | null {
   const slug = mcpSlug(server.name);
   const command = typeof server.command === "string" ? server.command.trim() : "";
   if (command) {
     const [program, ...args] = command.split(/\s+/);
     if (!mcpServerImportable({ command: program, args })) return null;
+    if (!services.stdioAllowed(program!)) return null;
     return {
       transport: "stdio",
       slug,
@@ -232,7 +246,7 @@ export async function buildTeamConfigBot<PreparedKey>(
   actor: Actor,
   bot: TeamConfigBot,
 ): Promise<Built> {
-  const { plans: mcpServers, configs: mcpConfigs } = mcpServerPlan(bot);
+  const { plans: mcpServers, configs: mcpConfigs } = await mcpServerPlan(services, bot);
   const saved = (
     await services.prisma.user.findUnique({
       where: { id: actor.userId },

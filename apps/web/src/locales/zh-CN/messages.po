@@ -3898,6 +3898,11 @@ msgstr "需要凭据"
 msgid "Needs input"
 msgstr "需要输入"
 
+#. placeholder {0}: bot.endpointProblems.join(", ")
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Needs setup: {0}"
+msgstr "需要设置：{0}"
+
 #: src/pages/ActivityList.tsx
 msgid "Needs takeover"
 msgstr "需要接管"
@@ -5763,6 +5768,10 @@ msgstr "思考"
 #: src/pages/ModelRoleSettings.tsx
 msgid "Thinking: {0}"
 msgstr "思考：{0}"
+
+#: src/pages/shell/import-status.ts
+msgid "This address cannot be used here."
+msgstr "此地址无法在此处使用。"
 
 #: src/lib/user-error.ts
 msgid "This app needs its own sign-in setup to connect."

@@ -404,6 +404,10 @@ export function mcpRoutes(ctx: RouterContext) {
           );
         }),
         create: authed.mcp.servers.create.handler(async ({ context, input }) => {
+          await assertMcpRemoteEndpoint("endpoint" in input ? input.endpoint : null, deps);
+          if (input.transport === "stdio") {
+            await assertMcpRemoteEndpoint(input.oauthClient?.authorizationServer, deps);
+          }
           const stored = await prepareMcpServer(context.actor, input);
           const row = await deps.prisma
             .$transaction((tx) =>

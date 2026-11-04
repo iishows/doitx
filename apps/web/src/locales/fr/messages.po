@@ -3898,6 +3898,11 @@ msgstr "nécessite des identifiants"
 msgid "Needs input"
 msgstr "Nécessite une saisie"
 
+#. placeholder {0}: bot.endpointProblems.join(", ")
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Needs setup: {0}"
+msgstr "Configuration requise : {0}"
+
 #: src/pages/ActivityList.tsx
 msgid "Needs takeover"
 msgstr "Nécessite une intervention"
@@ -5763,6 +5768,10 @@ msgstr "Réflexion"
 #: src/pages/ModelRoleSettings.tsx
 msgid "Thinking: {0}"
 msgstr "Réflexion : {0}"
+
+#: src/pages/shell/import-status.ts
+msgid "This address cannot be used here."
+msgstr "Cette adresse ne peut pas être utilisée ici."
 
 #: src/lib/user-error.ts
 msgid "This app needs its own sign-in setup to connect."

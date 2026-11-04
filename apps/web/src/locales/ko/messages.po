@@ -3898,6 +3898,11 @@ msgstr "자격 증명 필요"
 msgid "Needs input"
 msgstr "입력 필요"
 
+#. placeholder {0}: bot.endpointProblems.join(", ")
+#: src/pages/shell/ImportWorkspaceDialog.tsx
+msgid "Needs setup: {0}"
+msgstr "설정 필요: {0}"
+
 #: src/pages/ActivityList.tsx
 msgid "Needs takeover"
 msgstr "인수 필요"
@@ -5763,6 +5768,10 @@ msgstr "생각 깊이"
 #: src/pages/ModelRoleSettings.tsx
 msgid "Thinking: {0}"
 msgstr "사고: {0}"
+
+#: src/pages/shell/import-status.ts
+msgid "This address cannot be used here."
+msgstr "이 주소는 여기에서 사용할 수 없습니다."
 
 #: src/lib/user-error.ts
 msgid "This app needs its own sign-in setup to connect."
