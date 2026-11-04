@@ -85,6 +85,44 @@ instead of this host proxy.
 If the installer, Compose downloads, or image pulls are blocked, use the
 [restricted-network guide](./self-host-restricted-network.md) for mirror settings and local files.
 
+### Offline bundle (air-gapped)
+
+When the target host has no route to GHCR, GitHub or any registry, ship the images as one tarball
+instead. On a machine that has the images (or can build them):
+
+```bash
+bash infra/compose/make-image-bundle.sh --tag v0.3.10
+```
+
+That writes `dist/offline-bundle/rakazo-offline-bundle-<tag>.tar.gz`: the `app`, `computer`,
+pinned Postgres and `busybox` images, plus the flat set of files `install-images.sh --offline`
+resolves by relative path (`docker-compose.images.yml`, `.env.images.example`,
+`restrict-computer-egress.sh`). It refuses to start when an image is missing or when the output
+filesystem cannot hold the tar. `--dry-run` prints the plan without writing, `--build` builds the
+app and computer images from the checkout first, and `RAKAZO_IMAGE` / `RAKAZO_COMPUTER_IMAGE` /
+`POSTGRES_IMAGE` / `BUSYBOX_IMAGE` override the references.
+
+On the target host, extract, load, then run the installer from inside the bundle directory:
+
+```bash
+tar -xzf rakazo-offline-bundle-v0.3.10.tar.gz &&
+cd rakazo-offline-bundle-v0.3.10 &&
+docker load -i images/rakazo-images.tar &&
+bash install-images.sh --offline
+```
+
+`--offline` keeps the bundled Compose and env files, skips every download, and never pulls, so all
+images must already be loaded. The env example defaults the app and computer tags to `edge`; the
+bundle's `BUNDLE_ENV` records the tags actually saved, so copy those into `.env` or Compose will
+look for an image that is not there. `IMAGES.txt` lists the digests, `SHA256SUMS` covers the
+tarball contents, and `OFFLINE.md` is the offline walkthrough itself so the target host does not
+need to open the repository.
+
+The bundle omits the `updater` image on purpose: it discovers and pulls new releases from GitHub
+and the registry, which an air-gapped host cannot reach. See the
+[Chinese offline guide](./self-host-offline-zh.md) for the full walkthrough (proxy, TLS, health
+checks, upgrades, troubleshooting).
+
 ### Bot computer resource ceilings
 
 Each Docker computer runs Xvfb, a window manager and a full Chromium driven by an agent that

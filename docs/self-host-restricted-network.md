@@ -98,6 +98,10 @@ JSON configuration, then restart Docker:
 See the [base daemon configuration](../infra/compose/docker-daemon.json). Docker Hub mirrors do not
 replace the GHCR image overrides above.
 
+When the host cannot reach any registry at all, skip mirrors and ship the images as a tarball:
+`bash infra/compose/make-image-bundle.sh` produces one that `install-images.sh --offline` accepts.
+See [offline bundle](./self-host.md#offline-bundle-air-gapped).
+
 ## Digest-verified Hub mirror startup
 
 Run `bash install-images.sh --prepare-only` in the installation directory first (add `--local`
