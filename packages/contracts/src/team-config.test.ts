@@ -5,6 +5,7 @@ import {
   TEAM_CONFIG_VERSION,
   TeamConfigBotSchema,
   TeamConfigManifestSchema,
+  TeamConfigManifestV2Schema,
   TeamConfigSelectionSchema,
 } from "./team-config.js";
 
@@ -59,8 +60,33 @@ describe("team config manifest", () => {
 
   it("rejects an unknown archive version so a newer exporter cannot be half-read", () => {
     expect(TeamConfigManifestSchema.safeParse({ ...manifest, version: 1 }).success).toBe(false);
-    expect(TeamConfigManifestSchema.safeParse({ ...manifest, version: 3 }).success).toBe(false);
-    expect(TeamConfigManifestSchema.safeParse({ ...manifest, version: "2" }).success).toBe(false);
+    expect(
+      TeamConfigManifestSchema.safeParse({ ...manifest, version: TEAM_CONFIG_VERSION + 1 }).success,
+    ).toBe(false);
+    expect(
+      TeamConfigManifestSchema.safeParse({ ...manifest, version: String(TEAM_CONFIG_VERSION) })
+        .success,
+    ).toBe(false);
+  });
+
+  it("keeps a version 2 manifest readable, with its inlined skill bodies", () => {
+    const v2 = {
+      ...manifest,
+      version: 2,
+      skills: [{ key: "skill:style", name: "Style", description: "", content: "# Style" }],
+    };
+    expect(TeamConfigManifestV2Schema.safeParse(v2).success).toBe(true);
+    // The current schema expects a summary plus a separate file, so it does not read the old shape.
+    expect(TeamConfigManifestSchema.safeParse(v2).success).toBe(false);
+  });
+
+  it("keeps a skill body out of the manifest", () => {
+    expect(
+      TeamConfigManifestSchema.safeParse({
+        ...manifest,
+        skills: [{ key: "skill:style", name: "Style", description: "", content: "# Style" }],
+      }).success,
+    ).toBe(false);
   });
 
   it("requires the fields the preview reads and defaults the warning list", () => {

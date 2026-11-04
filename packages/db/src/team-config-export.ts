@@ -4,8 +4,14 @@ import type {
   TeamConfigManifest,
   TeamConfigRoutine,
   TeamConfigSection,
+  TeamConfigSkill,
 } from "@rakazo/contracts";
-import { TEAM_CONFIG_FORMAT, TEAM_CONFIG_MAX_BOTS, TEAM_CONFIG_VERSION } from "@rakazo/contracts";
+import {
+  TEAM_CONFIG_FORMAT,
+  TEAM_CONFIG_MAX_BOTS,
+  TEAM_CONFIG_MAX_SKILLS,
+  TEAM_CONFIG_VERSION,
+} from "@rakazo/contracts";
 
 import type { PrismaClient } from "./client.js";
 import { runAsSystem } from "./row-security.js";
@@ -18,7 +24,8 @@ import { runAsSystem } from "./row-security.js";
  * `McpServer` is absent from the archive until someone deliberately adds it here. Nothing in this
  * module imports the `Secret` model, so `Secret.ciphertext` is not reachable from the export path.
  *
- * The archive never carries content: no messages, no memory documents, no files, no run history.
+ * The archive never carries runtime state: no messages, no memory documents, no uploaded files, no
+ * run history. A skill travels as the Markdown its author wrote, which is configuration.
  */
 
 /** A stable, readable key. Ids are regenerated on import, so they cannot be the handle. */
@@ -30,6 +37,18 @@ function botKey(name: string, id: string): string {
     .replace(/^-+|-+$/g, "");
   // Fall back to the row id when a name has no Latin characters to slug (e.g. all CJK).
   return `bot:${slug || id}`;
+}
+
+/**
+ * Keys name files inside the archive, so two rows that slug alike must not share one: a duplicate
+ * path makes the whole zip unreadable on import. Names are unique per user, not per space, so two
+ * users' skills in one space can collide here even though the database allows both.
+ */
+function uniqueKey(taken: Set<string>, base: string): string {
+  let key = base;
+  for (let n = 2; taken.has(key); n += 1) key = `${base}-${n}`;
+  taken.add(key);
+  return key;
 }
 
 function sectionKey(name: string, id: string): string {
@@ -232,6 +251,8 @@ export interface TeamConfigExportSource {
 export interface TeamConfigExportResult {
   manifest: TeamConfigManifest;
   bots: TeamConfigBot[];
+  /** Bodies written one file each, in the same order the manifest lists them. */
+  skills: TeamConfigSkill[];
   truncated: boolean;
 }
 
@@ -246,12 +267,16 @@ export function buildTeamConfig(source: TeamConfigExportSource): TeamConfigExpor
     sectionKeyById.set(section.id, sections[index]!.key);
   }
 
-  const truncated = source.bots.length > TEAM_CONFIG_MAX_BOTS;
+  const truncatedBots = source.bots.length > TEAM_CONFIG_MAX_BOTS;
   const kept = source.bots.slice(0, TEAM_CONFIG_MAX_BOTS);
+  const truncatedSkills = source.skills.length > TEAM_CONFIG_MAX_SKILLS;
+  const keptSkills = source.skills.slice(0, TEAM_CONFIG_MAX_SKILLS);
 
+  const botKeys = new Set<string>();
   const bots: TeamConfigBot[] = kept.map((bot) => {
+    const key = uniqueKey(botKeys, botKey(bot.name, bot.id));
     const routines: TeamConfigRoutine[] = bot.routines.map((routine, index) => ({
-      key: `routine:${botKey(bot.name, bot.id)}:${routine.name.toLowerCase() || index}`,
+      key: `routine:${key}:${routine.name.toLowerCase() || index}`,
       name: routine.name,
       prompt: routine.prompt,
       crons: routine.crons,
@@ -266,7 +291,7 @@ export function buildTeamConfig(source: TeamConfigExportSource): TeamConfigExpor
     }));
 
     return {
-      key: botKey(bot.name, bot.id),
+      key,
       name: bot.name,
       description: bot.description,
       instructions: bot.instructions,
@@ -289,7 +314,7 @@ export function buildTeamConfig(source: TeamConfigExportSource): TeamConfigExpor
       // The server row carries env and headers; only the declared endpoint is copied, and the
       // importer is told the user must supply credentials before it can run.
       mcpServers: bot.mcpServers.map((assignment, index) => ({
-        key: `mcp:${botKey(bot.name, bot.id)}:${assignment.server.name.toLowerCase() || index}`,
+        key: `mcp:${key}:${assignment.server.name.toLowerCase() || index}`,
         name: assignment.server.name,
         ...(assignment.server.command ? { command: assignment.server.command } : {}),
         ...(assignment.server.endpoint ? { endpoint: assignment.server.endpoint } : {}),
@@ -306,6 +331,16 @@ export function buildTeamConfig(source: TeamConfigExportSource): TeamConfigExpor
     ...(connection.providerRef ? { providerRef: connection.providerRef } : {}),
   }));
 
+  // The body is written to its own file; the manifest only points at it, so a long skill can no
+  // longer push the manifest past the per-file limit an import enforces.
+  const skillKeys = new Set<string>();
+  const skills: TeamConfigSkill[] = keptSkills.map((skill, index) => ({
+    key: uniqueKey(skillKeys, `skill:${skill.name.toLowerCase() || index}`),
+    name: skill.name,
+    description: skill.description,
+    content: skill.content,
+  }));
+
   const manifest: TeamConfigManifest = {
     format: TEAM_CONFIG_FORMAT,
     version: TEAM_CONFIG_VERSION,
@@ -314,12 +349,7 @@ export function buildTeamConfig(source: TeamConfigExportSource): TeamConfigExpor
     bots: bots.map((bot) => ({ key: bot.key, name: bot.name, warnings: [] })),
     sections,
     connections,
-    skills: source.skills.map((skill, index) => ({
-      key: `skill:${skill.name.toLowerCase() || index}`,
-      name: skill.name,
-      description: skill.description,
-      content: skill.content,
-    })),
+    skills: skills.map(({ key, name, description }) => ({ key, name, description })),
     modelPreferences: source.modelPreferences.map((preference) => ({
       provider: preference.provider,
       ...(preference.modelId ? { modelId: preference.modelId } : {}),
@@ -332,5 +362,5 @@ export function buildTeamConfig(source: TeamConfigExportSource): TeamConfigExpor
     })),
   };
 
-  return { manifest, bots, truncated };
+  return { manifest, bots, skills, truncated: truncatedBots || truncatedSkills };
 }

@@ -1,5 +1,10 @@
 import type { Actor, TeamConfigFile } from "@rakazo/contracts";
-import { TEAM_CONFIG_MANIFEST_PATH, teamConfigBotPath } from "@rakazo/contracts";
+import {
+  TEAM_CONFIG_MANIFEST_PATH,
+  TeamConfigFilesSchema,
+  teamConfigBotPath,
+  teamConfigSkillPath,
+} from "@rakazo/contracts";
 import { parseTeamConfig } from "@rakazo/core";
 import { buildTeamConfig, type TeamConfigExportSource } from "@rakazo/db";
 import { describe, expect, it } from "vitest";
@@ -92,20 +97,30 @@ const source: TeamConfigExportSource = {
       ],
     },
   ],
-  skills: [],
+  skills: [
+    {
+      name: "House style",
+      description: "Our tone of voice",
+      content: "# House style\n\nBe terse.",
+    },
+  ],
   connections: [],
   modelPreferences: [],
   approvalRules: [],
 };
 
 /** Assemble the archive the exporter would write, then read it back the way an importer does. */
-function roundTrip(): TeamConfigFile[] {
-  const { manifest, bots } = buildTeamConfig(source);
+function roundTrip(input: TeamConfigExportSource = source): TeamConfigFile[] {
+  const { manifest, bots, skills } = buildTeamConfig(input);
   return [
     { path: TEAM_CONFIG_MANIFEST_PATH, content: JSON.stringify(manifest) },
     ...bots.map((bot) => ({
       path: teamConfigBotPath(bot.key),
       content: JSON.stringify(bot),
+    })),
+    ...skills.map((skill) => ({
+      path: teamConfigSkillPath(skill.key),
+      content: skill.content,
     })),
   ];
 }
@@ -151,6 +166,30 @@ describe("team-config round trip", () => {
       command: "npx",
       args: ["linear-mcp"],
     });
+  });
+
+  it("round-trips a skill, body included", () => {
+    const parsed = parseTeamConfig(roundTrip());
+
+    expect(parsed.manifest.skills[0]?.name).toBe("House style");
+    expect(parsed.skills.get(parsed.manifest.skills[0]!.key)?.content).toBe(
+      "# House style\n\nBe terse.",
+    );
+  });
+
+  it("imports a skill at the size the skill editor itself allows", () => {
+    // The body is the whole point of the split: a full-size skill used to push the manifest past
+    // the per-file limit, so the archive exported fine and was then rejected on import.
+    const heading = "# Long\n\n";
+    const content = `${heading}${"x".repeat(100_000 - heading.length)}`;
+    const files = roundTrip({
+      ...source,
+      skills: [{ name: "Long", description: "Big", content }],
+    });
+
+    expect(TeamConfigFilesSchema.safeParse(files).success).toBe(true);
+    const parsed = parseTeamConfig(files);
+    expect(parsed.skills.get(parsed.manifest.skills[0]!.key)?.content).toBe(content);
   });
 
   it("carries no credential-shaped value in the archive", () => {

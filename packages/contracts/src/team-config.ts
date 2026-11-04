@@ -8,7 +8,7 @@ import { BOT_DESCRIPTION_MAX_LENGTH, BOT_NAME_MAX_LENGTH } from "./domain.js";
  * an older importer cannot read. The importer refuses anything newer than the version it knows and
  * migrates anything older.
  */
-export const TEAM_CONFIG_VERSION = 2;
+export const TEAM_CONFIG_VERSION = 3;
 
 /** Identifies the archive as ours, so an unrelated zip is rejected before anything is read. */
 export const TEAM_CONFIG_FORMAT = "rakazo-team-config";
@@ -24,8 +24,18 @@ export function teamConfigBotPath(key: string): string {
   return `${TEAM_CONFIG_BOTS_DIR}/${encodeURIComponent(key)}.json`;
 }
 
+/** Per-skill bodies live here, one `<key>.md` each. A skill's content is Markdown, so no JSON wrapper. */
+export const TEAM_CONFIG_SKILLS_DIR = "skills";
+
+export function teamConfigSkillPath(key: string): string {
+  return `${TEAM_CONFIG_SKILLS_DIR}/${encodeURIComponent(key)}.md`;
+}
+
 /** How many bots one archive may carry. Mirrors the per-agent file ceiling the importer already applies. */
 export const TEAM_CONFIG_MAX_BOTS = 200;
+
+/** Matches the bot ceiling, so the file count stays inside `TEAM_CONFIG_MAX_FILES`. */
+export const TEAM_CONFIG_MAX_SKILLS = 200;
 
 /**
  * A key that is stable inside one archive only. Slugs are minted on export and are what the import
@@ -63,9 +73,12 @@ export const TeamConfigRoutineSchema = z.strictObject({
 export type TeamConfigRoutine = z.infer<typeof TeamConfigRoutineSchema>;
 
 /**
- * A skill in the space's library, as text. `AgentSkill.content` is the author's Markdown. Skills are
- * space-scoped rather than per-bot, so they live at the manifest level; the recording a taught skill
- * produces is runtime state and is not exported.
+ * A skill in the space's library. Skills are space-scoped rather than per-bot, so the manifest lists
+ * them; the recording a taught skill produces is runtime state and is not exported.
+ *
+ * The body is the author's Markdown and lives in its own file (`teamConfigSkillPath`). It used to be
+ * inlined here, which made the manifest itself unbounded: one legal 100 000-character skill pushed
+ * the manifest past the per-file limit and the archive could be exported but never imported.
  */
 export const TeamConfigSkillSchema = z.strictObject({
   key: TeamConfigKeySchema,
@@ -74,6 +87,14 @@ export const TeamConfigSkillSchema = z.strictObject({
   content: z.string(),
 });
 export type TeamConfigSkill = z.infer<typeof TeamConfigSkillSchema>;
+
+/** What the manifest carries for a skill: everything but the body, which sits in its own file. */
+export const TeamConfigSkillSummarySchema = z.strictObject({
+  key: TeamConfigKeySchema,
+  name: z.string().min(1),
+  description: z.string(),
+});
+export type TeamConfigSkillSummary = z.infer<typeof TeamConfigSkillSummarySchema>;
 
 /**
  * An MCP server declaration. The command and endpoint describe what to run or connect to; **the
@@ -166,12 +187,11 @@ export const TeamConfigApprovalRuleSchema = z.strictObject({
 export type TeamConfigApprovalRule = z.infer<typeof TeamConfigApprovalRuleSchema>;
 
 /**
- * The archive's root manifest. It doubles as the import preview: `bots` carries the list the user
- * ticks and any per-bot warning the exporter already knows about.
+ * Everything the manifest carries except its version and skills, which are what differ between
+ * archive versions. Sharing them keeps the two schemas from drifting.
  */
-export const TeamConfigManifestSchema = z.object({
+const manifestBase = {
   format: z.literal(TEAM_CONFIG_FORMAT),
-  version: z.literal(TEAM_CONFIG_VERSION),
   exportedAt: z.string(),
   sourceWorkspace: z.string(),
   bots: z
@@ -185,11 +205,31 @@ export const TeamConfigManifestSchema = z.object({
     .max(TEAM_CONFIG_MAX_BOTS),
   sections: z.array(TeamConfigSectionSchema),
   connections: z.array(TeamConfigConnectionSchema),
-  skills: z.array(TeamConfigSkillSchema).default([]),
   modelPreferences: z.array(TeamConfigModelPreferenceSchema).default([]),
   approvalRules: z.array(TeamConfigApprovalRuleSchema).default([]),
+};
+
+/**
+ * The archive's root manifest. It doubles as the import preview: `bots` carries the list the user
+ * ticks and any per-bot warning the exporter already knows about. Each skill's body is a file.
+ */
+export const TeamConfigManifestSchema = z.object({
+  ...manifestBase,
+  version: z.literal(TEAM_CONFIG_VERSION),
+  skills: z.array(TeamConfigSkillSummarySchema).max(TEAM_CONFIG_MAX_SKILLS).default([]),
 });
 export type TeamConfigManifest = z.infer<typeof TeamConfigManifestSchema>;
+
+/**
+ * The version 2 manifest, kept only so archives exported before skills were split out can still be
+ * imported. Skills were inlined then, so this schema needs no skill files. Do not extend it.
+ */
+export const TeamConfigManifestV2Schema = z.object({
+  ...manifestBase,
+  version: z.literal(2),
+  skills: z.array(TeamConfigSkillSchema).default([]),
+});
+export type TeamConfigManifestV2 = z.infer<typeof TeamConfigManifestV2Schema>;
 
 /**
  * Which bots the user ticked in the preview, by archive key. The importer only ever writes the keys
@@ -204,7 +244,8 @@ export type TeamConfigSelection = z.infer<typeof TeamConfigSelectionSchema>;
  * Import transport, preview and apply
  * ----------------------------------------------------------------------------------------- */
 
-export const TEAM_CONFIG_MAX_FILES = 2 * TEAM_CONFIG_MAX_BOTS + 16;
+/** One manifest, one file per bot and one per skill, plus slack for the manifest and future entries. */
+export const TEAM_CONFIG_MAX_FILES = TEAM_CONFIG_MAX_BOTS + TEAM_CONFIG_MAX_SKILLS + 16;
 export const TEAM_CONFIG_MAX_FILE_LENGTH = 100_000;
 export const TEAM_CONFIG_MAX_TOTAL_LENGTH = 4_000_000;
 export const TEAM_CONFIG_MAX_PATH_LENGTH = 300;

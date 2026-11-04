@@ -8,6 +8,7 @@ import type {
   TeamConfigManifest,
   TeamConfigPreview,
   TeamConfigPreviewInput,
+  TeamConfigSkill,
 } from "@rakazo/contracts";
 import { parseTeamConfig, TeamConfigParseError } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
@@ -98,11 +99,11 @@ export async function createTeamConfig<PreparedKey>(
   actor: Actor,
   input: TeamConfigCreateInput,
 ): Promise<TeamConfigCreateResult> {
-  const { manifest, bots } = read(input);
+  const { manifest, bots, skills } = read(input);
   const wanted = new Set(input.selection.keys);
 
   // Space-scoped items first, so a bot that references a section can find it.
-  await writeSpaceLevelItems(services.prisma, actor, manifest);
+  await writeSpaceLevelItems(services.prisma, actor, manifest, skills);
 
   // Names are claimed as they are handed out, so two bots called the same in one archive do not
   // both get the same free name.
@@ -172,6 +173,7 @@ async function writeSpaceLevelItems(
   db: PrismaClient,
   actor: Actor,
   manifest: TeamConfigManifest,
+  skills: Map<string, TeamConfigSkill>,
 ): Promise<void> {
   const owner = { spaceId: actor.spaceId, userId: actor.userId };
 
@@ -202,7 +204,8 @@ async function writeSpaceLevelItems(
       row.name.toLowerCase(),
     ),
   );
-  const newSkills = manifest.skills.filter((skill) => {
+  // Bodies come from their own files, so the manifest's summaries alone cannot create anything.
+  const newSkills = [...skills.values()].filter((skill) => {
     if (skillNames.has(skill.name.toLowerCase())) return false;
     skillNames.add(skill.name.toLowerCase());
     return true;

@@ -8,6 +8,9 @@ import {
   type TeamConfigFile,
   type TeamConfigManifest,
   TeamConfigManifestSchema,
+  TeamConfigManifestV2Schema,
+  type TeamConfigSkill,
+  teamConfigSkillPath,
 } from "@rakazo/contracts";
 
 /**
@@ -19,7 +22,8 @@ export type TeamConfigParseErrorReason =
   | "format"
   | "version"
   | "malformed"
-  | "missing_bot";
+  | "missing_bot"
+  | "missing_skill";
 
 export class TeamConfigParseError extends Error {
   readonly reason: TeamConfigParseErrorReason;
@@ -35,6 +39,8 @@ export interface ParsedTeamConfig {
   manifest: TeamConfigManifest;
   /** Keyed by the manifest's bot key, so a bot body without a manifest entry is unreachable. */
   bots: Map<string, TeamConfigBot>;
+  /** Keyed the same way; the body is read from its own file (or inlined, for a version 2 archive). */
+  skills: Map<string, TeamConfigSkill>;
 }
 
 function textOf(files: TeamConfigFile[], path: string): string | null {
@@ -42,11 +48,15 @@ function textOf(files: TeamConfigFile[], path: string): string | null {
 }
 
 /**
- * Reads the manifest and every bot body out of an already-opened archive.
+ * Reads the manifest, every bot body and every skill body out of an already-opened archive.
  *
- * The manifest is authoritative: a bot file is only read when the manifest lists its key, so an
- * archive cannot smuggle in a bot the user never saw in the preview. Nothing here trusts the file
- * contents — each body is validated against the same strict schema the exporter writes.
+ * The manifest is authoritative: a body file is only read when the manifest lists its key, so an
+ * archive cannot smuggle in a bot or skill the user never saw in the preview. Nothing here trusts
+ * the file contents — each bot body is validated against the same strict schema the exporter writes.
+ *
+ * Version 2 inlined skill bodies in the manifest. Those archives are still importable: the manifest
+ * is read with its own schema and normalized to the current shape, so the rest of the import path
+ * only ever sees one manifest type.
  */
 export function parseTeamConfig(files: TeamConfigFile[]): ParsedTeamConfig {
   const manifestText = textOf(files, TEAM_CONFIG_MANIFEST_PATH);
@@ -77,11 +87,38 @@ export function parseTeamConfig(files: TeamConfigFile[]): ParsedTeamConfig {
     );
   }
 
-  const parsed = TeamConfigManifestSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new TeamConfigParseError("malformed", "The manifest is incomplete.");
+  const skills = new Map<string, TeamConfigSkill>();
+  let manifest: TeamConfigManifest;
+
+  if (version === 2) {
+    const parsed = TeamConfigManifestV2Schema.safeParse(raw);
+    if (!parsed.success) {
+      throw new TeamConfigParseError("malformed", "The manifest is incomplete.");
+    }
+    for (const skill of parsed.data.skills) skills.set(skill.key, skill);
+    manifest = {
+      ...parsed.data,
+      version: TEAM_CONFIG_VERSION,
+      skills: parsed.data.skills.map(({ key, name, description }) => ({
+        key,
+        name,
+        description,
+      })),
+    };
+  } else {
+    const parsed = TeamConfigManifestSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new TeamConfigParseError("malformed", "The manifest is incomplete.");
+    }
+    manifest = parsed.data;
+    for (const entry of manifest.skills) {
+      const content = textOf(files, teamConfigSkillPath(entry.key));
+      if (content === null) {
+        throw new TeamConfigParseError("missing_skill", `The file for "${entry.name}" is missing.`);
+      }
+      skills.set(entry.key, { ...entry, content });
+    }
   }
-  const manifest = parsed.data;
 
   const bots = new Map<string, TeamConfigBot>();
   for (const entry of manifest.bots) {
@@ -106,5 +143,5 @@ export function parseTeamConfig(files: TeamConfigFile[]): ParsedTeamConfig {
     bots.set(entry.key, { ...body.data, key: entry.key });
   }
 
-  return { manifest, bots };
+  return { manifest, bots, skills };
 }

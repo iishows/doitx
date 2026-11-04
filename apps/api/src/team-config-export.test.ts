@@ -1,6 +1,7 @@
+import { parseTeamConfig } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
-import { Hono } from "hono";
 import { unzipSync } from "fflate";
+import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 
 import { mountTeamConfigExportRoute } from "./team-config-export.js";
@@ -49,7 +50,7 @@ const fakeSource = vi.hoisted(() => ({
       ],
     },
   ],
-  skills: [],
+  skills: [{ name: "House style", description: "Our tone", content: "# House style\n\nBe terse." }],
   connections: [
     {
       provider: "github",
@@ -80,7 +81,7 @@ function buildApp(options: { scope?: typeof SCOPE | null } = {}) {
 }
 
 describe("team-config export route", () => {
-  it("streams a zip with the manifest and one file per bot", async () => {
+  it("streams a zip with the manifest, one file per bot and one per skill", async () => {
     const { app, consumeTeamConfigToken } = buildApp({ scope: SCOPE });
 
     const response = await app.request("/api/team-config/export?token=good");
@@ -92,19 +93,40 @@ describe("team-config export route", () => {
 
     const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
     const names = Object.keys(files).sort();
-    expect(names).toEqual(["bots/bot%3Awriter.json", "manifest.json"]);
+    expect(names).toEqual([
+      "bots/bot%3Awriter.json",
+      "manifest.json",
+      "skills/skill%3Ahouse%20style.md",
+    ]);
 
     const manifest = JSON.parse(new TextDecoder().decode(files["manifest.json"]!));
     expect(manifest.format).toBe("rakazo-team-config");
-    expect(manifest.version).toBe(2);
+    expect(manifest.version).toBe(3);
     expect(manifest.sourceWorkspace).toBe("My Workspace");
     expect(manifest.bots[0]?.key).toBe("bot:writer");
+    // The manifest points at the skill but does not carry its body.
+    expect(manifest.skills).toEqual([
+      { key: "skill:house style", name: "House style", description: "Our tone" },
+    ]);
+    expect(new TextDecoder().decode(files["skills/skill%3Ahouse%20style.md"]!)).toBe(
+      "# House style\n\nBe terse.",
+    );
 
     const bot = JSON.parse(new TextDecoder().decode(files["bots/bot%3Awriter.json"]!));
     expect(bot.key).toBe("bot:writer");
     expect(bot.mcpServers[0]?.endpoint).toBe("https://mcp.linear.app");
     // The server carries a secret, so the importer must ask for one.
     expect(bot.mcpServers[0]?.requiresCredentials).toBe(true);
+
+    // The names the zip wrote are the names the importer looks for, skill path included.
+    const parsed = parseTeamConfig(
+      Object.entries(files).map(([path, bytes]) => ({
+        path,
+        content: new TextDecoder().decode(bytes),
+      })),
+    );
+    expect(parsed.bots.get("bot:writer")?.instructions).toBe("Be concise.");
+    expect(parsed.skills.get("skill:house style")?.content).toBe("# House style\n\nBe terse.");
   });
 
   it("never writes a credential into the archive", async () => {

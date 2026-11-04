@@ -101,8 +101,23 @@ describe("buildTeamConfig", () => {
     expect(bot.routines[0]?.crons).toEqual(["0 9 * * *"]);
     expect(bot.routines[0]?.active).toBe(true);
     expect(bot.mcpServers[0]?.name).toBe("linear");
-    // Skills are space-scoped, so they sit at the manifest level rather than on the bot.
-    expect(manifest.skills[0]?.name).toBe("House style");
+    // Skills are space-scoped, so the manifest lists them rather than any bot.
+    expect(manifest.skills[0]).toEqual({
+      key: "skill:house style",
+      name: "House style",
+      description: "Our tone of voice",
+    });
+  });
+
+  it("writes a skill's body separately, so the manifest stays small", () => {
+    const { manifest, skills } = buildTeamConfig(source());
+    expect(JSON.stringify(manifest)).not.toContain("Be terse.");
+    expect(skills[0]).toEqual({
+      key: "skill:house style",
+      name: "House style",
+      description: "Our tone of voice",
+      content: "# House style\n\nBe terse.",
+    });
   });
 
   it("marks an exported MCP server as needing credentials the user must supply", () => {
@@ -125,6 +140,35 @@ describe("buildTeamConfig", () => {
     expect(bots[0]!.key).toBe("bot:bot-1");
   });
 
+  it("gives two bots whose names slug alike distinct keys, and so distinct files", () => {
+    const { bots } = buildTeamConfig(
+      source({
+        bots: [
+          { ...source().bots[0]!, id: "bot-1", name: "Writer" },
+          { ...source().bots[0]!, id: "bot-2", name: "Writer!" },
+        ],
+      }),
+    );
+    // A duplicate key would mean two entries at one path, which makes the zip unreadable.
+    expect(bots.map((bot) => bot.key)).toEqual(["bot:writer", "bot:writer-2"]);
+  });
+
+  it("gives two same-named skills, which different users may each own, distinct keys", () => {
+    const { skills, manifest } = buildTeamConfig(
+      source({
+        skills: [
+          { name: "House style", description: "One", content: "a" },
+          { name: "House style", description: "Two", content: "b" },
+        ],
+      }),
+    );
+    expect(skills.map((skill) => skill.key)).toEqual(["skill:house style", "skill:house style-2"]);
+    expect(manifest.skills.map((skill) => skill.key)).toEqual([
+      "skill:house style",
+      "skill:house style-2",
+    ]);
+  });
+
   it("truncates past the archive ceiling and says so", () => {
     const many = Array.from({ length: 201 }, (_, index) => ({
       ...source().bots[0]!,
@@ -134,6 +178,18 @@ describe("buildTeamConfig", () => {
     const result = buildTeamConfig(source({ bots: many }));
     expect(result.truncated).toBe(true);
     expect(result.bots).toHaveLength(200);
+  });
+
+  it("truncates skills at their own ceiling, since each one is a file too", () => {
+    const many = Array.from({ length: 201 }, (_, index) => ({
+      name: `Skill ${index}`,
+      description: "",
+      content: `# Skill ${index}`,
+    }));
+    const result = buildTeamConfig(source({ skills: many }));
+    expect(result.truncated).toBe(true);
+    expect(result.skills).toHaveLength(200);
+    expect(result.manifest.skills).toHaveLength(200);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   TEAM_CONFIG_MANIFEST_PATH,
   TEAM_CONFIG_VERSION,
   teamConfigBotPath,
+  teamConfigSkillPath,
 } from "@rakazo/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentImportServices } from "./agent-import.js";
@@ -40,8 +41,15 @@ const botBody = (key: string, name: string) => ({
   mcpServers: [],
 });
 
-/** An archive with the given bots, no space-level items, so the test reads only the plan. */
-function archive(bots: Array<{ key: string; name: string }>): TeamConfigFile[] {
+interface SkillFixture {
+  key: string;
+  name: string;
+  description: string;
+  content: string;
+}
+
+/** An archive with the given bots and skills, so the test reads only what it needs. */
+function archive(bots: Array<{ key: string; name: string }>, skills: SkillFixture[] = []) {
   const manifest = {
     format: TEAM_CONFIG_FORMAT,
     version: TEAM_CONFIG_VERSION,
@@ -50,7 +58,7 @@ function archive(bots: Array<{ key: string; name: string }>): TeamConfigFile[] {
     bots: bots.map((bot) => ({ ...bot, warnings: [] })),
     sections: [],
     connections: [],
-    skills: [],
+    skills: skills.map(({ key, name, description }) => ({ key, name, description })),
     modelPreferences: [],
     approvalRules: [],
   };
@@ -60,7 +68,11 @@ function archive(bots: Array<{ key: string; name: string }>): TeamConfigFile[] {
       path: teamConfigBotPath(bot.key),
       content: JSON.stringify(botBody(bot.key, bot.name)),
     })),
-  ];
+    ...skills.map((skill) => ({
+      path: teamConfigSkillPath(skill.key),
+      content: skill.content,
+    })),
+  ] satisfies TeamConfigFile[];
 }
 
 /** A Prisma stand-in: reads the given rows, and records what a create wrote. */
@@ -152,6 +164,22 @@ describe("createTeamConfig", () => {
     });
     expect(createBot).toHaveBeenCalledTimes(1);
     expect(result.created).toEqual([{ key: "bot:1", name: "Writer" }]);
+  });
+
+  it("writes a skill's body, which only exists in its own file", async () => {
+    const { services: svc, written } = services();
+    await createTeamConfig(svc, actor, {
+      files: archive(
+        [],
+        [{ key: "skill:style", name: "Style", description: "Tone", content: "# Style" }],
+      ),
+      selection: { keys: [] },
+    });
+
+    expect(written).toContainEqual({
+      model: "agentSkill",
+      data: expect.objectContaining({ name: "Style", description: "Tone", content: "# Style" }),
+    });
   });
 
   it("creates no bot when nothing is selected", async () => {

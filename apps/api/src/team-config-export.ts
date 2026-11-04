@@ -1,5 +1,9 @@
 import type { Auth } from "@rakazo/auth";
-import { TEAM_CONFIG_MANIFEST_PATH, teamConfigBotPath } from "@rakazo/contracts";
+import {
+  TEAM_CONFIG_MANIFEST_PATH,
+  teamConfigBotPath,
+  teamConfigSkillPath,
+} from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { buildTeamConfig, readTeamConfigSource } from "@rakazo/db";
 import type { Hono } from "hono";
@@ -12,13 +16,15 @@ const encoder = new TextEncoder();
 const TEAM_CONFIG_MAX_ARCHIVE_BYTES = 32 * 1024 * 1024;
 
 /**
- * The manifest first, then one JSON file per bot. The file name comes from the manifest entry rather
- * than from the bot body, so the two can never disagree about where a bot lives.
+ * The manifest first, then one file per bot and one per skill. The file names come from the manifest
+ * entries rather than from the bodies, so the two can never disagree about where an item lives. A
+ * skill's body is its Markdown, written as-is; wrapping it in JSON would cost headroom against the
+ * per-file limit without adding anything.
  */
 async function* teamConfigArchiveFiles(
   source: Parameters<typeof buildTeamConfig>[0],
 ): AsyncGenerator<ArchiveFile> {
-  const { manifest, bots } = buildTeamConfig(source);
+  const { manifest, bots, skills } = buildTeamConfig(source);
   yield {
     path: TEAM_CONFIG_MANIFEST_PATH,
     data: [encoder.encode(JSON.stringify(manifest, null, 2))],
@@ -26,6 +32,9 @@ async function* teamConfigArchiveFiles(
   for (const [index, bot] of bots.entries()) {
     const key = manifest.bots[index]?.key ?? String(index);
     yield { path: teamConfigBotPath(key), data: [encoder.encode(JSON.stringify(bot, null, 2))] };
+  }
+  for (const skill of skills) {
+    yield { path: teamConfigSkillPath(skill.key), data: [encoder.encode(skill.content)] };
   }
 }
 
