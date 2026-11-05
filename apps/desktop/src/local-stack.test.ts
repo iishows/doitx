@@ -810,6 +810,56 @@ describe("LocalStackController", () => {
     expect(probes).toBeGreaterThan(1);
   });
 
+  it("restarts the web publisher once when the host port never answers", async () => {
+    let clock = 0;
+    let restarted = false;
+    const stack = controller(
+      {
+        now: () => clock,
+        sleep: async (ms) => {
+          clock += ms;
+        },
+        healthTimeoutMs: 60_000,
+        probe: async () => (restarted ? "v1.2.3" : null),
+      },
+      (args) => {
+        if (args[7] === "restart") {
+          restarted = true;
+          return { lines: ["Container rakazo-desktop-web-1 Restarted"] };
+        }
+        return ok(args);
+      },
+    );
+    const state = await stack.start();
+    expect(state.phase).toBe("ready");
+    expect(calls.filter((call) => call.args[7] === "restart")).toHaveLength(1);
+    expect(stack.state().output).toContain("Container rakazo-desktop-web-1 Restarted");
+  });
+
+  it("does not keep restarting web when it still does not answer", async () => {
+    let clock = 0;
+    let restarts = 0;
+    const stack = controller(
+      {
+        now: () => clock,
+        sleep: async (ms) => {
+          clock += ms;
+        },
+        healthTimeoutMs: 40_000,
+        probe: async () => null,
+      },
+      (args) => {
+        if (args[7] === "restart") restarts += 1;
+        return ok(args);
+      },
+    );
+    expect(await stack.start()).toMatchObject({
+      phase: "failed",
+      message: expect.stringContaining("did not answer"),
+    });
+    expect(restarts).toBe(1);
+  });
+
   it("returns the same attempt while one is in flight and restarts after failure", async () => {
     let attempts = 0;
     const stack = controller({}, (args) => {

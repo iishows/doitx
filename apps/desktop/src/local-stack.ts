@@ -23,6 +23,8 @@ export const STACK_TOKEN_FILE = ".desktop-stack-token";
 export const STACK_OUTPUT_LINES = 20;
 export const STACK_HEALTH_TIMEOUT_MS = 120_000;
 export const COMPOSE_WAIT_TIMEOUT_S = 300;
+/** Docker Desktop can leave the published web port unbound after a container recreate. */
+export const STACK_WEB_REVIVE_AFTER_MS = 10_000;
 
 export async function readStackWebUrl(dir: string, fallback: string): Promise<string> {
   const raw = await readPrivateFile(path.join(dir, STACK_WEB_URL_FILE), 128);
@@ -56,6 +58,7 @@ const PULL_TIMEOUT_MS = 30 * 60_000;
 const UP_TIMEOUT_MS = (COMPOSE_WAIT_TIMEOUT_S + 60) * 1_000;
 const LOGS_TIMEOUT_MS = 15_000;
 const STOP_TIMEOUT_MS = 90_000;
+const RESTART_TIMEOUT_MS = 60_000;
 const MAX_STACK_TOKEN_BYTES = 1024;
 
 /** The compose project lives under the app's user data, next to the `.env` it generates. */
@@ -319,6 +322,7 @@ export interface LocalStackDeps {
   /** Called on every state change so the setup window is pushed progress instead of polling for it. */
   onState?: (state: DesktopLocalStackState) => void;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+  now?: () => number;
   healthTimeoutMs?: number;
 }
 
@@ -559,7 +563,12 @@ export class LocalStackController {
 
     this.push({ type: "wait-start" });
     const sleep = this.deps.sleep ?? defaultSleep;
-    const deadline = Date.now() + (this.deps.healthTimeoutMs ?? STACK_HEALTH_TIMEOUT_MS);
+    const now = this.deps.now ?? Date.now;
+    const startedWaiting = now();
+    const healthTimeoutMs = this.deps.healthTimeoutMs ?? STACK_HEALTH_TIMEOUT_MS;
+    const deadline = startedWaiting + healthTimeoutMs;
+    const reviveAfterMs = Math.min(STACK_WEB_REVIVE_AFTER_MS, healthTimeoutMs / 2);
+    let revived = false;
     while (!signal.aborted) {
       if ((await this.deps.probe(this.currentWebUrl, signal, stackToken)) === this.deps.imageTag) {
         if (this.deps.hostComputer)
@@ -570,7 +579,21 @@ export class LocalStackController {
         this.push({ type: "ready" });
         return;
       }
-      if (Date.now() >= deadline) break;
+      if (now() >= deadline) break;
+      // Compose reports the container healthy before the host's published port answers,
+      // and Docker Desktop can leave that mapping stale after a recreate. Restarting the
+      // publisher re-registers it; retrying the same broken mapping would just time out.
+      if (!revived && now() - startedWaiting >= reviveAfterMs) {
+        revived = true;
+        const restarted = await this.compose(
+          binary,
+          ["restart", "web"],
+          RESTART_TIMEOUT_MS,
+          signal,
+        );
+        if (interrupted(signal, restarted))
+          return this.push({ type: "failed", message: START_INTERRUPTED });
+      }
       await sleep(HEALTH_POLL_INTERVAL_MS, signal);
     }
     this.push({
