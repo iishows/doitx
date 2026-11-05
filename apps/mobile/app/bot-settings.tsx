@@ -5,6 +5,7 @@ import {
   BOT_DESCRIPTION_MAX_LENGTH,
   BOT_INSTRUCTIONS_MAX_LENGTH,
   BOT_NAME_MAX_LENGTH,
+  contextWindowForModel,
   parseModelContextWindow,
   parseModelMaxTokens,
   resolveBotAvatarSet,
@@ -228,6 +229,10 @@ export default function BotSettingsScreen() {
         )
       : undefined;
   const effectiveCredential = credentialForModel(credentials, effectiveProvider, effectiveModelId);
+  // The connection may set a window per model, so the inherited value follows the model.
+  const inheritedContextWindow = effectiveCredential
+    ? contextWindowForModel(effectiveCredential, effectiveModelId)
+    : undefined;
   const thinkingOptions = (
     effectiveCredential?.thinkingLevels ??
     effectiveEntry?.thinkingLevels ??
@@ -256,8 +261,11 @@ export default function BotSettingsScreen() {
 
   function selectModel(key: string) {
     if (key === selectedModelKey) return;
+    // A different model has its own limits; a stale cap must not follow it.
     setModelKey(key);
     setThinkingLevel("");
+    setModelMaxTokens("");
+    setModelContextWindow("");
   }
 
   // The searchable model list hands its pick back as a one-shot route param.
@@ -652,7 +660,7 @@ export default function BotSettingsScreen() {
                   accessibilityLabel={t("Context window")}
                   keyboardType="number-pad"
                   value={modelContextWindow}
-                  placeholder={effectiveCredential?.contextWindow?.toString()}
+                  placeholder={inheritedContextWindow?.toString()}
                   placeholderTextColor={tokens.mutedForeground}
                   onChangeText={setModelContextWindow}
                   style={[styles.rowValueInput, { color: tokens.foreground }]}

@@ -28,7 +28,7 @@ import type {
   SettingsScope,
   VaultPutInput,
 } from "@rakazo/contracts";
-import { BotSecretAuth, modelOutputLeavesInputRoom, resolveBotAvatarSet } from "@rakazo/contracts";
+import { BotSecretAuth, resolveBotAvatarSet } from "@rakazo/contracts";
 import { ACTIVE_RUN_STATUSES, displayName } from "@rakazo/core";
 import type { Prisma } from "@rakazo/db";
 import {
@@ -49,6 +49,7 @@ import { getLogger } from "@rakazo/logging";
 import type { AgentImportServices } from "../agent-import.js";
 import { agentImportSetupState, createImportedBot, previewAgentImport } from "../agent-import.js";
 import { deleteAgentSecret, listAgentSecrets, putAgentSecret } from "../agent-secrets.js";
+import { botModelLimitsError } from "../bot-model-limits.js";
 import { changedBotSettings } from "../bot-setting-analytics.js";
 import { requireIdentityConfirmation } from "../identity-confirmation.js";
 import type { RouterDeps } from "../router.js";
@@ -393,20 +394,8 @@ export function botsRoutes(ctx: RouterContext) {
           current: { provider: existing.modelProvider, model: existing.modelId },
         });
         if (!modelChange.ok) throw new ORPCError("BAD_REQUEST", { message: modelChange.error });
-        if (input.modelMaxTokens !== undefined || input.modelContextWindow !== undefined) {
-          // A partial update is checked against the stored value it keeps.
-          const maxTokens =
-            input.modelMaxTokens !== undefined ? input.modelMaxTokens : existing.modelMaxTokens;
-          const contextWindow =
-            input.modelContextWindow !== undefined
-              ? input.modelContextWindow
-              : existing.modelContextWindow;
-          if (!modelOutputLeavesInputRoom(maxTokens, contextWindow ?? undefined)) {
-            throw new ORPCError("BAD_REQUEST", {
-              message: "Maximum output tokens must be less than the context window",
-            });
-          }
-        }
+        const limitsError = botModelLimitsError(existing, input);
+        if (limitsError) throw new ORPCError("BAD_REQUEST", { message: limitsError });
         const thinkingLevel = input.thinkingLevel;
         const browserProxyUpdate = await resolveBrowserProxyUpdate(input.browserProxy, {
           secrets: deps.secrets,

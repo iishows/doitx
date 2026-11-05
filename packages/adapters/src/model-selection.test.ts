@@ -5,6 +5,7 @@ import type { PrismaClient } from "@rakazo/db";
 import { describe, expect, it, vi } from "vitest";
 import { selectConfiguredModel } from "./model-roles.js";
 import {
+  botModelLimitsApply,
   connectionServesModel,
   defaultCatalogModelId,
   enabledOpenAiCompatibleModelIds,
@@ -191,6 +192,16 @@ describe("routine model pin", () => {
   it("ignores run model columns that belong to an ordinary run", () => {
     // Ordinary runs record the model they used; that record is not an override.
     expect(runModelChoice(routine, bot)).toEqual(bot);
+  });
+
+  it("applies a bot's limits only to the model the bot names", () => {
+    expect(botModelLimitsApply(bot, bot.modelProvider, bot.modelId)).toBe(true);
+    expect(botModelLimitsApply(bot, "other-provider", bot.modelId)).toBe(false);
+    expect(botModelLimitsApply(bot, bot.modelProvider, "other-model")).toBe(false);
+    // A bot on the space default has no named model for the limits to describe.
+    expect(
+      botModelLimitsApply({ modelProvider: null, modelId: null }, "openrouter", "any-model"),
+    ).toBe(false);
   });
 
   it("pins an inbound delivery only when every routine chose the same model", () => {

@@ -14,6 +14,7 @@ import {
   BOT_NAME_MAX_LENGTH,
   BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH,
   BUILTIN_TOOL_NAMES,
+  contextWindowForModel,
   isBuiltinToolName,
   MAX_MODEL_CONTEXT_WINDOW,
   MAX_MODEL_MAX_TOKENS,
@@ -371,6 +372,10 @@ export function BotSettings({
         )
       : undefined;
   const effectiveCredential = credentialForModel(credentials, effectiveProvider, effectiveModelId);
+  // The connection may set a window per model, so the inherited value follows the model.
+  const inheritedContextWindow = effectiveCredential
+    ? contextWindowForModel(effectiveCredential, effectiveModelId)
+    : undefined;
   const thinkingOptions = (
     effectiveCredential?.thinkingLevels ??
     effectiveEntry?.thinkingLevels ??
@@ -744,8 +749,11 @@ export function BotSettings({
                       choices={modelChoices}
                       value={selectedModelKey}
                       onChange={(key) => {
+                        // A different model has its own limits; a stale cap must not follow it.
                         setModelKey(key);
                         setThinkingLevel("");
+                        setModelMaxTokens("");
+                        setModelContextWindow("");
                       }}
                     />
                   </div>
@@ -804,7 +812,7 @@ export function BotSettings({
                     max={MAX_MODEL_CONTEXT_WINDOW}
                     step={1}
                     value={modelContextWindow}
-                    placeholder={effectiveCredential?.contextWindow?.toString()}
+                    placeholder={inheritedContextWindow?.toString()}
                     onChange={(event) => setModelContextWindow(event.target.value)}
                     className="w-24 text-center"
                   />

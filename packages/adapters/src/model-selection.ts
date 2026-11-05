@@ -785,6 +785,20 @@ export type ModelChoice = {
 };
 
 /**
+ * A bot's own limits describe the model it names. A backup, a different pinned
+ * model, or the space default runs another model and keeps that connection's.
+ */
+export function botModelLimitsApply(
+  bot: { modelProvider: string | null; modelId: string | null },
+  provider: string | null | undefined,
+  modelId: string | null | undefined,
+): boolean {
+  return Boolean(
+    bot.modelProvider && bot.modelId && bot.modelProvider === provider && bot.modelId === modelId,
+  );
+}
+
+/**
  * The model a queued run will use. `modelPinned` is the choice captured when the
  * run was created. Model columns written later only record the attempt, so a
  * routine that follows its bot still follows the bot after a resume.

@@ -25,6 +25,7 @@ import {
 } from "./model-credit-observer.js";
 import { resolveMemberMainModel, selectConfiguredModel } from "./model-roles.js";
 import {
+  botModelLimitsApply,
   enabledOpenAiCompatibleModelIds,
   findConnectedModelCredential,
   hasHostedModelCredits,
@@ -573,8 +574,7 @@ export async function resolveRunModel(
   }
   if (!provider || !id) throw new Error(MISSING_MODEL_RUN_ERROR);
   // A bot's limits describe the model it names; a fallback keeps its own connection's.
-  const botLimitsApply =
-    hasOverride && override!.modelProvider === provider && override!.modelId === id;
+  const botLimitsApply = override ? botModelLimitsApply(override, provider, id) : false;
   // The key is resolved for the provider that won above, not before it is known.
   const resolved = await resolveModelKey(
     deps,

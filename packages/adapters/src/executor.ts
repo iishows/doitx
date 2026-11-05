@@ -101,6 +101,7 @@ import {
   selectConfiguredModel,
 } from "./model-roles.js";
 import {
+  botModelLimitsApply,
   findConnectedModelCredential,
   PINNED_PROVIDER_NOT_CONNECTED,
   pinnedModelCredentialError,
@@ -887,10 +888,7 @@ export function createRunExecutor(deps: ExecutorDeps) {
         runSecrets.push(...resolved.redact);
         // A bot's limits describe the model it names. A backup, a routine's pin, or the
         // space default runs a different model and keeps that connection's own values.
-        const botLimitsApply =
-          Boolean(bot.modelProvider && bot.modelId) &&
-          bot.modelProvider === runModelProvider &&
-          bot.modelId === runModelId;
+        const botLimitsApply = botModelLimitsApply(bot, runModelProvider, runModelId);
         // A pin stays as it was created. Unpinned runs still record the model they
         // used; modelPinned is what keeps that record from becoming the next choice.
         if (!run.modelPinned) {

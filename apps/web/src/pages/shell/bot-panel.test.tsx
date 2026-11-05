@@ -426,6 +426,47 @@ describe("BotSettings thinking options", () => {
     if (!(thinking instanceof HTMLSelectElement)) throw new Error("Missing thinking select");
     expect([...thinking.options].map((option) => option.value)).toEqual(["", "low", "high"]);
   });
+
+  it("clears a bot's limits when its model changes, since they described the old one", async () => {
+    i18n.load("en", {});
+    i18n.activate("en");
+    vi.mocked(rpc.models.credentials).mockResolvedValueOnce([
+      {
+        id: "cred-compatible",
+        provider: "openai-compatible",
+        label: "Local server",
+        hasKey: true,
+        isDefault: true,
+        modelId: "alpha",
+        enabledModelIds: ["alpha", "beta"],
+        thinkingLevels: ["off"],
+      },
+    ]);
+    await render("Billing", {
+      modelProvider: "openai-compatible",
+      modelId: "beta",
+      modelMaxTokens: 16_384,
+      modelContextWindow: 131_072,
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await expandAdvanced();
+    const model = container.querySelector<HTMLSelectElement>('[id$="-model"]');
+    if (!model) throw new Error("Missing model select");
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(
+        model,
+        "openai-compatible::alpha",
+      );
+      model.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await clickSave();
+    expect(onSave.mock.lastCall?.[0]).toMatchObject({
+      modelMaxTokens: null,
+      modelContextWindow: null,
+    });
+  });
 });
 
 describe("BotSettings bot management saves", () => {
