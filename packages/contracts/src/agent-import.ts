@@ -122,6 +122,9 @@ export const AgentImportModelSchema = z.object({
   /** The provider as model settings name it, e.g. "DeepSeek". */
   providerName: z.string().optional(),
   modelId: z.string(),
+  /** Per-bot limits that travel with a team-config model choice. */
+  maxTokens: z.number().int().min(1).optional(),
+  contextWindow: z.number().int().min(1).optional(),
   /** `ready`: a connection exists; `needs_key`: only with this provider's key; `unknown`: not offered. */
   status: z.enum(["ready", "needs_key", "unknown"]),
 });

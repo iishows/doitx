@@ -68,6 +68,9 @@ export type AgentImportServices<PreparedKey = unknown> = {
       computerMode: AgentImportCreateInput["computerMode"];
       modelProvider: string | null;
       modelId: string | null;
+      /** Per-bot limits a team archive carried with the model choice. */
+      modelMaxTokens?: number | null;
+      modelContextWindow?: number | null;
       seed: (tx: Prisma.TransactionClient, botId: string) => Promise<void>;
     },
   ) => Promise<Bot>;
@@ -684,6 +687,8 @@ export async function materializeImportedBot<PreparedKey>(
       computerMode: input.computerMode,
       modelProvider: model?.provider ?? null,
       modelId: model?.modelId ?? null,
+      modelMaxTokens: model?.maxTokens ?? null,
+      modelContextWindow: model?.contextWindow ?? null,
       seed: write,
     });
   } catch (error) {

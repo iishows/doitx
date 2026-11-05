@@ -95,6 +95,8 @@ export async function readTeamConfigSource(
             modelProvider: true,
             modelId: true,
             thinkingLevel: true,
+            modelMaxTokens: true,
+            modelContextWindow: true,
             disabledBuiltinTools: true,
             teamChatAmbientEnabled: true,
             teamChatRules: true,
@@ -191,6 +193,8 @@ export interface TeamConfigExportSource {
     modelProvider: string | null;
     modelId: string | null;
     thinkingLevel: string | null;
+    modelMaxTokens?: number | null;
+    modelContextWindow?: number | null;
     disabledBuiltinTools: string[];
     teamChatAmbientEnabled: boolean;
     teamChatRules: string;
@@ -304,6 +308,8 @@ export function buildTeamConfig(source: TeamConfigExportSource): TeamConfigExpor
       modelProvider: bot.modelProvider,
       modelId: bot.modelId,
       thinkingLevel: bot.thinkingLevel,
+      modelMaxTokens: bot.modelMaxTokens,
+      modelContextWindow: bot.modelContextWindow,
       disabledBuiltinTools: bot.disabledBuiltinTools,
       teamChatAmbientEnabled: bot.teamChatAmbientEnabled,
       teamChatRules: bot.teamChatRules,

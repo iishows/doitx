@@ -149,6 +149,9 @@ export const TeamConfigBotSchema = z.strictObject({
   modelProvider: z.string().nullable(),
   modelId: z.string().nullable(),
   thinkingLevel: z.string().nullable(),
+  /** Absent in archives written before per-bot model limits existed. */
+  modelMaxTokens: z.number().int().min(1).nullable().optional(),
+  modelContextWindow: z.number().int().min(1).nullable().optional(),
   disabledBuiltinTools: z.array(z.string()),
   teamChatAmbientEnabled: z.boolean(),
   teamChatRules: z.string(),

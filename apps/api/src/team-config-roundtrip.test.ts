@@ -142,6 +142,18 @@ describe("team-config round trip", () => {
     });
   });
 
+  it("carries a bot's model limits across the round trip", async () => {
+    const limited = {
+      ...source,
+      bots: [{ ...source.bots[0]!, modelMaxTokens: 16_384, modelContextWindow: 131_072 }],
+    };
+    const parsed = parseTeamConfig(roundTrip(limited));
+    const entry = parsed.manifest.bots[0]!;
+    const built = await buildTeamConfigBot(services(), actor, parsed.bots.get(entry.key)!);
+
+    expect(built.plan.model).toMatchObject({ maxTokens: 16_384, contextWindow: 131_072 });
+  });
+
   it("keeps a routine's schedule and prompt across the round trip", async () => {
     const parsed = parseTeamConfig(roundTrip());
     const entry = parsed.manifest.bots[0]!;

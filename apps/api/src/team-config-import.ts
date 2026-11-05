@@ -237,6 +237,8 @@ async function modelPlan<PreparedKey>(
     title: `${provider}/${modelId}`,
     provider,
     modelId,
+    ...(bot.modelMaxTokens != null ? { maxTokens: bot.modelMaxTokens } : {}),
+    ...(bot.modelContextWindow != null ? { contextWindow: bot.modelContextWindow } : {}),
     status: problem === null ? "ready" : connected ? "unknown" : "needs_key",
   };
 }
