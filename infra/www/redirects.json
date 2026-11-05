@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": { "eq": "doitx.ai" } }],
+      "destination": "https://doitx.ai/"
+    },
+    {
+      "source": "/docs/:path*",
+      "has": [{ "type": "host", "value": { "eq": "doitx.ai" } }],
+      "destination": "/docs/:path*"
+    }
+  ]
+}
