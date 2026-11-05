@@ -2274,7 +2274,11 @@ Each run allows at most two submissions (including failures). Submissions are
 never retried automatically: a lost response can mean the provider accepted and
 charged for the request. Provider errors omit remote response bodies. Configure
 account budgets and rate limits with your provider; the run cap is not a currency
-budget. Provider 429 responses are returned without automatic retries. Outputs
+budget. Provider 429 responses are retried on the same model with increasing
+waits (2s, 8s, 20s, then 40s through 240s): the default is one retry,
+configurable up to 10 via `MODEL_STREAM_MAX_RETRIES`, and the whole loop is
+capped at 20 minutes, so a saturated provider pauses a run instead of failing
+it. One attempt still waits at most two minutes for response headers. Outputs
 must fit both the 10 MiB media ceiling and the configured attachment limit;
 larger outputs are rejected.
 

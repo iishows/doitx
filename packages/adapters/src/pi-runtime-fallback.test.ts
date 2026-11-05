@@ -68,7 +68,11 @@ vi.mock("./pi-openai-compatible-provider.js", () => ({
 import { estimateModelContextTokens } from "./model-context.js";
 import { IMAGE_RETURNING_COMPUTER_TOOLS } from "./model-vision.js";
 import { PiAgentRuntime } from "./pi-runtime.js";
-import { MODEL_STREAM_IDLE_TIMEOUT_MS, MODEL_STREAM_TIMEOUT_MS } from "./pi-runtime-limits.js";
+import {
+  MODEL_STREAM_IDLE_TIMEOUT_MS,
+  MODEL_STREAM_RETRY_WINDOW_MS,
+  MODEL_STREAM_TIMEOUT_MS,
+} from "./pi-runtime-limits.js";
 import { MODEL_STREAM_IDLE_TIMEOUT_MESSAGE } from "./pi-runtime-stream.js";
 import { PiJsonlSessionRecorder } from "./pi-session.js";
 
@@ -220,9 +224,15 @@ beforeEach(() => {
   providerState.agent = undefined;
   vi.restoreAllMocks();
   providerState.delay.mockReset().mockResolvedValue(undefined);
+  // The same-model retry loop follows the configured count; ten keeps the
+  // multi-retry cases meaningful without exhausting the table.
+  vi.stubEnv("MODEL_STREAM_MAX_RETRIES", "10");
 });
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
 
 describe("Pi runtime transient model retries", () => {
   it("recovers one empty idle stream after the header retry budget expires", async () => {
@@ -241,7 +251,7 @@ describe("Pi runtime transient model retries", () => {
     expect(await run(request())).toContainEqual({ type: "text", text: "Recovered." });
     expect(providerState.stream).toHaveBeenCalledTimes(2);
     expect(providerState.delay.mock.calls.map(([delay]) => delay)).toEqual([2_000]);
-    expect(providerState.stream.mock.calls[1]?.[2].timeoutMs).toBe(MODEL_STREAM_TIMEOUT_MS - 2_000);
+    expect(providerState.stream.mock.calls[1]?.[2].timeoutMs).toBe(MODEL_STREAM_TIMEOUT_MS);
   });
 
   it("caps idle recovery at one retry even when failures arrive before the idle bound", async () => {
@@ -291,12 +301,12 @@ describe("Pi runtime transient model retries", () => {
 
   it("does not renew the idle recovery budget again for an ordinary timeout", async () => {
     vi.useFakeTimers();
-    providerState.stream.mockImplementation((_target, _context, options) => {
+    providerState.stream.mockImplementation(() => {
       vi.setSystemTime(
         Date.now() +
           (providerState.stream.mock.calls.length === 1
             ? MODEL_STREAM_IDLE_TIMEOUT_MS
-            : options.timeoutMs),
+            : MODEL_STREAM_RETRY_WINDOW_MS),
       );
       const error =
         providerState.stream.mock.calls.length === 1
@@ -380,6 +390,7 @@ describe("Pi runtime transient model retries", () => {
   });
 
   it("exhausts three retries without a backup and preserves the first provider error", async () => {
+    vi.stubEnv("MODEL_STREAM_MAX_RETRIES", "3");
     providerState.stream
       .mockImplementationOnce(() => stream(primary, message(primary, [], "error", "terminated")))
       .mockImplementation(() =>
@@ -397,7 +408,9 @@ describe("Pi runtime transient model retries", () => {
       const pending = new AssistantMessageEventStream();
       providerState.stream.mockReturnValue(pending);
       const outcome = run(request()).catch((error: unknown) => error);
-      await vi.advanceTimersByTimeAsync(MODEL_STREAM_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(0);
+      // Jump the clock without running timers: the idle watchdog must not fire here.
+      vi.setSystemTime(Date.now() + MODEL_STREAM_RETRY_WINDOW_MS);
       const failure = message(primary, [], "error", error);
       pending.push({ type: "error", reason: "error", error: failure });
       pending.end(failure);
@@ -407,27 +420,25 @@ describe("Pi runtime transient model retries", () => {
     },
   );
 
-  it("bounds repeated early timeouts by elapsed request budget", async () => {
+  it("caps a retried attempt's header wait at the time left in the retry window", async () => {
     vi.useFakeTimers();
     const { abortableDelay } = await vi.importActual<typeof Core>("@rakazo/core");
     providerState.delay.mockImplementation(abortableDelay);
-    providerState.stream.mockImplementation((_target, _context, options) => {
-      const pending = new AssistantMessageEventStream();
-      setTimeout(
-        () => {
-          const failure = message(primary, [], "error", "Request timed out.");
-          pending.push({ type: "error", reason: "error", error: failure });
-          pending.end(failure);
-        },
-        Math.min(MODEL_STREAM_TIMEOUT_MS / 2, options.timeoutMs),
-      );
-      return pending;
-    });
+    providerState.stream
+      .mockImplementationOnce(() => {
+        // Land the first failure with most of the window already spent.
+        vi.setSystemTime(Date.now() + MODEL_STREAM_RETRY_WINDOW_MS - 60_000);
+        return stream(primary, message(primary, [], "error", "Request timed out."));
+      })
+      .mockImplementation(() => {
+        vi.setSystemTime(Date.now() + MODEL_STREAM_RETRY_WINDOW_MS);
+        return stream(primary, message(primary, [], "error", "Request timed out."));
+      });
     const outcome = run(request()).catch((error: unknown) => error);
-    await vi.advanceTimersByTimeAsync(MODEL_STREAM_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(2_000);
     expect(providerState.stream.mock.calls.map(([, , options]) => options.timeoutMs)).toEqual([
       MODEL_STREAM_TIMEOUT_MS,
-      MODEL_STREAM_TIMEOUT_MS / 2 - 2_000,
+      58_000,
     ]);
     expect(await outcome).toEqual(expect.objectContaining({ message: "Request timed out." }));
     expect(providerState.stream).toHaveBeenCalledTimes(2);
@@ -437,29 +448,22 @@ describe("Pi runtime transient model retries", () => {
 
   it("does not back off when the delay would consume the remaining budget", async () => {
     vi.useFakeTimers();
-    const { abortableDelay } = await vi.importActual<typeof Core>("@rakazo/core");
-    providerState.delay.mockImplementation(abortableDelay);
     providerState.stream.mockImplementation(() => {
-      const pending = new AssistantMessageEventStream();
-      setTimeout(() => {
-        const failure = message(primary, [], "error", "Request timed out.");
-        pending.push({ type: "error", reason: "error", error: failure });
-        pending.end(failure);
-      }, 30_000);
-      return pending;
+      // One second left in the window; the first backoff is longer than that.
+      vi.setSystemTime(Date.now() + MODEL_STREAM_RETRY_WINDOW_MS - 1_000);
+      return stream(primary, message(primary, [], "error", "Request timed out."));
     });
     const outcome = run(request()).catch((error: unknown) => error);
-    await vi.advanceTimersByTimeAsync(100_000);
-    expect(providerState.stream).toHaveBeenCalledTimes(3);
-    expect(providerState.delay.mock.calls.map(([delay]) => delay)).toEqual([2_000, 8_000]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(providerState.stream).toHaveBeenCalledOnce();
+    expect(providerState.delay).not.toHaveBeenCalled();
     expect(await outcome).toEqual(expect.objectContaining({ message: "Request timed out." }));
-    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("rechecks the budget when backoff wakes after the deadline", async () => {
     vi.useFakeTimers();
     providerState.delay.mockImplementation(async () => {
-      vi.setSystemTime(Date.now() + MODEL_STREAM_TIMEOUT_MS);
+      vi.setSystemTime(Date.now() + MODEL_STREAM_RETRY_WINDOW_MS);
     });
     providerState.stream.mockImplementation(() =>
       stream(primary, message(primary, [], "error", "Connection error.")),
@@ -554,6 +558,7 @@ describe("Pi runtime transient model retries", () => {
 
   it("waits for each bounded backoff before retrying", async () => {
     vi.useFakeTimers();
+    vi.stubEnv("MODEL_STREAM_MAX_RETRIES", "3");
     const { abortableDelay } = await vi.importActual<typeof Core>("@rakazo/core");
     providerState.delay.mockImplementation(abortableDelay);
     providerState.stream.mockImplementation(() =>
@@ -1889,6 +1894,7 @@ describe("Pi runtime ordered model fallback", () => {
   });
 
   it("tries each backup once in order, then retries the last before surfacing exhaustion", async () => {
+    vi.stubEnv("MODEL_STREAM_MAX_RETRIES", "3");
     providerState.stream.mockImplementation((target: Model<"openai-completions">) =>
       stream(target, message(target, [], "error", "529 overloaded_error")),
     );
@@ -2116,6 +2122,7 @@ describe("Pi runtime ordered model fallback", () => {
   });
 
   it("still skips a native text-only backup when screen tools can return images", async () => {
+    vi.stubEnv("MODEL_STREAM_MAX_RETRIES", "3");
     providerState.models.set(`${backupA.provider}/${backupA.id}`, {
       ...backupA,
       input: ["text"],
@@ -2621,11 +2628,11 @@ describe("Pi runtime output reservation recovery", () => {
     expect(providerState.stream).not.toHaveBeenCalled();
   });
 
-  it("does not retry after the original request deadline", async () => {
+  it("does not reduce a reservation after the retry window is spent", async () => {
     vi.useFakeTimers();
     const input = limitedRequest();
     providerState.stream.mockImplementation((target) => {
-      vi.setSystemTime(Date.now() + MODEL_STREAM_TIMEOUT_MS + 1);
+      vi.setSystemTime(Date.now() + MODEL_STREAM_RETRY_WINDOW_MS + 1);
       return stream(target, message(target, [], "error", budgetError));
     });
     await expect(run(input)).rejects.toThrow("This request requires more credits");

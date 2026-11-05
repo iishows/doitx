@@ -34,7 +34,9 @@ import { OPENAI_COMPATIBLE_PROVIDER_ID } from "./pi-openai-compatible-provider.j
 import { assistantText, messageHasToolCall, sanitizeProviderError } from "./pi-runtime-errors.js";
 import {
   effectiveOutputReserve,
+  MODEL_STREAM_RETRY_WINDOW_MS,
   MODEL_STREAM_TIMEOUT_MS,
+  modelStreamMaxRetries,
   resolveCompletionMaxTokens,
 } from "./pi-runtime-limits.js";
 import type { RuntimeModelTarget } from "./pi-runtime-models.js";
@@ -56,7 +58,12 @@ import {
   withoutThinkingFrom,
 } from "./thinking-signatures.js";
 
-const MODEL_PROVIDER_RETRY_DELAYS_MS = [2_000, 8_000, 20_000] as const;
+// Same-model provider outages get strictly increasing, bounded pauses: a
+// saturated upstream (429) pauses the run instead of killing it. Ten steps
+// total, ~17 minutes of wall time.
+const MODEL_PROVIDER_RETRY_DELAYS_MS = [
+  2_000, 8_000, 20_000, 40_000, 60_000, 90_000, 120_000, 160_000, 200_000, 240_000,
+] as const;
 
 /** Why a reply ended before the model finished it. */
 export type CutReplyReason = "connection" | "limit";
@@ -421,10 +428,13 @@ export function fallbackAwareModelStream(
     let retries = 0;
     let recoveredIdle = false;
     let sizingFailure: Extract<AssistantMessageEvent, { type: "error" }> | undefined;
-    // Bound same-model retries. Explicit backups retain their per-model header
-    // timeout: a post-header idle watchdog can already exceed that timeout.
+    // Same-model retries are bounded twice: by the configured count and by a
+    // wall-clock window wide enough for every pause in the table below. An
+    // explicit caller timeout bounds both, as before.
+    const maxProviderRetries = modelStreamMaxRetries();
     let startedAt = Date.now();
-    const timeoutMs = options?.timeoutMs ?? MODEL_STREAM_TIMEOUT_MS;
+    const headerTimeoutMs = options?.timeoutMs ?? MODEL_STREAM_TIMEOUT_MS;
+    const retryWindowMs = options?.timeoutMs ?? MODEL_STREAM_RETRY_WINDOW_MS;
     let firstRetryableError: Extract<AssistantMessageEvent, { type: "error" }> | undefined;
     // Set once this call has been repeated after spending its output budget on nothing visible.
     let lengthRecovered = false;
@@ -434,7 +444,7 @@ export function fallbackAwareModelStream(
     const continuingCutReply = Boolean(state.continuingCutReply);
     state.continuingCutReply = false;
     while (!signalAborted()) {
-      const remainingMs = timeoutMs - (Date.now() - startedAt);
+      const remainingMs = retryWindowMs - (Date.now() - startedAt);
       const failure = firstRetryableError ?? sizingFailure;
       if ((retries > 0 || sizingFailure) && remainingMs <= 0 && failure) {
         output.push(failure);
@@ -451,7 +461,11 @@ export function fallbackAwareModelStream(
       const outputCap = state.outputCaps?.get(targetKey);
       const attemptOptions = {
         ...options,
-        ...(retries > 0 || sizingFailure ? { timeoutMs: remainingMs } : {}),
+        // A retried attempt gets the smaller of its own header budget and the
+        // time left in the window, so the window still bounds the turn.
+        ...(retries > 0 || sizingFailure
+          ? { timeoutMs: Math.min(headerTimeoutMs, remainingMs) }
+          : {}),
         ...(outputCap !== undefined
           ? { maxTokens: Math.min(outputCap, options?.maxTokens ?? outputCap) }
           : {}),
@@ -522,7 +536,7 @@ export function fallbackAwareModelStream(
                   event.error.errorMessage,
                   target.model.contextWindow,
                 );
-              if (contextWindow !== undefined && Date.now() - startedAt < timeoutMs) {
+              if (contextWindow !== undefined && Date.now() - startedAt < retryWindowMs) {
                 const requiredContext = requestContext();
                 const minimumInput = estimateModelContextTokens({
                   ...requiredContext,
@@ -561,7 +575,7 @@ export function fallbackAwareModelStream(
                 event.error.errorMessage,
                 sentMaxTokens,
               );
-              if (affordable !== undefined && Date.now() - startedAt < timeoutMs) {
+              if (affordable !== undefined && Date.now() - startedAt < retryWindowMs) {
                 state.outputCaps ??= new Map();
                 state.outputCaps.set(targetKey, affordable);
                 getLogger().info("model.output_reservation.reduced", {
@@ -638,11 +652,14 @@ export function fallbackAwareModelStream(
               if (isTransientModelError(event.error)) {
                 firstRetryableError ??= event;
                 const idle = event.error.errorMessage === MODEL_STREAM_IDLE_TIMEOUT_MESSAGE;
-                const delay = idle
-                  ? recoveredIdle
+                const delay =
+                  retries >= maxProviderRetries
                     ? undefined
-                    : MODEL_PROVIDER_RETRY_DELAYS_MS[0]
-                  : MODEL_PROVIDER_RETRY_DELAYS_MS[retries];
+                    : idle
+                      ? recoveredIdle
+                        ? undefined
+                        : MODEL_PROVIDER_RETRY_DELAYS_MS[0]
+                      : MODEL_PROVIDER_RETRY_DELAYS_MS[retries];
                 if (idle && delay !== undefined) {
                   // The post-header idle bound can outlast the header retry window.
                   // Renew it once for this empty call, retaining completed tool results.
@@ -650,11 +667,11 @@ export function fallbackAwareModelStream(
                   startedAt = Date.now();
                 }
                 // Ordinary failures and backoff share the remaining retry window.
-                if (delay !== undefined && Date.now() - startedAt + delay < timeoutMs) {
+                if (delay !== undefined && Date.now() - startedAt + delay < retryWindowMs) {
                   retries += 1;
                   await abortableDelay(delay, signal);
                   if (failIfAborted(target)) return;
-                  if (Date.now() - startedAt < timeoutMs) {
+                  if (Date.now() - startedAt < retryWindowMs) {
                     buffered = [];
                     restart = true;
                     break;

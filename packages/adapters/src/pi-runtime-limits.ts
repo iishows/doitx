@@ -10,13 +10,22 @@ export const MODEL_CONNECT_TIMEOUT_MS = 30_000;
  * and advance the configured fallback chain.
  */
 export const MODEL_STREAM_IDLE_TIMEOUT_MS = 180_000;
+/**
+ * Total time the same-model retry loop may spend, pauses included. Kept apart
+ * from `MODEL_STREAM_TIMEOUT_MS`, which bounds one attempt's wait for headers:
+ * sharing one value made the longer backoff steps unreachable.
+ */
+export const MODEL_STREAM_RETRY_WINDOW_MS = 20 * 60_000;
 export const DEFAULT_MODEL_STREAM_MAX_RETRIES = 1;
+const MAX_MODEL_STREAM_MAX_RETRIES = 10;
 
 /** More retries extend the worst-case turn; the executor heartbeat renews its leases. */
 export function modelStreamMaxRetries(): number {
   const value = process.env.MODEL_STREAM_MAX_RETRIES?.trim();
   const raw = Number(value || DEFAULT_MODEL_STREAM_MAX_RETRIES);
-  return Number.isInteger(raw) && raw >= 0 && raw <= 5 ? raw : DEFAULT_MODEL_STREAM_MAX_RETRIES;
+  return Number.isInteger(raw) && raw >= 0 && raw <= MAX_MODEL_STREAM_MAX_RETRIES
+    ? raw
+    : DEFAULT_MODEL_STREAM_MAX_RETRIES;
 }
 
 export const TOOL_RESULT_TEXT_LIMIT = 12_000;

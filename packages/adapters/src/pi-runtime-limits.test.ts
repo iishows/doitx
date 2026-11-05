@@ -19,12 +19,15 @@ describe("modelStreamMaxRetries", () => {
     expect(modelStreamMaxRetries()).toBe(1);
   });
 
-  it.each(["0", "1", "2", "3", "4", "5", " 3 "])("accepts %j", (value) => {
-    vi.stubEnv("MODEL_STREAM_MAX_RETRIES", value);
-    expect(modelStreamMaxRetries()).toBe(Number(value));
-  });
+  it.each(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", " 3 "])(
+    "accepts %j",
+    (value) => {
+      vi.stubEnv("MODEL_STREAM_MAX_RETRIES", value);
+      expect(modelStreamMaxRetries()).toBe(Number(value));
+    },
+  );
 
-  it.each(["", " ", "-1", "6", "1.5", "NaN", "Infinity", "three", "3retries"])(
+  it.each(["", " ", "-1", "11", "1.5", "NaN", "Infinity", "three", "3retries"])(
     "falls back to one retry for %j",
     (value) => {
       vi.stubEnv("MODEL_STREAM_MAX_RETRIES", value);
