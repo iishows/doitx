@@ -16,11 +16,17 @@ loadRootEnv();
 const urls = databaseUrls(process.env);
 await deployMigrations({
   migrationUrl: urls.migrationUrl,
-  dbPackageDir: execFileSync("pnpm", ["--filter", "@rakazo/db", "exec", "pwd"], {
-    encoding: "utf8",
-    // Local Windows patch: a bare "pnpm" only resolves to pnpm.cmd through a shell.
-    shell: process.platform === "win32",
-  }).trim(),
+  // Ask Node for the directory, not the shell's `pwd`: under Git Bash that prints a
+  // POSIX path (`/d/...`) which path.join turns into a wrong Windows path.
+  dbPackageDir: execFileSync(
+    "pnpm",
+    ["--filter", "@rakazo/db", "exec", "node", "-e", "process.stdout.write(process.cwd())"],
+    {
+      encoding: "utf8",
+      // Local Windows patch: a bare "pnpm" only resolves to pnpm.cmd through a shell.
+      shell: process.platform === "win32",
+    },
+  ).trim(),
 });
 await migrateJobQueue(urls.migrationUrl);
 
