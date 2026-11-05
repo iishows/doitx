@@ -119,6 +119,9 @@ vi.mock("@rakazo/ui-web", async (importOriginal) => {
       maxTokens?: string;
       maxTokensLabel?: string;
       onMaxTokensChange?: (value: string) => void;
+      contextWindow?: string;
+      contextWindowLabel?: string;
+      onContextWindowChange?: (value: string) => void;
     }) =>
       props.onMaxTokensChange ? (
         <>
@@ -127,6 +130,13 @@ vi.mock("@rakazo/ui-web", async (importOriginal) => {
             value={props.maxTokens ?? ""}
             onChange={(event) => props.onMaxTokensChange?.(event.target.value)}
           />
+          {props.onContextWindowChange ? (
+            <input
+              aria-label={props.contextWindowLabel}
+              value={props.contextWindow ?? ""}
+              onChange={(event) => props.onContextWindowChange?.(event.target.value)}
+            />
+          ) : null}
           {props.children}
         </>
       ) : null,
@@ -501,6 +511,30 @@ it("saves an edited output limit without sending a half-typed replacement key", 
     expect(input).not.toHaveProperty("apiKey");
     // A limits-only save keeps the dialog and the half-typed key.
     expect(keyField(view.container).value).toBe("sk-ab");
+  } finally {
+    await view.unmount();
+  }
+});
+
+it("saves a context window edited for the selected model", async () => {
+  models.credentials.mockResolvedValue([deepseekCredential]);
+
+  const view = await renderSettings();
+  try {
+    await manage();
+    const windowField = view.container.querySelector<HTMLInputElement>(
+      'input[aria-label="Context window"]',
+    );
+    if (!windowField) throw new Error("Missing context window field");
+    // Empty until a window is saved for this model, so the model card wins.
+    expect(windowField.value).toBe("");
+    await typeInto(windowField, "32000");
+    await click(buttons(view.container, "Save").find((entry) => entry.textContent === "Save"));
+    expect(models.connect).toHaveBeenCalledTimes(1);
+    expect(models.connect.mock.calls[0]?.[0]).toMatchObject({
+      provider: "deepseek",
+      contextWindow: 32000,
+    });
   } finally {
     await view.unmount();
   }
@@ -900,6 +934,8 @@ it("folds the key form behind Or paste an API key once a subscription is signed 
   try {
     await manage();
     expect(view.container.querySelector("#model-api-key")).toBeNull();
+    // OAuth runs take the window from the subscription, so the field would be discarded.
+    expect(view.container.querySelector('input[aria-label="Context window"]')).toBeNull();
     await click(buttons(view.container, "Or paste an API key")[0]);
     expect(keyField(view.container)).toBeTruthy();
     expect(buttons(view.container, "Connect API key")).toHaveLength(1);

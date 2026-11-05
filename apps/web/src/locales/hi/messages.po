@@ -1676,6 +1676,10 @@ msgstr ""
 msgid "Contains code to run"
 msgstr "चलाने योग्य कोड है"
 
+#: src/pages/ModelSettingsOverlay.tsx
+msgid "Context window"
+msgstr "कॉन्टेक्स्ट विंडो"
+
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx

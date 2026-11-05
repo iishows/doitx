@@ -52,6 +52,7 @@ export function ModelSettingsOverlay({
     cancelOAuthAttempt,
     confirmDisconnect,
     connectKey,
+    contextWindow,
     credential,
     credentialByProvider,
     credentials,
@@ -74,6 +75,7 @@ export function ModelSettingsOverlay({
     selectedConnectionName,
     selectedProviderName,
     setConfirmDisconnect,
+    setContextWindow,
     setMaxTokens,
     setNotice,
     settingsDirty,
@@ -162,6 +164,16 @@ export function ModelSettingsOverlay({
             setNotice(null);
           }}
           maxTokensLabel={t`Maximum output tokens`}
+          {...(credential.authKind === "oauth"
+            ? {}
+            : {
+                contextWindow,
+                onContextWindowChange: (value: string) => {
+                  setContextWindow(value);
+                  setNotice(null);
+                },
+                contextWindowLabel: t`Context window`,
+              })}
         />
         {settingsDirty ? (
           <Button

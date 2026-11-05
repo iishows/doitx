@@ -1676,6 +1676,10 @@ msgstr ""
 msgid "Contains code to run"
 msgstr "Enthält ausführbaren Code"
 
+#: src/pages/ModelSettingsOverlay.tsx
+msgid "Context window"
+msgstr "Kontextfenster"
+
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx

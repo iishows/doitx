@@ -1676,6 +1676,10 @@ msgstr "连接器"
 msgid "Contains code to run"
 msgstr "包含可运行的代码"
 
+#: src/pages/ModelSettingsOverlay.tsx
+msgid "Context window"
+msgstr "上下文窗口"
+
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx

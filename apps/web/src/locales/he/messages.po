@@ -1676,6 +1676,10 @@ msgstr ""
 msgid "Contains code to run"
 msgstr "מכיל קוד להרצה"
 
+#: src/pages/ModelSettingsOverlay.tsx
+msgid "Context window"
+msgstr "חלון הקשר"
+
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx

@@ -40,7 +40,7 @@ function draft(overrides: Partial<ConnectionFormDraft> = {}): ConnectionFormDraf
     reasoning: false,
     thinkingLevel: null,
     maxTokens: "",
-    contextWindow: "262144",
+    contextWindow: "",
     supportsImages: false,
     maxImagesPerPrompt: "",
     accountId: "",
@@ -156,6 +156,22 @@ describe("connectionFormFields", () => {
     ).toBeNull();
   });
 
+  it("prefers a model's own window over the connection-wide one", () => {
+    const saved = credential({
+      provider: "local",
+      modelContextWindows: { alpha: 1_000_000 },
+      contextWindow: 32_000,
+    });
+    expect(
+      connectionFormFields({ catalog, provider: "local", modelId: "alpha", credential: saved })
+        .contextWindow,
+    ).toBe("1000000");
+    expect(
+      connectionFormFields({ catalog, provider: "local", modelId: "beta", credential: saved })
+        .contextWindow,
+    ).toBe("32000");
+  });
+
   it("clamps a catalog connection's effort to its model and leaves the endpoint empty", () => {
     const fields = connectionFormFields({
       catalog,
@@ -192,6 +208,18 @@ describe("modelConnectRequest", () => {
     id: "opus",
     thinkingLevels: ["low", "high"] as ModelCredential["thinkingLevels"],
   };
+
+  it("clears a model's saved window when its field is emptied", () => {
+    const saved = credential({ modelId: "opus", modelContextWindows: { opus: 100_000 } });
+    const request = modelConnectRequest({
+      form: draft({ contextWindow: "" }),
+      selected: anthropic,
+      credential: saved,
+      credentialId: saved.id,
+      settingsOnly: true,
+    });
+    expect(request.status === "ready" && request.input).toMatchObject({ contextWindow: null });
+  });
 
   it("waits for a key, or a saved connection for a limits-only save", () => {
     expect(
@@ -288,7 +316,11 @@ describe("modelConnectRequest", () => {
       }),
     ).toMatchObject({ activeModelId: "gpt-6-luna", input: { modelId: "gpt-6-luna" } });
     expect(
-      modelConnectRequest({ form: draft({ apiKey: "sk-long-enough" }), selected, credentialId: null }),
+      modelConnectRequest({
+        form: draft({ apiKey: "sk-long-enough" }),
+        selected,
+        credentialId: null,
+      }),
     ).toMatchObject({ activeModelId: "", input: {} });
   });
 
@@ -373,6 +405,7 @@ describe("modelConnectRequest", () => {
         reasoning: true,
         thinkingLevel: "high",
         maxTokens: "4096",
+        contextWindow: "262144",
         supportsImages: true,
         headerRows: [{ name: " X-Team ", value: "v" }],
       }),

@@ -426,7 +426,8 @@ export const RU_MESSAGES: Record<string, string> = {
   "Could not save bot": "Не удалось сохранить бота",
   "Could not save computer settings": "Не удалось сохранить настройки компьютера",
   "Runs at the same time": "Одновременных запусков",
-  "How many runs may share this computer.": "Сколько запусков могут совместно использовать этот компьютер.",
+  "How many runs may share this computer.":
+    "Сколько запусков могут совместно использовать этот компьютер.",
   "Using the default of {count}.": "Используется значение по умолчанию {count}.",
   "Could not save group": "Не удалось сохранить группу",
   "Could not save that speech model": "Не удалось сохранить речевую модель",
@@ -745,6 +746,7 @@ export const RU_MESSAGES: Record<string, string> = {
   "Supports thinking": "Поддерживает рассуждения",
   "Reasoning effort": "Уровень рассуждений",
   Default: "По умолчанию",
+  "Context window": "Контекстное окно",
   "Maximum output tokens": "Максимум выходных токенов",
   "Context limit": "Лимит контекста",
   "Enter a whole number from 1 to {max} for maximum output tokens.":

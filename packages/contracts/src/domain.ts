@@ -1453,8 +1453,21 @@ export type CacheCapabilities = z.infer<typeof CacheCapabilitiesSchema>;
 export const ModelContextLimitsSchema = z.object({
   cacheCapabilities: CacheCapabilitiesSchema.optional(),
   contextWindow: z.number().int().min(1).max(MAX_MODEL_CONTEXT_WINDOW).optional(),
+  /** Per-model overrides keyed by model id; falls back to `contextWindow`. */
+  modelContextWindows: z
+    .record(z.string().min(1).max(512), z.number().int().min(1).max(MAX_MODEL_CONTEXT_WINDOW))
+    .optional(),
 });
 export type ModelContextLimits = z.infer<typeof ModelContextLimitsSchema>;
+
+/** Models keep their own window; the connection-wide value covers the rest. */
+export function contextWindowForModel(
+  limits: Pick<ModelContextLimits, "contextWindow" | "modelContextWindows">,
+  modelId: string | null | undefined,
+): number | undefined {
+  const id = modelId?.trim();
+  return (id ? limits.modelContextWindows?.[id] : undefined) ?? limits.contextWindow;
+}
 
 /** A completion limit must leave capacity for at least one input token. */
 export function modelOutputLeavesInputRoom(
@@ -1567,7 +1580,9 @@ export const CONNECTION_LABEL_MAX_LENGTH = 80;
 
 export const ModelConnectInputSchema = z
   .object({
-    ...ModelContextLimitsSchema.shape,
+    ...ModelContextLimitsSchema.omit({ modelContextWindows: true }).shape,
+    /** Null clears the window saved for `modelId`; the server keys the rest by model. */
+    contextWindow: z.number().int().min(1).max(MAX_MODEL_CONTEXT_WINDOW).nullable().optional(),
     provider: z.string(),
     apiKey: z.string().optional(),
     accountId: z.string().optional(),
@@ -1618,7 +1633,7 @@ export const ModelConnectInputSchema = z
         path: ["headers"],
       });
     }
-    if (!modelOutputLeavesInputRoom(value.maxTokens, value.contextWindow)) {
+    if (!modelOutputLeavesInputRoom(value.maxTokens, value.contextWindow ?? undefined)) {
       ctx.addIssue({
         code: "custom",
         message: "Maximum output tokens must leave room for input",

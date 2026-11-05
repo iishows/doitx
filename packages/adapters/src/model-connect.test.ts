@@ -148,6 +148,86 @@ describe("built-in provider output limits", () => {
     );
   });
 
+  it("keeps a context window per model on one connection", () => {
+    const first = connectAsOwner({
+      provider: "local",
+      apiKey: "fake-local-key",
+      modelId: "alpha",
+      contextWindow: 1_000_000,
+    });
+    const second = connectAsOwner(
+      { provider: "local", modelId: "beta", contextWindow: 32_768 },
+      first,
+    );
+    expect(parseModelSecret(second)).toMatchObject({
+      kind: "api_key",
+      key: "fake-local-key",
+      modelContextWindows: { alpha: 1_000_000, beta: 32_768 },
+    });
+    // One model's window must not become the fallback every other model inherits.
+    expect(parseModelSecret(second)).not.toHaveProperty("contextWindow");
+    expect(modelCredentialDto(row, second)).toMatchObject({
+      modelContextWindows: { alpha: 1_000_000, beta: 32_768 },
+    });
+  });
+
+  it("clears one model's context window and keeps the others", () => {
+    const saved = connectAsOwner(
+      {
+        provider: "local",
+        apiKey: "fake-local-key",
+        modelId: "alpha",
+        contextWindow: 1_000_000,
+      },
+      undefined,
+    );
+    const withBeta = connectAsOwner(
+      { provider: "local", modelId: "beta", contextWindow: 32_768 },
+      saved,
+    );
+    const cleared = connectAsOwner(
+      { provider: "local", modelId: "alpha", contextWindow: null },
+      withBeta,
+    );
+    expect(parseModelSecret(cleared)).toMatchObject({
+      modelContextWindows: { beta: 32_768 },
+    });
+  });
+
+  it("clears a legacy connection-wide window too", () => {
+    const legacy = serializeModelSecret({
+      kind: "api_key",
+      key: "fake-local-key",
+      contextWindow: 32_768,
+    });
+    const cleared = connectAsOwner(
+      { provider: "local", modelId: "alpha", contextWindow: null },
+      legacy,
+    );
+    const parsed = parseModelSecret(cleared);
+    expect(parsed).not.toHaveProperty("contextWindow");
+  });
+
+  it("leaves another model's window alone when only output tokens change", () => {
+    const saved = connectAsOwner(
+      { provider: "local", apiKey: "fake-local-key", modelId: "alpha", contextWindow: 1_000_000 },
+      undefined,
+    );
+    const withBeta = connectAsOwner(
+      { provider: "local", modelId: "beta", contextWindow: 32_768 },
+      saved,
+    );
+    const outputOnly = connectAsOwner(
+      { provider: "local", modelId: "alpha", maxTokens: 4096 },
+      withBeta,
+    );
+    const parsed = parseModelSecret(outputOnly);
+    expect(parsed.kind === "api_key" ? parsed.modelContextWindows : undefined).toEqual({
+      alpha: 1_000_000,
+      beta: 32_768,
+    });
+  });
+
   it("clears the limit without replacing the key", () => {
     const previous = connectAsOwner({
       provider: "anthropic",
@@ -812,15 +892,22 @@ describe("compatible connection updates", () => {
     expect(parseModelSecret(configured)).toMatchObject({ maxTokens: 8192 });
     expect(parseModelSecret(updated)).toMatchObject({ maxTokens: 8192 });
   });
-  it("persists the context window while preserving it on connection updates", () => {
+  it("persists the context window per model while preserving it on updates", () => {
     const configured = connectAsOwner({
       ...input,
       contextWindow: 65536,
     });
     const updated = connectAsOwner({ ...input, reasoning: false }, configured);
 
-    expect(parseModelSecret(configured)).toMatchObject({ contextWindow: 65536 });
-    expect(parseModelSecret(updated)).toMatchObject({ contextWindow: 65536 });
+    // The window belongs to the model, not the endpoint, so other enabled models
+    // are not handed this value.
+    expect(parseModelSecret(configured)).toMatchObject({
+      modelContextWindows: { "arbitrary-model": 65536 },
+    });
+    expect(parseModelSecret(configured)).not.toHaveProperty("contextWindow");
+    expect(parseModelSecret(updated)).toMatchObject({
+      modelContextWindows: { "arbitrary-model": 65536 },
+    });
   });
   it.each(["", "fake-replacement-key"])(
     "honors an explicit key replacement or removal",

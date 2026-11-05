@@ -396,7 +396,8 @@ export const DE_MESSAGES: Record<string, string> = {
   "Could not save bot": "Bot konnte nicht gespeichert werden",
   "Could not save computer settings": "Computereinstellungen konnten nicht gespeichert werden",
   "Runs at the same time": "Gleichzeitige Ausführungen",
-  "How many runs may share this computer.": "Wie viele Ausführungen sich diesen Computer teilen dürfen.",
+  "How many runs may share this computer.":
+    "Wie viele Ausführungen sich diesen Computer teilen dürfen.",
   "Using the default of {count}.": "Standardwert {count} wird verwendet.",
   "Default (medium)": "Standard (mittel)",
   Description: "Beschreibung",
@@ -514,6 +515,7 @@ export const DE_MESSAGES: Record<string, string> = {
   "Found {count} model.": "{count} Modell gefunden.",
   "Found {count} models.": "{count} Modelle gefunden.",
   "Maximum images per request": "Maximale Bilder pro Anfrage",
+  "Context window": "Kontextfenster",
   "Maximum output tokens": "Maximale Ausgabetokens",
   "Model id": "Modell-ID",
   "No matching models": "Keine passenden Modelle",

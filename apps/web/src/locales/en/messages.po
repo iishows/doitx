@@ -1676,6 +1676,10 @@ msgstr "Connector"
 msgid "Contains code to run"
 msgstr "Contains code to run"
 
+#: src/pages/ModelSettingsOverlay.tsx
+msgid "Context window"
+msgstr "Context window"
+
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx

@@ -4,6 +4,7 @@ import {
   CreateGroupInput,
   CreateRoutineInput,
   canReactToThreadMessage,
+  contextWindowForModel,
   DOITX_PROVIDER_ID,
   LOCAL_PROVIDER_ID,
   MANAGED_MODEL_PROVIDER_IDS,
@@ -492,6 +493,14 @@ describe("contracts", () => {
       }).success,
     ).toBe(false);
   });
+});
+
+it("prefers a model's own context window over the connection-wide value", () => {
+  const limits = { modelContextWindows: { alpha: 1_000_000 }, contextWindow: 32_000 };
+  expect(contextWindowForModel(limits, "alpha")).toBe(1_000_000);
+  expect(contextWindowForModel(limits, "beta")).toBe(32_000);
+  expect(contextWindowForModel(limits, " alpha ")).toBe(1_000_000);
+  expect(contextWindowForModel({}, undefined)).toBeUndefined();
 });
 
 it("retains legacy unknown-field stripping for model connections", () => {

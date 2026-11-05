@@ -246,9 +246,13 @@ export type StoredModelLimits = ModelContextLimits;
 function modelLimits(value: Record<string, unknown>): StoredModelLimits {
   const cache = ModelContextLimitsSchema.shape.cacheCapabilities.safeParse(value.cacheCapabilities);
   const window = ModelContextLimitsSchema.shape.contextWindow.safeParse(value.contextWindow);
+  const windows = ModelContextLimitsSchema.shape.modelContextWindows.safeParse(
+    value.modelContextWindows,
+  );
   return {
     ...(cache.success && cache.data !== undefined ? { cacheCapabilities: cache.data } : {}),
     ...(window.success && window.data !== undefined ? { contextWindow: window.data } : {}),
+    ...(windows.success && windows.data !== undefined ? { modelContextWindows: windows.data } : {}),
   };
 }
 
@@ -542,6 +546,7 @@ export function serializeModelSecret(secret: StoredModelSecret): string {
     secret.accountId === undefined &&
     secret.gatewayId === undefined &&
     secret.contextWindow === undefined &&
+    secret.modelContextWindows === undefined &&
     secret.cacheCapabilities === undefined
   ) {
     return secret.key;
@@ -930,7 +935,9 @@ export class PiOAuthLogins {
         ? SUBSCRIPTION_SIGN_IN_PROVIDERS[input.provider]?.mode
         : "auth-url";
     const verifier =
-      this.handoff && handoffMode === "auth-url" ? randomBytes(32).toString("base64url") : undefined;
+      this.handoff && handoffMode === "auth-url"
+        ? randomBytes(32).toString("base64url")
+        : undefined;
     const started = await this.start(input, randomUUID(), verifier);
     if (verifier && started.mode === "auth-url") {
       await this.handOff(started.loginId, input, verifier);

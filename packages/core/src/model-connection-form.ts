@@ -7,6 +7,7 @@ import type {
   ThinkingLevel,
 } from "@rakazo/contracts";
 import {
+  contextWindowForModel,
   DEFAULT_MODEL_CONTEXT_WINDOW,
   isCloudflareModelProvider,
   LOCAL_PROVIDER_ID,
@@ -88,6 +89,7 @@ export function connectionFormFields(input: {
     | "thinkingLevel"
     | "maxTokens"
     | "contextWindow"
+    | "modelContextWindows"
     | "supportsImages"
     | "maxImagesPerPrompt"
     | "accountId"
@@ -112,7 +114,13 @@ export function connectionFormFields(input: {
       supportedThinking,
     ) as ThinkingLevel | null,
     maxTokens: connectionMaxTokensField(provider, credential?.maxTokens),
-    contextWindow: String(credential?.contextWindow ?? DEFAULT_MODEL_CONTEXT_WINDOW),
+    contextWindow: (() => {
+      const saved = credential ? contextWindowForModel(credential, modelId) : undefined;
+      // A compatible endpoint always needs a window. A catalog model keeps its own
+      // unless one was saved, so an unrelated save never overrides the model card.
+      if (compatible) return String(saved ?? DEFAULT_MODEL_CONTEXT_WINDOW);
+      return saved === undefined ? "" : String(saved);
+    })(),
     supportsImages: credential?.supportsImages ?? false,
     maxImagesPerPrompt: String(credential?.maxImagesPerPrompt ?? ""),
     accountId: credential?.accountId ?? "",
@@ -174,7 +182,10 @@ export function modelConnectRequest(input: {
     ModelCatalogEntry,
     "provider" | "providerName" | "id" | "thinkingLevels" | "placeholder"
   >;
-  credential?: Pick<ModelCredential, "modelId" | "thinkingLevel">;
+  credential?: Pick<
+    ModelCredential,
+    "modelId" | "thinkingLevel" | "contextWindow" | "modelContextWindows"
+  >;
   credentialId: string | null;
   settingsOnly?: boolean;
   makeDefault?: { makeDefault: boolean; scope: SettingsScope };
@@ -191,9 +202,7 @@ export function modelConnectRequest(input: {
   // The form's id wins: a probe can discover a model the catalog has not listed yet,
   // and that is the one to save. A placeholder stands in for models a probe discovers,
   // so it is never saved as a model itself.
-  const activeModelId = compatible
-    ? modelId
-    : modelId || (selected.placeholder ? "" : selected.id);
+  const activeModelId = compatible ? modelId : modelId || (selected.placeholder ? "" : selected.id);
   if (compatible) {
     if (!baseUrl || !modelId) return { status: "incomplete" };
   } else if (savingLimitOnly) {
@@ -216,10 +225,21 @@ export function modelConnectRequest(input: {
   ) {
     return { status: "invalid", field: "maxImagesPerPrompt" };
   }
-  const contextWindow = compatible ? parseModelContextWindow(form.contextWindow) : undefined;
-  if (compatible && contextWindow === undefined) {
+  // Every provider can carry a per-model window; only a compatible connection requires one.
+  const contextWindow = form.contextWindow.trim()
+    ? parseModelContextWindow(form.contextWindow)
+    : undefined;
+  if ((compatible || form.contextWindow.trim()) && contextWindow === undefined) {
     return { status: "invalid", field: "contextWindow" };
   }
+  // An emptied field on a model that had its own window clears that override; an
+  // untouched empty field means "use the model's own window" and sends nothing.
+  const clearContextWindow =
+    !compatible &&
+    !form.contextWindow.trim() &&
+    credential !== undefined &&
+    contextWindowForModel(credential, modelId || (selected.placeholder ? "" : selected.id)) !==
+      undefined;
   // The staged effort belongs to the model on screen. Clamp it before a connect or a limit
   // save so a previous model's level cannot stick.
   const thinkingLevel = clampCatalogThinkingLevel(
@@ -275,6 +295,11 @@ export function modelConnectRequest(input: {
         : {}),
       ...makeDefault,
       maxTokens: maxTokens ?? null,
+      ...(contextWindow !== undefined
+        ? { contextWindow }
+        : clearContextWindow
+          ? { contextWindow: null }
+          : {}),
       label,
       credentialId,
     },

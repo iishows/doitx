@@ -283,9 +283,14 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     : [];
   const busy = pending !== null || oauthPending;
   // Saved-connection settings edited without a new key (output limit, gateway ids).
+  // The same derivation the form loads with, so an untouched field is never dirty.
+  const savedContextWindow = credential
+    ? connectionFormFields({ catalog, provider, modelId, credential }).contextWindow
+    : "";
   const settingsDirty =
     Boolean(credential) &&
     (maxTokens.trim() !== connectionMaxTokensField(provider, credential?.maxTokens) ||
+      contextWindow.trim() !== savedContextWindow ||
       (isCloudflare &&
         (accountId.trim() !== (credential?.accountId ?? "") ||
           gatewayId.trim() !== (credential?.gatewayId ?? ""))));
@@ -344,14 +349,22 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   }
 
   /** Adopts the first id a probe listed, the way the upstream form preselects one. */
+  /** The window belongs to the model on screen, so a new id reloads its own saved value. */
+  function selectModel(nextModelId: string) {
+    setModelId(nextModelId);
+    setContextWindow(
+      connectionFormFields({ catalog, provider, modelId: nextModelId, credential }).contextWindow,
+    );
+  }
+
   function adoptFoundModels(models: string[]) {
     setFoundModels(models);
-    if (models.length > 0 && !models.includes(modelId)) setModelId(models[0]!);
+    if (models.length > 0 && !models.includes(modelId)) selectModel(models[0]!);
   }
 
   /** Picks one of the ids "Find models" listed for the connection's own model. */
   function selectFoundModel(nextModelId: string) {
-    setModelId(nextModelId);
+    selectModel(nextModelId);
     setPreflightFailure(null);
     setPreflightSuccess(null);
     setError(null);

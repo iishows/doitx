@@ -234,7 +234,13 @@ export default function ModelConnection() {
   const subscriptionSignIn = selected?.signIn !== undefined;
   const _reasoningEffortValue = thinkingLevel ? thinkingLevelLabel(thinkingLevel, t) : t("Default");
   const busy = pending !== null || oauthPending;
-  const limitsDirty = maxTokens !== connectionMaxTokensField(provider, credential?.maxTokens);
+  // The same derivation the form loads with, so an untouched field is never dirty.
+  const savedContextWindow = credential
+    ? connectionFormFields({ catalog, provider, modelId, credential }).contextWindow
+    : "";
+  const limitsDirty =
+    maxTokens !== connectionMaxTokensField(provider, credential?.maxTokens) ||
+    contextWindow.trim() !== savedContextWindow;
   const gatewayDirty =
     accountId.trim() !== (credential?.accountId ?? "") ||
     gatewayId.trim() !== (credential?.gatewayId ?? "");
@@ -518,6 +524,17 @@ export default function ModelConnection() {
               },
               6,
             )}
+            {credential.authKind === "oauth"
+              ? null
+              : limitField(
+                  t("Context window"),
+                  contextWindow,
+                  (value) => {
+                    setContextWindow(value);
+                    clearFeedback();
+                  },
+                  7,
+                )}
             {credential && limitsDirty ? (
               <NativeActionButton
                 disabled={busy || !cloudflareRoutingReady}

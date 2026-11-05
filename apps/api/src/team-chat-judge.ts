@@ -13,6 +13,7 @@ import {
   serializeModelSecret,
   toOAuthCredential,
 } from "@rakazo/adapters";
+import { contextWindowForModel } from "@rakazo/contracts";
 import { redactSecrets } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
 import { findModelCredential, recordUsage } from "@rakazo/db";
@@ -302,7 +303,7 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
         ? {}
         : {
             cacheCapabilities: parsed.cacheCapabilities,
-            contextWindow: parsed.contextWindow,
+            contextWindow: contextWindowForModel(parsed, modelId),
           };
     if (parsed.kind === "oauth") {
       return {

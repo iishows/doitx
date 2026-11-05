@@ -1677,6 +1677,10 @@ msgstr ""
 msgid "Contains code to run"
 msgstr "包含可執行的程式碼"
 
+#: src/pages/ModelSettingsOverlay.tsx
+msgid "Context window"
+msgstr "上下文視窗"
+
 #: src/components/AskCard.tsx
 #: src/components/ConfirmIdentityDialog.tsx
 #: src/components/integrations/IntegrationSetup.tsx

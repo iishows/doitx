@@ -6,6 +6,7 @@ import {
   canonicalPiProviderId,
   cloudflareModelConfigMessage,
   cloudflareModelRouting,
+  contextWindowForModel,
   isCloudflareModelProvider,
   LOCAL_PROVIDER_ID,
   MAX_ENABLED_MODEL_IDS,
@@ -59,6 +60,47 @@ export function storedOpenAiCompatibleProbeKey(
   return previous.apiKey;
 }
 
+/** Bounded so a stream of model ids cannot grow one credential without limit. */
+const MAX_MODEL_CONTEXT_WINDOWS = 100;
+
+/**
+ * Windows are keyed by the model they apply to. Null removes that model's entry;
+ * undefined leaves the map untouched. A connection with no model id keeps the
+ * legacy connection-wide value instead.
+ */
+function withModelContextWindow(
+  previous: Record<string, number> | undefined,
+  modelId: string | undefined,
+  contextWindow: number | null | undefined,
+): Record<string, number> | undefined {
+  const id = modelId?.trim();
+  if (!id || contextWindow === undefined) return previous;
+  if (contextWindow === null) {
+    if (previous?.[id] === undefined) return previous;
+    const { [id]: _removed, ...rest } = previous;
+    return Object.keys(rest).length > 0 ? rest : undefined;
+  }
+  if (
+    previous?.[id] === undefined &&
+    Object.keys(previous ?? {}).length >= MAX_MODEL_CONTEXT_WINDOWS
+  ) {
+    throw new Error("Too many context windows are saved for this connection.");
+  }
+  return { ...previous, [id]: contextWindow };
+}
+
+/** A per-model save must not update the connection-wide value other models fall back to. */
+function connectionWideContextWindow(
+  input: ModelConnectInput,
+  previous: number | undefined,
+): number | undefined {
+  if (input.modelId?.trim()) {
+    // Clearing the field the user sees must also drop a legacy fallback that fed it.
+    return input.contextWindow === null ? undefined : previous;
+  }
+  return input.contextWindow ?? previous;
+}
+
 export function buildModelConnectPlaintext(
   input: ModelConnectInput,
   previousPlaintext?: string,
@@ -67,10 +109,16 @@ export function buildModelConnectPlaintext(
   const previous = tryParseModelSecret(previousPlaintext);
   const inherited = previous?.kind === "api_key" ? previous : undefined;
   const cacheCapabilities = input.cacheCapabilities ?? inherited?.cacheCapabilities;
-  const contextWindow = input.contextWindow ?? inherited?.contextWindow;
+  const contextWindow = connectionWideContextWindow(input, inherited?.contextWindow);
+  const modelContextWindows = withModelContextWindow(
+    inherited?.modelContextWindows,
+    input.modelId,
+    input.contextWindow,
+  );
   const limits = {
     ...(cacheCapabilities !== undefined ? { cacheCapabilities } : {}),
     ...(contextWindow !== undefined ? { contextWindow } : {}),
+    ...(modelContextWindows !== undefined ? { modelContextWindows } : {}),
   };
   if (input.provider === OPENAI_COMPATIBLE_PROVIDER_ID) {
     const policy = { allowPrivate: options?.allowPrivateEndpoint };
@@ -103,13 +151,24 @@ export function buildModelConnectPlaintext(
       input.maxTokens,
       sameEndpoint ? previous.maxTokens : undefined,
     );
-    const contextWindow =
-      input.contextWindow !== undefined
-        ? input.contextWindow
-        : sameEndpoint
-          ? previous.contextWindow
-          : undefined;
-    if (!modelOutputLeavesInputRoom(maxTokens, contextWindow)) {
+    // Enabled models on one endpoint keep separate windows; the endpoint-wide value
+    // stays as the fallback for ids saved before per-model limits existed, so a
+    // per-model save never rewrites it and leaks one model's window onto another.
+    const contextWindow = sameEndpoint ? previous.contextWindow : undefined;
+    const compatibleModelContextWindows = withModelContextWindow(
+      sameEndpoint ? previous.modelContextWindows : undefined,
+      prepared.modelId,
+      input.contextWindow,
+    );
+    if (
+      !modelOutputLeavesInputRoom(
+        maxTokens,
+        contextWindowForModel(
+          { contextWindow, modelContextWindows: compatibleModelContextWindows },
+          prepared.modelId,
+        ),
+      )
+    ) {
       throw new Error("Maximum output tokens must leave room for input");
     }
     const visionModelIds = updateModelImageCapabilities(
@@ -141,6 +200,9 @@ export function buildModelConnectPlaintext(
       ...(thinkingLevel !== undefined ? { thinkingLevel } : {}),
       ...(maxTokens !== undefined ? { maxTokens } : {}),
       ...(contextWindow !== undefined ? { contextWindow } : {}),
+      ...(compatibleModelContextWindows !== undefined
+        ? { modelContextWindows: compatibleModelContextWindows }
+        : {}),
       ...(prepared.apiKey ? { apiKey: prepared.apiKey } : {}),
       ...(includeVisionModelIds ? { visionModelIds } : {}),
       // The default is always implicit in the effective list. At the input limit,
@@ -163,7 +225,12 @@ export function buildModelConnectPlaintext(
     throw new Error(CHATGPT_SUBSCRIPTION_REQUIRED_MESSAGE);
   }
   const maxTokens = connectMaxTokens(input.maxTokens, previous?.maxTokens);
-  if (!modelOutputLeavesInputRoom(maxTokens, contextWindow)) {
+  if (
+    !modelOutputLeavesInputRoom(
+      maxTokens,
+      contextWindowForModel({ contextWindow, modelContextWindows }, input.modelId),
+    )
+  ) {
     throw new Error("Maximum output tokens must leave room for input");
   }
   const routing = cloudflareRoutingForConnect(input, previous);
@@ -314,6 +381,9 @@ export function modelCredentialDto(
         ? {
             cacheCapabilities: parsed.cacheCapabilities,
             contextWindow: parsed.contextWindow,
+            ...(parsed.modelContextWindows !== undefined
+              ? { modelContextWindows: parsed.modelContextWindows }
+              : {}),
           }
         : {}),
       ...(parsed.kind === "api_key" && parsed.accountId ? { accountId: parsed.accountId } : {}),
@@ -344,6 +414,9 @@ export function modelCredentialDto(
       : {}),
     ...(parsed.maxTokens !== undefined ? { maxTokens: parsed.maxTokens } : {}),
     ...(parsed.contextWindow !== undefined ? { contextWindow: parsed.contextWindow } : {}),
+    ...(parsed.modelContextWindows !== undefined
+      ? { modelContextWindows: parsed.modelContextWindows }
+      : {}),
     cacheCapabilities: parsed.cacheCapabilities,
     ...(parsed.maxImagesPerPrompt !== undefined
       ? { maxImagesPerPrompt: parsed.maxImagesPerPrompt }

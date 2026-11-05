@@ -712,6 +712,7 @@ export const ZH_MESSAGES: Record<string, string> = {
   "Supports thinking": "支持思考",
   "Reasoning effort": "推理强度",
   Default: "默认",
+  "Context window": "上下文窗口",
   "Maximum output tokens": "最大输出 token 数",
   "Context limit": "上下文限制",
   "Enter a whole number from 1 to {max} for maximum output tokens.":

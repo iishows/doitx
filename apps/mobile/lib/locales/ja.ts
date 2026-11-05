@@ -497,6 +497,7 @@ export const JA_MESSAGES: Record<string, string> = {
   "Found {count} model.": "{count}個のモデルが見つかりました。",
   "Found {count} models.": "{count}個のモデルが見つかりました。",
   "Maximum images per request": "リクエストあたりの最大画像数",
+  "Context window": "コンテキストウィンドウ",
   "Maximum output tokens": "最大出力トークン数",
   "Model id": "モデルID",
   "No matching models": "一致するモデルはありません",

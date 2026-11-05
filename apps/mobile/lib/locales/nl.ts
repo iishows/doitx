@@ -507,6 +507,7 @@ export const NL_MESSAGES: Record<string, string> = {
   "Found {count} model.": "{count} model gevonden.",
   "Found {count} models.": "{count} modellen gevonden.",
   "Maximum images per request": "Maximum aantal afbeeldingen per verzoek",
+  "Context window": "Contextvenster",
   "Maximum output tokens": "Maximaal aantal uitvoertokens",
   "Model id": "Model-id",
   "No matching models": "Geen overeenkomende modellen",
