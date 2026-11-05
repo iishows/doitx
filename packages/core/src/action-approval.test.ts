@@ -428,6 +428,26 @@ describe("planActionGate", () => {
     expect(gate("never", { mandatory: true, steerable: true })).toBe("deny");
   });
 
+  it("asks about a dangerous command in Auto and Ask, and never runs it silently in Never ask", () => {
+    expect(gate("ask", { dangerous: true })).toBe("ask");
+    expect(gate("auto", { dangerous: true })).toBe("ask");
+    // Not "allow": outside text could have written the command in a run nobody is watching.
+    expect(gate("never", { dangerous: true })).toBe("deny");
+  });
+
+  it("lets a dangerous command beat an allowlist rule and a mandatory pass", () => {
+    for (const mode of ["ask", "auto"] as const) {
+      expect(gate(mode, { dangerous: true, resolved: allowed })).toBe("ask");
+      expect(gate(mode, { dangerous: true, mandatory: true })).toBe("ask");
+    }
+    expect(gate("never", { dangerous: true, resolved: allowed })).toBe("deny");
+    expect(gate("never", { dangerous: true, mandatory: true })).toBe("deny");
+  });
+
+  it("still refuses a blocked command whatever the command looks like", () => {
+    expect(gate("ask", { dangerous: true, resolved: blocked })).toBe("deny");
+  });
+
   it("only lets the approval model check a read outside content may have chosen", () => {
     const read = { consequential: false, reviewOnly: true };
     expect(gate("auto", read)).toBe("judge");
@@ -441,6 +461,20 @@ describe("planActionGate", () => {
     expect(gate("auto", { newDestination: true, checkerConfigured: false })).toBe("ask");
     expect(gate("ask", { resolved: allowed, newDestination: true })).toBe("ask");
     expect(gate("never", { newDestination: true })).toBe("allow");
+  });
+
+  it("asks about a dangerous command in Auto and Ask even when a rule allows the tool", () => {
+    expect(gate("auto", { dangerous: true, resolved: allowed })).toBe("ask");
+    expect(gate("ask", { dangerous: true, resolved: allowed })).toBe("ask");
+  });
+
+  it("refuses a dangerous command in Never ask instead of running it silently", () => {
+    expect(gate("never", { dangerous: true, steerable: false })).toBe("deny");
+    expect(gate("never", { dangerous: true, steerable: true })).toBe("deny");
+  });
+
+  it("still refuses a dangerous command that a deny rule blocks", () => {
+    expect(gate("ask", { dangerous: true, resolved: blocked })).toBe("deny");
   });
 });
 

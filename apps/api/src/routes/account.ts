@@ -225,10 +225,13 @@ export function accountRoutes(ctx: RouterContext) {
           saveAutoReviewPreference(
             tx,
             context.actor,
-            input.mode
-              ? approvalPreferenceFromMode(input.mode)
-              : { enabled: input.enabled, skipApprovals: input.skipApprovals },
-            { enabled: true, skipApprovals: false },
+            {
+              ...(input.mode
+                ? approvalPreferenceFromMode(input.mode)
+                : { enabled: input.enabled, skipApprovals: input.skipApprovals }),
+              guardDangerousCommands: input.guardDangerousCommands,
+            },
+            { enabled: true, skipApprovals: false, guardDangerousCommands: true },
             input.scope,
           ),
         );
@@ -374,6 +377,7 @@ async function loadAutoReviewSettings(deps: RouterDeps, actor: Actor, scope?: Se
   const stored = {
     enabled: preference?.enabled ?? true,
     skipApprovals: preference?.skipApprovals ?? false,
+    guardDangerousCommands: preference?.guardDangerousCommands ?? true,
   };
   const settings = { ...stored, mode: approvalModeFromPreference(stored) };
   const deploymentChecker = role.primarySource === "deployment" ? role.primary : null;

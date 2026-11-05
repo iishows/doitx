@@ -32,6 +32,7 @@ export * from "./computer-pressure.js";
 export * from "./computer-updates.js";
 export * from "./connection-catalog.js";
 export * from "./cron.js";
+export * from "./dangerous-command.js";
 export * from "./display-name.js";
 export * from "./echo.js";
 export * from "./events.js";

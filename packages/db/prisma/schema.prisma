@@ -324,10 +324,11 @@ model ActionAutoReviewPreference {
   space         Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enabled       Boolean  @default(false)
-  skipApprovals Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  enabled                Boolean  @default(false)
+  skipApprovals          Boolean  @default(false)
+  guardDangerousCommands Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@unique([spaceId, userId])
   @@map("action_auto_review_preferences")
@@ -2094,10 +2095,11 @@ model UserActionApprovalRule {
 model UserActionAutoReviewPreference {
   userId        String   @id
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enabled       Boolean  @default(false)
-  skipApprovals Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  enabled                Boolean  @default(false)
+  skipApprovals          Boolean  @default(false)
+  guardDangerousCommands Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@map("user_action_auto_review_preferences")
 }

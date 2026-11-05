@@ -74,6 +74,7 @@ function fixture({
   nativeReview = false,
   checkerConnected = true,
   skipApprovals = false,
+  guardDangerousCommands = true,
   trigger = "user",
   secrets = [] as string[],
   prompt = "Read the item",
@@ -131,6 +132,7 @@ function fixture({
   nativeReview?: boolean;
   checkerConnected?: boolean;
   skipApprovals?: boolean;
+  guardDangerousCommands?: boolean;
   trigger?: string;
   secrets?: string[];
   prompt?: string;
@@ -391,12 +393,16 @@ function fixture({
     routine: { findMany: vi.fn(async () => routines) },
     actionAutoReviewPreference: {
       findUnique: vi.fn(async () =>
-        confirmationsOverride && savedPreference ? { enabled: autoReview, skipApprovals } : null,
+        confirmationsOverride && savedPreference
+          ? { enabled: autoReview, skipApprovals, guardDangerousCommands }
+          : null,
       ),
     },
     userActionAutoReviewPreference: {
       findUnique: vi.fn(async () =>
-        confirmationsOverride || !savedPreference ? null : { enabled: autoReview, skipApprovals },
+        confirmationsOverride || !savedPreference
+          ? null
+          : { enabled: autoReview, skipApprovals, guardDangerousCommands },
       ),
     },
     steeringMessage: {
@@ -625,6 +631,64 @@ function fixture({
     },
   };
 }
+
+describe("destructive shell commands", () => {
+  it("refuses one in Never ask instead of running it silently", async () => {
+    const f = fixture({ name: "shell", skipApprovals: true });
+    f.setCalls([{ args: { command: "rm -rf /" }, executionId: "call-1" }]);
+    await f.run();
+    expect(f.execute).not.toHaveBeenCalled();
+    expect(f.pauseRunForInput).not.toHaveBeenCalled();
+    expect(JSON.stringify(f.results[0])).toContain("never asks");
+  });
+
+  it("lets it through in Never ask when the owner turned the guard off", async () => {
+    const f = fixture({ name: "shell", skipApprovals: true, guardDangerousCommands: false });
+    f.setCalls([{ args: { command: "rm -rf /" }, executionId: "call-1" }]);
+    await f.run(true);
+    expect(f.pauseRunForInput).not.toHaveBeenCalled();
+    expect(isApprovalPausedResult(f.results[0])).toBe(false);
+  });
+
+  it("asks about one in Ask mode even with an allow rule", async () => {
+    const f = fixture({
+      name: "shell",
+      rules: [{ effect: "always_allow", matchKind: "tool", matchValue: "shell" }],
+    });
+    f.setCalls([{ args: { command: "rm -rf /" }, executionId: "call-1" }]);
+    await f.run();
+    expect(f.execute).not.toHaveBeenCalled();
+    expect(isApprovalPausedResult(f.results[0])).toBe(true);
+    expect((f.pauseRunForInput.mock.calls as unknown[][])[0]?.[0]).toEqual(
+      expect.objectContaining({
+        blocks: [
+          expect.objectContaining({
+            kind: "ask",
+            text: expect.stringContaining("Review before"),
+            detail: expect.stringContaining("looks destructive"),
+          }),
+        ],
+      }),
+    );
+  });
+
+  it("asks a person in Auto mode without consulting the approval model", async () => {
+    reviewMock.mockReset();
+    const f = fixture({ name: "shell", autoReview: true, checkerConnected: true });
+    f.setCalls([{ args: { command: "rm -rf /" }, executionId: "call-1" }]);
+    await f.run();
+    expect(reviewMock).not.toHaveBeenCalled();
+    expect(isApprovalPausedResult(f.results[0])).toBe(true);
+  });
+
+  it("leaves an ordinary command to the mode and the rules", async () => {
+    const f = fixture({ name: "shell", skipApprovals: true });
+    f.setCalls([{ args: { command: "ls -la" }, executionId: "call-1" }]);
+    await f.run(true);
+    expect(f.pauseRunForInput).not.toHaveBeenCalled();
+    expect(isApprovalPausedResult(f.results[0])).toBe(false);
+  });
+});
 
 it("enqueues pending work when an approval pauses its current run", async () => {
   const f = fixture({ name: "shell", trigger: "webhook" });
@@ -2661,6 +2725,23 @@ describe("user_computer_shell", () => {
     expect(f.pauseRunForInput).toHaveBeenCalledOnce();
     expect(f.results.at(-1)).toEqual({ stdout: "pi.local\n", stderr: "", code: 0 });
     expect(f.effects.map((effect) => effect.status)).toEqual(["completed", "completed"]);
+  });
+
+  it("asks again for a destructive command after the chat was allowed", async () => {
+    const { gateway, requests } = devices();
+    const f = fixture({ ...ownRun, userDevices: gateway });
+    f.effects.push({
+      id: "earlier",
+      kind: "user_computer_shell",
+      idempotencyKey: "earlier-key",
+      status: "completed",
+      request: { command: "hostname" },
+    });
+    f.setCalls([call("rm -rf ~")]);
+    await f.run();
+    expect(isApprovalPausedResult(f.results[0])).toBe(true);
+    expect(requests).toEqual([]);
+    expect(f.pauseRunForInput).toHaveBeenCalledOnce();
   });
 
   it("refuses with a block rule", async () => {

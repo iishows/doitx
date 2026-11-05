@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { ProcessEvent } from "@rakazo/adapter-kit";
-import { redactSecrets, sandboxCommandTimeoutMs } from "@rakazo/core";
+import { classifyDangerousCommand, redactSecrets, sandboxCommandTimeoutMs } from "@rakazo/core";
 import type { HostComputerEnvironment } from "./host-computer-protocol.js";
 import { nativeShellCommandArgv } from "./native-shell.js";
 import type { RunContext } from "./run-context.js";
@@ -44,8 +44,12 @@ export function userComputerOwner(input: {
 export async function userComputerGate(
   ctx: RunContext,
   blocked: boolean,
+  command?: unknown,
 ): Promise<"deny" | "allow" | "ask"> {
   if (blocked) return "deny";
+  // "Allow for this chat" covers a shell session, not a destructive command typed into it later.
+  // A command that could destroy data asks again even though an earlier one was approved.
+  if (typeof command === "string" && classifyDangerousCommand(command).dangerous) return "ask";
   const { deps, run, bot, thread } = ctx;
   const allowed = await deps.prisma.externalEffect.findFirst({
     where: {

@@ -1190,6 +1190,7 @@ export const appContract = {
           mode: ApprovalModeSchema.optional(),
           enabled: z.boolean().optional(),
           skipApprovals: z.boolean().optional(),
+          guardDangerousCommands: z.boolean().optional(),
         }),
       )
       .output(ActionAutoReviewSettingsSchema),

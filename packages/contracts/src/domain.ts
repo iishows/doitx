@@ -889,6 +889,8 @@ export const ActionAutoReviewSettingsSchema = z.object({
   enabled: z.boolean(),
   checkerAvailable: z.boolean(),
   skipApprovals: z.boolean(),
+  /** Ask before a shell command that could destroy data, even when approvals are skipped. */
+  guardDangerousCommands: z.boolean(),
 });
 export type ActionAutoReviewSettings = z.infer<typeof ActionAutoReviewSettingsSchema>;
 

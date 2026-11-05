@@ -10,6 +10,7 @@ import {
   applyJudgeDecision,
   approvalModeFromPreference,
   batchActions,
+  classifyDangerousToolCall,
   connectorKindFromToolName,
   connectorReadRequiresApproval,
   connectorToolRequiresApproval,
@@ -229,6 +230,12 @@ export async function gateToolCall(
     scheduleNamesNewSite ||
     requiresUnattendedApproval ||
     toolRequiresExplicitApproval(name);
+  const preference = await ctx.trust.loadAutoReviewPreference();
+  // `shell` is exempt from the rule engine, so a destructive line would otherwise run unattended.
+  // Judge the command itself and let it ask, or refuse, whatever the rules or mode say.
+  const dangerousCommand = preference.guardDangerousCommands
+    ? classifyDangerousToolCall(name, args)
+    : { dangerous: false, reasons: [] as string[] };
   const resolvedRules = resolveActionApprovalForTools({
     tools: approvalToolNames.map((toolName) => ({
       name: toolName,
@@ -244,8 +251,9 @@ export async function gateToolCall(
     unidentifiedAction && resolvedRules.decision === "allow"
       ? { ...resolvedRules, decision: "ask" as const }
       : resolvedRules;
-  const mode = approvalModeFromPreference(await ctx.trust.loadAutoReviewPreference());
-  const reviewable = mode === "auto" && !requiresMandatoryApproval;
+  const mode = approvalModeFromPreference(preference);
+  // A destructive command never goes to the approval model: only a person may pass it.
+  const reviewable = mode === "auto" && !requiresMandatoryApproval && !dangerousCommand.dangerous;
   const injectedReview = reviewable ? deps.autoReview : undefined;
   const reviewSettings = !reviewable || injectedReview ? null : await ctx.trust.loadApprovalModel();
   const memberChecker = reviewSettings?.primarySource === "member";
@@ -279,11 +287,16 @@ export async function gateToolCall(
         : false));
   const plan =
     name === USER_COMPUTER_SHELL_TOOL
-      ? await userComputerGate(ctx, approvalResolved.decision === "deny")
+      ? await userComputerGate(
+          ctx,
+          approvalResolved.decision === "deny",
+          preference.guardDangerousCommands ? (args as { command?: unknown }).command : undefined,
+        )
       : planActionGate({
           resolved: approvalResolved,
           mode,
           mandatory: requiresMandatoryApproval,
+          dangerous: dangerousCommand.dangerous,
           steerable:
             requiresMandatoryApproval && mode === "never"
               ? !ctx.source.ownerStartedRun || (await isRunTainted(ctx))
@@ -299,11 +312,15 @@ export async function gateToolCall(
         error:
           approvalResolved.decision === "deny"
             ? `${name} is blocked in this space${blockingRuleSuffix(approvalResolved)}. Don't try it another way; tell the user it's blocked.`
-            : `${name} needs the owner's approval because it could have been asked for by someone else, and this space never asks. Don't retry; tell the user.`,
+            : dangerousCommand.dangerous
+              ? `This command was refused without running: ${dangerousCommand.reasons.join("; ").toLowerCase()}. This space never asks, so a destructive command cannot run here. Tell the user, and don't try it another way.`
+              : `${name} needs the owner's approval because it could have been asked for by someone else, and this space never asks. Don't retry; tell the user.`,
       },
     };
   }
-  let reviewReason: string | undefined;
+  let reviewReason: string | undefined = dangerousCommand.dangerous
+    ? `This looks destructive: ${dangerousCommand.reasons.join("; ").toLowerCase()}.`
+    : undefined;
   let gateDecision: "ask" | "allow" = plan === "ask" ? "ask" : "allow";
   const needsApprovalEarly = plan === "ask" || plan === "judge";
   // A resumed approval keeps its key even if "Always allow" changed the policy.

@@ -13,6 +13,7 @@ export type ApprovalSettings = {
   loadError: string | null;
   pending: boolean;
   setMode: (mode: ApprovalMode) => Promise<void>;
+  setGuardDangerousCommands: (enabled: boolean) => Promise<void>;
   retry: () => void;
 };
 
@@ -99,10 +100,35 @@ export function useApprovalSettings(target: SettingsTarget, enabled = true): App
     }
   }
 
+  async function setGuardDangerousCommands(guardDangerousCommands: boolean) {
+    if (!settings || saving.current) return;
+    const previous = settings;
+    const resetsAtSave = resets.current;
+    saves.current += 1;
+    saving.current = true;
+    setPending(true);
+    setSettings({ ...previous, guardDangerousCommands });
+    try {
+      const saved = await rpc("autoReview/set", { scope, guardDangerousCommands });
+      if (resets.current === resetsAtSave) setSettings(saved);
+    } catch (err) {
+      if (resets.current === resetsAtSave) setSettings(previous);
+      Alert.alert(t("Could not save that preference"), errorText(err, t("Try again.")));
+      readAfterSave.current = true;
+    } finally {
+      saving.current = false;
+      setPending(false);
+      if (readAfterSave.current) {
+        readAfterSave.current = false;
+        setAttempt((count) => count + 1);
+      }
+    }
+  }
+
   const retry = () => {
     setLoadError(null);
     setAttempt((count) => count + 1);
   };
 
-  return { settings, ruleCount, loadError, pending, setMode, retry };
+  return { settings, ruleCount, loadError, pending, setMode, setGuardDangerousCommands, retry };
 }

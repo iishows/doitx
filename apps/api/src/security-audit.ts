@@ -80,7 +80,10 @@ export const AUDITED_PROCEDURES: Record<string, AuditedProcedure> = {
   "approvalRules.set": { type: "approval.policy.changed", fields: ["effect", "matchKind"] },
   "approvalRules.remove": { type: "approval.policy.changed", fields: ["id"] },
   "models.setRole": { type: "approval.policy.changed", fields: ["role", "scope"] },
-  "autoReview.set": { type: "approval.policy.changed", fields: ["enabled", "skipApprovals"] },
+  "autoReview.set": {
+    type: "approval.policy.changed",
+    fields: ["enabled", "skipApprovals", "guardDangerousCommands"],
+  },
   "spaceSettings.setOverride": {
     type: "approval.policy.changed",
     fields: ["setting", "enabled"],

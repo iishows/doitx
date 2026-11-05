@@ -24,7 +24,15 @@ export function storedBatchActions(
 }
 
 export type ApprovalRuleInput = { effect: string; matchKind: string; matchValue: string };
-export type AutoReviewPreference = { enabled: boolean; skipApprovals: boolean };
+export type AutoReviewPreference = {
+  enabled: boolean;
+  skipApprovals: boolean;
+  /**
+   * Ask before a shell command that could destroy data, even when approvals are otherwise
+   * skipped. Personal safety setting; on unless the owner turns it off.
+   */
+  guardDangerousCommands: boolean;
+};
 
 /**
  * Approval rules and auto review are confirmations: the account's copy, or the Space's
@@ -122,7 +130,7 @@ export async function findAutoReviewPreference(
   scope: Scope,
   requested?: SettingsScope,
 ): Promise<AutoReviewPreference | null> {
-  const select = { enabled: true, skipApprovals: true } as const;
+  const select = { enabled: true, skipApprovals: true, guardDangerousCommands: true } as const;
   return (await confirmationsTarget(prisma, scope, requested)) === "account"
     ? prisma.userActionAutoReviewPreference.findUnique({
         where: { userId: scope.userId },
@@ -145,6 +153,7 @@ export async function saveAutoReviewPreference(
   const create = {
     enabled: update.enabled ?? defaults.enabled,
     skipApprovals: update.skipApprovals ?? defaults.skipApprovals,
+    guardDangerousCommands: update.guardDangerousCommands ?? defaults.guardDangerousCommands,
   };
   await lockSpaceSettings(prisma, scope);
   if ((await confirmationsTarget(prisma, scope, requested)) === "account") {

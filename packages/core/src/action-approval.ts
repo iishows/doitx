@@ -535,6 +535,11 @@ export function planActionGate(input: {
   mode: ApprovalMode;
   /** Needs a person whatever the rules say (see toolRequiresExplicitApproval). */
   mandatory?: boolean;
+  /**
+   * A command that could destroy data or take over the machine (see classifyDangerousCommand).
+   * It beats an allow rule, and Never ask refuses it instead of running it silently.
+   */
+  dangerous?: boolean;
   /** The owner did not start this run, or outside content entered it. */
   steerable?: boolean;
   consequential: boolean;
@@ -548,6 +553,12 @@ export function planActionGate(input: {
   newDestination?: boolean;
 }): "ask" | "allow" | "judge" | "deny" {
   if (input.resolved.decision === "deny") return "deny";
+  // A dangerous command outranks an allow rule: ask whenever a person can answer, and never run it
+  // silently in Never ask, where a script or a page could have written the command.
+  if (input.dangerous) {
+    if (input.mode !== "never") return "ask";
+    return "deny";
+  }
   if (input.mandatory) {
     if (input.mode !== "never") return "ask";
     return input.steerable ? "deny" : "allow";

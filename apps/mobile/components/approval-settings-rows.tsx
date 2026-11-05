@@ -4,6 +4,7 @@ import type { ApprovalSettings } from "../lib/approval-settings";
 import { useI18n } from "../lib/i18n";
 import { native } from "../lib/native";
 import { MenuPickerMenu } from "./menu-picker";
+import { NativeSwitch } from "./native-switch";
 import { NativeSymbol } from "./native-symbol";
 import { SettingsRow } from "./settings-group";
 
@@ -79,6 +80,37 @@ export function ApprovalModeRow({
         />
       </View>
     </MenuPickerMenu>
+  );
+}
+
+/**
+ * Whether a destructive shell command asks even in Never ask. On by default; a switch so the
+ * owner can turn the guard off for a space where they run such commands on purpose.
+ */
+export function DangerousCommandGuardRow({
+  approvals,
+  disabled = false,
+}: {
+  approvals: ApprovalSettings;
+  disabled?: boolean;
+}) {
+  const { t } = useI18n();
+  const { settings, pending } = approvals;
+  return (
+    <SettingsRow
+      accessibilityLabel={t("Ask before destructive commands")}
+      detail={t("Even when set to Never ask, a command that could erase files stays gated.")}
+      dimmed={pending}
+      title={t("Ask before destructive commands")}
+      trailing={
+        <NativeSwitch
+          accessibilityLabel={t("Ask before destructive commands")}
+          disabled={disabled || pending || !settings}
+          onValueChange={(enabled) => void approvals.setGuardDangerousCommands(enabled)}
+          value={settings?.guardDangerousCommands ?? true}
+        />
+      }
+    />
   );
 }
 

@@ -28,6 +28,24 @@ vi.mock("@rakazo/ui-web", async () => {
   });
   return {
     Input: (props: ComponentProps<"input">) => <input {...props} />,
+    // biome-ignore lint/a11y/noLabelWithoutControl: a test double; the real Label renders a control.
+    Label: (props: ComponentProps<"label">) => <label {...props} />,
+    Switch: ({
+      checked,
+      onCheckedChange,
+      ...props
+    }: Omit<ComponentProps<"button">, "onChange"> & {
+      checked?: boolean;
+      onCheckedChange?: (checked: boolean) => void;
+    }) => (
+      <button
+        aria-checked={checked}
+        role="switch"
+        type="button"
+        onClick={() => onCheckedChange?.(!checked)}
+        {...props}
+      />
+    ),
     Button: ({
       variant: _variant,
       size: _size,
@@ -66,7 +84,13 @@ vi.mock("@rakazo/ui-web", async () => {
 
 import { ApprovalRulesSettings } from "./ApprovalRulesSettings";
 
-const settings = { mode: "ask", enabled: false, skipApprovals: false, checkerAvailable: true };
+const settings = {
+  mode: "ask",
+  enabled: false,
+  skipApprovals: false,
+  checkerAvailable: true,
+  guardDangerousCommands: true,
+};
 
 beforeEach(() => vi.resetAllMocks());
 
@@ -161,6 +185,30 @@ it("sets the mode, and lists Auto only when an approval model is there", async (
     );
     // No rules yet, so the rule list stays out of the way.
     expect(container.querySelector('[data-testid="approval-rules"]')).toBeNull();
+    await act(async () => root.unmount());
+  } finally {
+    container.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("turns the destructive-command guard off and on", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  rpcMock.approvalRules.list.mockResolvedValue([]);
+  rpcMock.autoReview.get.mockResolvedValue(settings);
+  rpcMock.autoReview.set.mockResolvedValue({ ...settings, guardDangerousCommands: false });
+  const { container, root } = await render();
+  try {
+    const toggle = () =>
+      container.querySelector<HTMLButtonElement>('[data-testid="guard-dangerous-commands"]')!;
+    // The switch shows its default before the first read lands, so wait until it is interactive.
+    await vi.waitFor(() => expect(toggle().disabled).toBe(false));
+    await act(async () => toggle().click());
+    expect(rpcMock.autoReview.set).toHaveBeenLastCalledWith({
+      scope: "account",
+      guardDangerousCommands: false,
+    });
+    await vi.waitFor(() => expect(toggle().getAttribute("aria-checked")).toBe("false"));
     await act(async () => root.unmount());
   } finally {
     container.remove();

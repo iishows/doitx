@@ -3,7 +3,11 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ApprovalModeRow, ApprovalRulesRow } from "../../components/approval-settings-rows";
+import {
+  ApprovalModeRow,
+  ApprovalRulesRow,
+  DangerousCommandGuardRow,
+} from "../../components/approval-settings-rows";
 import { LoadFailure } from "../../components/load-failure";
 import { NativeSwitch } from "../../components/native-switch";
 import { SettingsGroup, SettingsRow } from "../../components/settings-group";
@@ -148,6 +152,11 @@ export default function SpaceSettings() {
         {overrides?.includes("confirmations") ? (
           <SettingsGroup>
             <ApprovalModeRow key="approvals" approvals={approvals} disabled={pending} />
+            <DangerousCommandGuardRow
+              key="guard-dangerous-commands"
+              approvals={approvals}
+              disabled={pending}
+            />
             {approvals.ruleCount ? (
               <ApprovalRulesRow
                 key="approval-rules"

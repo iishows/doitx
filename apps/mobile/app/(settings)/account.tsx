@@ -21,7 +21,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppMark } from "../../components/app-mark";
-import { ApprovalModeRow, ApprovalRulesRow } from "../../components/approval-settings-rows";
+import {
+  ApprovalModeRow,
+  ApprovalRulesRow,
+  DangerousCommandGuardRow,
+} from "../../components/approval-settings-rows";
 import { NameDialog } from "../../components/name-dialog";
 import { NativeActionButton } from "../../components/native-action-button";
 import { NativeSegmentedControl } from "../../components/native-segmented-control";
@@ -718,6 +722,11 @@ export default function Account() {
             ] as const
           ).map(settingsLink)}
           <ApprovalModeRow key="approvals" approvals={approvals} disabled={pending} />
+          <DangerousCommandGuardRow
+            key="guard-dangerous-commands"
+            approvals={approvals}
+            disabled={pending}
+          />
           {approvals.ruleCount ? (
             <ApprovalRulesRow
               key="approval-rules"

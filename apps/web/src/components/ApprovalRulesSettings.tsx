@@ -7,9 +7,9 @@ import type {
 } from "@rakazo/contracts";
 import { humanizeToolName } from "@rakazo/core";
 import { writeSaved } from "@rakazo/core/query";
-import { Button, ToggleGroup, ToggleGroupItem } from "@rakazo/ui-web";
+import { Button, Label, Switch, ToggleGroup, ToggleGroupItem } from "@rakazo/ui-web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useSpaceQueries } from "../lib/query";
 import { useSpaceRpc } from "../lib/space-rpc";
 import { errorText } from "../lib/user-error";
@@ -33,6 +33,7 @@ export function ApprovalRulesSettings({ scope }: { scope: SettingsScope }) {
   const loading = rulesQuery.isPending || autoReviewQuery.isPending;
   const loadFailed = rulesQuery.error ?? autoReviewQuery.error;
   const [saving, setSaving] = useState(false);
+  const guardSwitchId = useId();
   const [previewRule, setPreviewRule] = useState<string | null>(null);
   const [actionError, setError] = useState<string | null>(null);
   const error =
@@ -72,6 +73,12 @@ export function ApprovalRulesSettings({ scope }: { scope: SettingsScope }) {
   const setMode = (mode: ApprovalMode) =>
     save(
       async () => setAutoReview(await rpc.autoReview.set({ scope, mode })),
+      t`Could not save Auto Review`,
+    );
+
+  const setGuardDangerousCommands = (guardDangerousCommands: boolean) =>
+    save(
+      async () => setAutoReview(await rpc.autoReview.set({ scope, guardDangerousCommands })),
       t`Could not save Auto Review`,
     );
 
@@ -124,6 +131,26 @@ export function ApprovalRulesSettings({ scope }: { scope: SettingsScope }) {
               <Trans>Add a model in Settings to use this.</Trans>
             </p>
           ) : null}
+        </SettingsRow>
+        <SettingsRow
+          label={
+            <Label htmlFor={guardSwitchId} className="text-[14px] font-normal text-foreground">
+              <Trans>Ask before destructive commands</Trans>
+            </Label>
+          }
+          control={
+            <Switch
+              id={guardSwitchId}
+              data-testid="guard-dangerous-commands"
+              checked={autoReview?.guardDangerousCommands ?? true}
+              disabled={loading || saving || !autoReview}
+              onCheckedChange={(checked) => void setGuardDangerousCommands(checked)}
+            />
+          }
+        >
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            <Trans>Even when set to Never ask, a command that could erase files stays gated.</Trans>
+          </p>
         </SettingsRow>
       </SettingsGroup>
       {rules.length > 0 ? (
