@@ -454,6 +454,17 @@ describe("BotSettings thinking options", () => {
     await expandAdvanced();
     const model = container.querySelector<HTMLSelectElement>('[id$="-model"]');
     if (!model) throw new Error("Missing model select");
+    // Re-picking the model already saved is not a change and keeps its limits.
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(
+        model,
+        "openai-compatible::beta",
+      );
+      model.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(container.querySelector<HTMLInputElement>('input[id$="-max-tokens"]')?.value).toBe(
+      "16384",
+    );
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(
         model,

@@ -749,6 +749,8 @@ export function BotSettings({
                       choices={modelChoices}
                       value={selectedModelKey}
                       onChange={(key) => {
+                        // Re-picking the same model is not a change and keeps its limits.
+                        if (key === selectedModelKey) return;
                         // A different model has its own limits; a stale cap must not follow it.
                         setModelKey(key);
                         setThinkingLevel("");

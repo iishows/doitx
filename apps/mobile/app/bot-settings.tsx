@@ -464,7 +464,10 @@ export default function BotSettingsScreen() {
       autoSpeak !== bot.autoSpeak ||
       (selectedModel?.provider ?? null) !== (bot.modelProvider ?? null) ||
       (selectedModel?.modelId ?? null) !== (bot.modelId ?? null) ||
-      (thinkingLevel || null) !== (bot.thinkingLevel ?? null));
+      (thinkingLevel || null) !== (bot.thinkingLevel ?? null) ||
+      modelMaxTokens.trim() !== (bot.modelMaxTokens == null ? "" : String(bot.modelMaxTokens)) ||
+      modelContextWindow.trim() !==
+        (bot.modelContextWindow == null ? "" : String(bot.modelContextWindow)));
 
   const voiceValue = (
     <Text
