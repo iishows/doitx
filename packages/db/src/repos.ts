@@ -101,6 +101,8 @@ function mapBot(
     modelProvider?: string | null;
     modelId?: string | null;
     thinkingLevel?: string | null;
+    modelMaxTokens?: number | null;
+    modelContextWindow?: number | null;
     teamChatAmbientEnabled?: boolean;
     teamChatRules?: string;
     crossSpaceCommunication?: boolean;
@@ -151,6 +153,8 @@ function mapBot(
     modelProvider: bot.modelProvider ? canonicalPiProviderId(bot.modelProvider) : null,
     modelId: bot.modelId ?? null,
     thinkingLevel: (bot.thinkingLevel as Bot["thinkingLevel"]) ?? null,
+    modelMaxTokens: bot.modelMaxTokens ?? null,
+    modelContextWindow: bot.modelContextWindow ?? null,
     teamChatAmbientEnabled: bot.teamChatAmbientEnabled ?? false,
     teamChatRules: bot.teamChatRules ?? "",
     crossSpaceCommunication: bot.crossSpaceCommunication ?? false,
@@ -547,6 +551,8 @@ export function createRepos(
         modelProvider?: string | null;
         modelId?: string | null;
         thinkingLevel?: string | null;
+        modelMaxTokens?: number | null;
+        modelContextWindow?: number | null;
         disabledBuiltinTools?: string[];
         initialMessage?: {
           role: "user" | "bot" | "system";
@@ -563,6 +569,8 @@ export function createRepos(
       let modelProvider = input.modelProvider ?? null;
       let modelId = input.modelId ?? null;
       let thinkingLevel = input.thinkingLevel ?? null;
+      let modelMaxTokens = input.modelMaxTokens ?? null;
+      let modelContextWindow = input.modelContextWindow ?? null;
       let disabledBuiltinTools = input.disabledBuiltinTools ?? [];
       if (input.parentBotId) {
         const parent = await prisma.bot.findFirst({
@@ -578,6 +586,8 @@ export function createRepos(
           modelId = parent.modelId ?? null;
         }
         if (thinkingLevel == null) thinkingLevel = parent.thinkingLevel ?? null;
+        if (modelMaxTokens == null) modelMaxTokens = parent.modelMaxTokens ?? null;
+        if (modelContextWindow == null) modelContextWindow = parent.modelContextWindow ?? null;
         if (input.disabledBuiltinTools === undefined) {
           disabledBuiltinTools = parent.disabledBuiltinTools;
         }
@@ -637,6 +647,8 @@ export function createRepos(
               modelProvider,
               modelId,
               thinkingLevel,
+              modelMaxTokens,
+              modelContextWindow,
               disabledBuiltinTools,
             },
           });

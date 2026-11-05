@@ -15,6 +15,8 @@ const SETTINGS: Partial<Record<Field, AnalyticsBotSetting>> = {
   autoSpeak: "auto_speak",
   modelProvider: "model",
   modelId: "model",
+  modelMaxTokens: "model",
+  modelContextWindow: "model",
   thinkingLevel: "thinking",
   teamChatAmbientEnabled: "team_chat",
   teamChatRules: "team_chat",

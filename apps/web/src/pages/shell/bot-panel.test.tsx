@@ -159,6 +159,8 @@ function bot(description = "Billing", overrides: Partial<Bot> = {}): Bot {
     modelProvider: null,
     modelId: null,
     thinkingLevel: null,
+    modelMaxTokens: null,
+    modelContextWindow: null,
     teamChatAmbientEnabled: false,
     teamChatRules: "",
     fleetManagement: false,
@@ -696,6 +698,34 @@ it.each(["color", "notifyOnFinish"])(
     ).toBe(false);
   },
 );
+
+it("saves per-bot model limits and clears them when emptied", async () => {
+  await render("Billing", { modelMaxTokens: 8_192, modelContextWindow: 65_536 });
+  await expandAdvanced();
+  const limitInput = (suffix: string) =>
+    container.querySelector<HTMLInputElement>(`input[id$="${suffix}"]`)!;
+  const setValue = async (input: HTMLInputElement, value: string) => {
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+  expect(limitInput("-max-tokens").value).toBe("8192");
+  await setValue(limitInput("-max-tokens"), "32768");
+  await clickSave();
+  expect(onSave.mock.lastCall?.[0]).toMatchObject({ modelMaxTokens: 32_768 });
+  await setValue(limitInput("-max-tokens"), "");
+  await setValue(limitInput("-context-window"), "");
+  await clickSave();
+  expect(onSave.mock.lastCall?.[0]).toMatchObject({
+    modelMaxTokens: null,
+    modelContextWindow: null,
+  });
+  // Out-of-range text is left unsaved rather than wiping the stored override.
+  await setValue(limitInput("-max-tokens"), "999999999");
+  await clickSave();
+  expect(onSave.mock.lastCall?.[0]).not.toHaveProperty("modelMaxTokens");
+});
 
 it("saves a color change back to the initial value after a successful automatic save", async () => {
   await render();

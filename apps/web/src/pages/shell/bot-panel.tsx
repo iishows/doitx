@@ -15,6 +15,10 @@ import {
   BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH,
   BUILTIN_TOOL_NAMES,
   isBuiltinToolName,
+  MAX_MODEL_CONTEXT_WINDOW,
+  MAX_MODEL_MAX_TOKENS,
+  parseModelContextWindow,
+  parseModelMaxTokens,
   resolveBotAvatarSet,
 } from "@rakazo/contracts";
 import {
@@ -73,7 +77,26 @@ function advancedValues(bot: Bot) {
     bot.memoryScope,
     bot.autoSpeak,
     bot.voiceId ?? "",
+    bot.modelMaxTokens == null ? "" : String(bot.modelMaxTokens),
+    bot.modelContextWindow == null ? "" : String(bot.modelContextWindow),
   ] as const;
+}
+
+/**
+ * An emptied limit clears the override. Text that is not a valid value is left
+ * unsaved instead of wiping the stored number.
+ */
+function modelLimitPatch<K extends "modelMaxTokens" | "modelContextWindow">(
+  key: K,
+  value: string,
+  saved: number | null,
+  parse: (value: string) => number | undefined,
+): Partial<Record<K, number | null>> {
+  const text = value.trim();
+  if (text === (saved == null ? "" : String(saved))) return {};
+  if (!text) return { [key]: null } as Partial<Record<K, number | null>>;
+  const parsed = parse(text);
+  return parsed === undefined ? {} : ({ [key]: parsed } as Partial<Record<K, number | null>>);
 }
 
 export function ComputerModePicker({
@@ -134,6 +157,8 @@ export function BotSettings({
     modelProvider?: string | null;
     modelId?: string | null;
     thinkingLevel?: ThinkingLevel | null;
+    modelMaxTokens?: number | null;
+    modelContextWindow?: number | null;
     disabledBuiltinTools?: string[];
   }) => Promise<void>;
   onExport: () => Promise<void>;
@@ -201,6 +226,13 @@ export function BotSettings({
     bot.modelProvider && bot.modelId ? modelOptionKey(bot.modelProvider, bot.modelId) : "",
   );
   const [thinkingLevel, setThinkingLevel] = useState(bot.thinkingLevel ?? "");
+  // Empty means "inherit the connection's value".
+  const [modelMaxTokens, setModelMaxTokens] = useState(
+    bot.modelMaxTokens == null ? "" : String(bot.modelMaxTokens),
+  );
+  const [modelContextWindow, setModelContextWindow] = useState(
+    bot.modelContextWindow == null ? "" : String(bot.modelContextWindow),
+  );
   const [disabledBuiltinTools, setDisabledBuiltinTools] = useState<string[]>(
     bot.disabledBuiltinTools ?? [],
   );
@@ -241,6 +273,8 @@ export function BotSettings({
     memoryScope,
     autoSpeak,
     voiceId,
+    modelMaxTokens,
+    modelContextWindow,
   ]);
   const dirty =
     name.trim() !== savedNameRef.current.trim() ||
@@ -294,6 +328,8 @@ export function BotSettings({
     if (memoryScope === saved[3]) setMemoryScope(next[3]);
     if (autoSpeak === saved[4]) setAutoSpeak(next[4]);
     if (voiceId === saved[5]) setVoiceId(next[5]);
+    if (modelMaxTokens === saved[6]) setModelMaxTokens(next[6]);
+    if (modelContextWindow === saved[7]) setModelContextWindow(next[7]);
     setSavedAdvanced(JSON.stringify(next));
     const nextCallbackUrl = bot.webhookCallbackUrl ?? "";
     if (webhookCallbackUrl === savedWebhookCallbackUrlRef.current) {
@@ -437,6 +473,18 @@ export function BotSettings({
                 : null,
             }
           : {}),
+        ...modelLimitPatch(
+          "modelMaxTokens",
+          modelMaxTokens,
+          bot.modelMaxTokens,
+          parseModelMaxTokens,
+        ),
+        ...modelLimitPatch(
+          "modelContextWindow",
+          modelContextWindow,
+          bot.modelContextWindow,
+          parseModelContextWindow,
+        ),
       };
       const requestedTools = patchOverrides?.disabledBuiltinTools;
       const baseTools = patchOverrides?.baseDisabledBuiltinTools ?? [];
@@ -489,7 +537,16 @@ export function BotSettings({
       setProxyUsername("");
       setProxyPassword("");
       setSavedAdvanced(
-        JSON.stringify([modelKey, thinkingLevel, computerMode, memoryScope, autoSpeak, voiceId]),
+        JSON.stringify([
+          modelKey,
+          thinkingLevel,
+          computerMode,
+          memoryScope,
+          autoSpeak,
+          voiceId,
+          modelMaxTokens,
+          modelContextWindow,
+        ]),
       );
     } catch (err) {
       if (
@@ -708,6 +765,42 @@ export function BotSettings({
                     </NativeSelect>
                   </label>
                 ) : null}
+                <label
+                  htmlFor={`${ids}-max-tokens`}
+                  className="flex min-h-11 items-center justify-between gap-3 text-sm text-foreground"
+                >
+                  <Trans>Maximum output tokens</Trans>
+                  <Input
+                    id={`${ids}-max-tokens`}
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={MAX_MODEL_MAX_TOKENS}
+                    step={1}
+                    value={modelMaxTokens}
+                    placeholder={effectiveCredential?.maxTokens?.toString()}
+                    onChange={(event) => setModelMaxTokens(event.target.value)}
+                    className="w-24 text-center"
+                  />
+                </label>
+                <label
+                  htmlFor={`${ids}-context-window`}
+                  className="flex min-h-11 items-center justify-between gap-3 text-sm text-foreground"
+                >
+                  <Trans>Context window</Trans>
+                  <Input
+                    id={`${ids}-context-window`}
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={MAX_MODEL_CONTEXT_WINDOW}
+                    step={1}
+                    value={modelContextWindow}
+                    placeholder={effectiveCredential?.contextWindow?.toString()}
+                    onChange={(event) => setModelContextWindow(event.target.value)}
+                    className="w-24 text-center"
+                  />
+                </label>
               </div>
             </div>
             <SettingsGroup label={t`Computer`} plain>

@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { ORPCError } from "@orpc/server";
-import { runContinueJob, runJobKey } from "@rakazo/adapter-kit";
 import type { AdapterContext, SecretStore } from "@rakazo/adapter-kit";
+import { runContinueJob, runJobKey } from "@rakazo/adapter-kit";
 import type { getBotSecretMetadata } from "@rakazo/adapters";
 import {
   archiveBot,
@@ -28,7 +28,7 @@ import type {
   SettingsScope,
   VaultPutInput,
 } from "@rakazo/contracts";
-import { BotSecretAuth, resolveBotAvatarSet } from "@rakazo/contracts";
+import { BotSecretAuth, modelOutputLeavesInputRoom, resolveBotAvatarSet } from "@rakazo/contracts";
 import { ACTIVE_RUN_STATUSES, displayName } from "@rakazo/core";
 import type { Prisma } from "@rakazo/db";
 import {
@@ -338,6 +338,8 @@ export function botsRoutes(ctx: RouterContext) {
             modelProvider: source.modelProvider,
             modelId: source.modelId,
             thinkingLevel: source.thinkingLevel,
+            modelMaxTokens: source.modelMaxTokens,
+            modelContextWindow: source.modelContextWindow,
             disabledBuiltinTools: source.disabledBuiltinTools,
           })
           .catch((error: unknown) => {
@@ -391,6 +393,20 @@ export function botsRoutes(ctx: RouterContext) {
           current: { provider: existing.modelProvider, model: existing.modelId },
         });
         if (!modelChange.ok) throw new ORPCError("BAD_REQUEST", { message: modelChange.error });
+        if (input.modelMaxTokens !== undefined || input.modelContextWindow !== undefined) {
+          // A partial update is checked against the stored value it keeps.
+          const maxTokens =
+            input.modelMaxTokens !== undefined ? input.modelMaxTokens : existing.modelMaxTokens;
+          const contextWindow =
+            input.modelContextWindow !== undefined
+              ? input.modelContextWindow
+              : existing.modelContextWindow;
+          if (!modelOutputLeavesInputRoom(maxTokens, contextWindow ?? undefined)) {
+            throw new ORPCError("BAD_REQUEST", {
+              message: "Maximum output tokens must be less than the context window",
+            });
+          }
+        }
         const thinkingLevel = input.thinkingLevel;
         const browserProxyUpdate = await resolveBrowserProxyUpdate(input.browserProxy, {
           secrets: deps.secrets,
@@ -429,6 +445,10 @@ export function botsRoutes(ctx: RouterContext) {
               ? { modelProvider: input.modelProvider, modelId: input.modelId ?? null }
               : {}),
             ...(input.thinkingLevel !== undefined ? { thinkingLevel } : {}),
+            ...(input.modelMaxTokens !== undefined ? { modelMaxTokens: input.modelMaxTokens } : {}),
+            ...(input.modelContextWindow !== undefined
+              ? { modelContextWindow: input.modelContextWindow }
+              : {}),
             ...(input.teamChatAmbientEnabled !== undefined
               ? { teamChatAmbientEnabled: input.teamChatAmbientEnabled }
               : {}),

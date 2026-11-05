@@ -161,6 +161,8 @@ async function* spaceRecords(
       modelProvider: bot.modelProvider,
       modelId: bot.modelId,
       thinkingLevel: bot.thinkingLevel,
+      modelMaxTokens: bot.modelMaxTokens,
+      modelContextWindow: bot.modelContextWindow,
       disabledBuiltinTools: bot.disabledBuiltinTools,
       teamChatAmbientEnabled: bot.teamChatAmbientEnabled,
       teamChatRules: bot.teamChatRules,

@@ -291,6 +291,31 @@ describe("contracts", () => {
     ).toBe(true);
   });
 
+  it("accepts per-bot model limits and keeps output below the window", () => {
+    expect(
+      UpdateBotInput.parse({
+        botId: "bot-1",
+        modelMaxTokens: 16_384,
+        modelContextWindow: 131_072,
+      }),
+    ).toMatchObject({ modelMaxTokens: 16_384, modelContextWindow: 131_072 });
+    expect(
+      UpdateBotInput.safeParse({
+        botId: "bot-1",
+        modelMaxTokens: null,
+        modelContextWindow: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      UpdateBotInput.safeParse({
+        botId: "bot-1",
+        modelMaxTokens: 131_072,
+        modelContextWindow: 131_072,
+      }).success,
+    ).toBe(false);
+    expect(UpdateBotInput.safeParse({ botId: "bot-1", modelMaxTokens: 0 }).success).toBe(false);
+  });
+
   it("normalizes group names and rejects duplicate members", () => {
     expect(CreateGroupInput.parse({ name: "  Draft team  ", botIds: ["bot-1", "bot-2"] })).toEqual({
       name: "Draft team",

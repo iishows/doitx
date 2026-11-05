@@ -527,7 +527,13 @@ export async function resolveRunModel(
           userId: scope.userId,
           spaceId: scope.spaceId,
         },
-        select: { modelProvider: true, modelId: true, thinkingLevel: true },
+        select: {
+          modelProvider: true,
+          modelId: true,
+          thinkingLevel: true,
+          modelMaxTokens: true,
+          modelContextWindow: true,
+        },
       })
     : null;
   const hasOverride = Boolean(override?.modelProvider && override.modelId);
@@ -566,6 +572,9 @@ export async function resolveRunModel(
     id ??= runtimeFallback?.id ?? null;
   }
   if (!provider || !id) throw new Error(MISSING_MODEL_RUN_ERROR);
+  // A bot's limits describe the model it names; a fallback keeps its own connection's.
+  const botLimitsApply =
+    hasOverride && override!.modelProvider === provider && override!.modelId === id;
   // The key is resolved for the provider that won above, not before it is known.
   const resolved = await resolveModelKey(
     deps,
@@ -585,10 +594,15 @@ export async function resolveRunModel(
     headers: resolved.headers,
     allowPrivateEndpoint: resolved.allowPrivateEndpoint,
     cacheCapabilities: resolved.cacheCapabilities,
-    contextWindow: resolved.contextWindow,
+    // The bot's own limits win on its own model; otherwise the connection's stand.
+    contextWindow: botLimitsApply
+      ? (override?.modelContextWindow ?? resolved.contextWindow)
+      : resolved.contextWindow,
 
     reasoning: resolved.reasoning,
-    maxTokens: resolved.maxTokens,
+    maxTokens: botLimitsApply
+      ? (override?.modelMaxTokens ?? resolved.maxTokens)
+      : resolved.maxTokens,
     acceptsImages: resolved.acceptsImages,
     maxImagesPerPrompt: resolved.maxImagesPerPrompt,
     thinkingLevel: thinkingLevel ?? resolved.thinkingLevel ?? null,

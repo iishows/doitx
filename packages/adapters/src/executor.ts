@@ -884,6 +884,12 @@ export function createRunExecutor(deps: ExecutorDeps) {
           resolved,
         } = start;
         runSecrets.push(...resolved.redact);
+        // A bot's limits describe the model it names. A backup, a routine's pin, or the
+        // space default runs a different model and keeps that connection's own values.
+        const botLimitsApply =
+          Boolean(bot.modelProvider && bot.modelId) &&
+          bot.modelProvider === runModelProvider &&
+          bot.modelId === runModelId;
         // A pin stays as it was created. Unpinned runs still record the model they
         // used; modelPinned is what keeps that record from becoming the next choice.
         if (!run.modelPinned) {
@@ -1554,10 +1560,15 @@ export function createRunExecutor(deps: ExecutorDeps) {
                 headers: resolved.headers,
                 allowPrivateEndpoint: resolved.allowPrivateEndpoint,
                 cacheCapabilities: resolved.cacheCapabilities,
-                contextWindow: resolved.contextWindow,
+                // The bot's own limits win on its own model; otherwise the connection's stand.
+                contextWindow: botLimitsApply
+                  ? (bot.modelContextWindow ?? resolved.contextWindow)
+                  : resolved.contextWindow,
 
                 reasoning: resolved.reasoning,
-                maxTokens: resolved.maxTokens,
+                maxTokens: botLimitsApply
+                  ? (bot.modelMaxTokens ?? resolved.maxTokens)
+                  : resolved.maxTokens,
                 acceptsImages: resolved.acceptsImages,
                 maxImagesPerPrompt: resolved.maxImagesPerPrompt,
                 thinkingLevel: thinkingLevel ?? resolved.thinkingLevel ?? null,

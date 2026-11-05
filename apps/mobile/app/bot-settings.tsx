@@ -5,6 +5,8 @@ import {
   BOT_DESCRIPTION_MAX_LENGTH,
   BOT_INSTRUCTIONS_MAX_LENGTH,
   BOT_NAME_MAX_LENGTH,
+  parseModelContextWindow,
+  parseModelMaxTokens,
   resolveBotAvatarSet,
 } from "@rakazo/contracts";
 import {
@@ -85,6 +87,9 @@ export default function BotSettingsScreen() {
   const [advancedOpen, setAdvancedOpen] = useState(focus === "model" || pickedModel !== undefined);
   const [modelKey, setModelKey] = useState("");
   const [thinkingLevel, setThinkingLevel] = useState("");
+  // Empty means "inherit the connection's value".
+  const [modelMaxTokens, setModelMaxTokens] = useState("");
+  const [modelContextWindow, setModelContextWindow] = useState("");
   const [notifyOnFinish, setNotifyOnFinish] = useState(true);
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [crossSpaceCommunication, setCrossSpaceCommunication] = useState(false);
@@ -172,6 +177,10 @@ export default function BotSettingsScreen() {
             : "",
         );
         setThinkingLevel(next.thinkingLevel ?? "");
+        setModelMaxTokens(next.modelMaxTokens == null ? "" : String(next.modelMaxTokens));
+        setModelContextWindow(
+          next.modelContextWindow == null ? "" : String(next.modelContextWindow),
+        );
         setAutoSpeak(next.autoSpeak);
         setNotifyOnFinish(next.notifyOnFinish ?? true);
         setCrossSpaceCommunication(next.crossSpaceCommunication ?? false);
@@ -367,6 +376,8 @@ export default function BotSettingsScreen() {
         modelProvider?: string | null;
         modelId?: string | null;
         thinkingLevel?: ThinkingLevel | null;
+        modelMaxTokens?: number | null;
+        modelContextWindow?: number | null;
         autoSpeak?: boolean;
       } = { botId };
       if (profile.description !== (bot.description ?? "")) {
@@ -390,6 +401,19 @@ export default function BotSettingsScreen() {
         input.thinkingLevel = thinkingOptions.length
           ? ((thinkingLevel || null) as ThinkingLevel | null)
           : null;
+      }
+      // Clearing a limit inherits the connection's value; invalid text is not saved.
+      const maxTokensText = modelMaxTokens.trim();
+      if (maxTokensText !== (bot.modelMaxTokens == null ? "" : String(bot.modelMaxTokens))) {
+        const parsed = maxTokensText ? parseModelMaxTokens(maxTokensText) : null;
+        if (parsed !== undefined) input.modelMaxTokens = parsed;
+      }
+      const contextWindowText = modelContextWindow.trim();
+      if (
+        contextWindowText !== (bot.modelContextWindow == null ? "" : String(bot.modelContextWindow))
+      ) {
+        const parsed = contextWindowText ? parseModelContextWindow(contextWindowText) : null;
+        if (parsed !== undefined) input.modelContextWindow = parsed;
       }
       if (autoSpeak !== bot.autoSpeak) input.autoSpeak = autoSpeak;
       if (computerMode !== bot.computerMode) {
@@ -606,6 +630,34 @@ export default function BotSettingsScreen() {
                   value={thinkingLevel}
                 />
               ) : null}
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { color: tokens.foreground }]}>
+                  {t("Maximum output tokens")}
+                </Text>
+                <TextInput
+                  accessibilityLabel={t("Maximum output tokens")}
+                  keyboardType="number-pad"
+                  value={modelMaxTokens}
+                  placeholder={effectiveCredential?.maxTokens?.toString()}
+                  placeholderTextColor={tokens.mutedForeground}
+                  onChangeText={setModelMaxTokens}
+                  style={[styles.rowValueInput, { color: tokens.foreground }]}
+                />
+              </View>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { color: tokens.foreground }]}>
+                  {t("Context window")}
+                </Text>
+                <TextInput
+                  accessibilityLabel={t("Context window")}
+                  keyboardType="number-pad"
+                  value={modelContextWindow}
+                  placeholder={effectiveCredential?.contextWindow?.toString()}
+                  placeholderTextColor={tokens.mutedForeground}
+                  onChangeText={setModelContextWindow}
+                  style={[styles.rowValueInput, { color: tokens.foreground }]}
+                />
+              </View>
             </SettingsGroup>
             {modelMetaError ? (
               <Text style={{ color: tokens.mutedForeground, marginTop: 12, fontSize: 13 }}>
@@ -980,6 +1032,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   rowLabel: { fontSize: 14, flex: 1 },
+  rowValueInput: { minWidth: 96, minHeight: 44, textAlign: "right", fontSize: 14 },
   voiceTrigger: {
     minHeight: 44,
     flexDirection: "row",

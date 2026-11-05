@@ -630,6 +630,9 @@ model Bot {
   modelProvider     String?
   modelId           String?
   thinkingLevel     String?
+  // Per-bot model limits; null inherits the connection's value.
+  modelMaxTokens     Int?
+  modelContextWindow Int?
   disabledBuiltinTools String[] @default([])
   webhookSecretId   String?
   // Optional callback receiving the bot's reply after a webhook-triggered run.

@@ -3404,6 +3404,43 @@ description: Prepare standup notes
     },
   );
 
+  it("lets a bot's own model limits override the connection's", async () => {
+    const plaintext = serializeModelSecret({
+      kind: "openai_compatible",
+      baseUrl: COMPATIBLE_BASE_URL,
+      apiKey: "fake-api-key",
+      enabledModelIds: ["space-model"],
+      maxTokens: 8_192,
+      contextWindow: 65_536,
+    });
+    const scope = { userId: "user-1", spaceId: "ws-1" };
+    const withBot = (bot: Record<string, unknown>) =>
+      compatibleExecutor(
+        {
+          ...compatiblePrismaParts("space-model", plaintext),
+          bot: { findFirst: vi.fn(async () => bot) },
+        },
+        plaintext,
+      );
+    const bot = {
+      modelProvider: COMPATIBLE_PROVIDER,
+      modelId: "space-model",
+      thinkingLevel: null,
+    };
+    await expect(
+      withBot({ ...bot, modelMaxTokens: 32_768, modelContextWindow: 200_000 }).resolveModel({
+        ...scope,
+        botId: "bot-1",
+      }),
+    ).resolves.toMatchObject({ maxTokens: 32_768, contextWindow: 200_000 });
+    await expect(
+      withBot({ ...bot, modelMaxTokens: null, modelContextWindow: null }).resolveModel({
+        ...scope,
+        botId: "bot-1",
+      }),
+    ).resolves.toMatchObject({ maxTokens: 8_192, contextWindow: 65_536 });
+  });
+
   describe("private model endpoints at run time", () => {
     const scope = { userId: "user-1", spaceId: "ws-1" };
     const plaintext = compatibleSecret(["space-model"]);

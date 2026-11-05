@@ -24,6 +24,16 @@ import { RoutineWatchSchema, RoutineWatchStateSchema } from "./routine-watch.js"
 import { RunTriggerSchema } from "./runs.js";
 import { SettingsScopeSchema } from "./settings-scope.js";
 
+/** Default maximum number of completion tokens for an OpenAI-compatible connection. */
+export const DEFAULT_MODEL_MAX_TOKENS = 4_096;
+
+export const MAX_MODEL_MAX_TOKENS = 131_072;
+
+/** Fallback context window for OpenAI-compatible connections that do not report a size (e.g. Ollama, LM Studio, vLLM). */
+export const DEFAULT_MODEL_CONTEXT_WINDOW = 262_144;
+
+export const MAX_MODEL_CONTEXT_WINDOW = 2_147_483_647;
+
 export const ComputerModeSchema = z.enum(["team", "dedicated"]);
 export type ComputerMode = z.infer<typeof ComputerModeSchema>;
 
@@ -119,6 +129,16 @@ export const BotSchema = z.object({
   modelProvider: z.string().nullable(),
   modelId: z.string().nullable(),
   thinkingLevel: ThinkingLevelSchema.nullable(),
+  /** Overrides the connection's output limit for this bot; null inherits it. */
+  modelMaxTokens: z.number().int().min(1).max(MAX_MODEL_MAX_TOKENS).nullable().default(null),
+  /** Overrides the connection's context window for this bot; null inherits it. */
+  modelContextWindow: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_MODEL_CONTEXT_WINDOW)
+    .nullable()
+    .default(null),
   teamChatAmbientEnabled: z.boolean(),
   teamChatRules: z.string(),
   crossSpaceCommunication: z.boolean().optional(),
@@ -482,6 +502,10 @@ export const UpdateBotInput = z
     modelProvider: z.string().trim().min(1).max(80).nullable().optional(),
     modelId: z.string().trim().min(1).max(200).nullable().optional(),
     thinkingLevel: ThinkingLevelSchema.nullable().optional(),
+    /** Null inherits the connection's output limit. */
+    modelMaxTokens: z.number().int().min(1).max(MAX_MODEL_MAX_TOKENS).nullable().optional(),
+    /** Null inherits the connection's context window. */
+    modelContextWindow: z.number().int().min(1).max(MAX_MODEL_CONTEXT_WINDOW).nullable().optional(),
     teamChatAmbientEnabled: z.boolean().optional(),
     teamChatRules: z.string().max(TEAM_CHAT_RULES_MAX_LENGTH).optional(),
     crossSpaceCommunication: z.boolean().optional(),
@@ -521,6 +545,17 @@ export const UpdateBotInput = z
           path: ["webhookCallbackUrl"],
         });
       }
+    }
+    if (
+      value.modelMaxTokens != null &&
+      value.modelContextWindow != null &&
+      !modelOutputLeavesInputRoom(value.modelMaxTokens, value.modelContextWindow)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Maximum output tokens must be less than the context window",
+        path: ["modelMaxTokens"],
+      });
     }
     const providerProvided = value.modelProvider !== undefined;
     const modelProvided = value.modelId !== undefined;
@@ -1397,15 +1432,6 @@ export const ThreadSnapshotSchema = z.object({
 });
 export type ThreadSnapshot = z.infer<typeof ThreadSnapshotSchema>;
 
-/** Default maximum number of completion tokens for an OpenAI-compatible connection. */
-export const DEFAULT_MODEL_MAX_TOKENS = 4_096;
-
-export const MAX_MODEL_MAX_TOKENS = 131_072;
-
-/** Fallback context window for OpenAI-compatible connections that do not report a size (e.g. Ollama, LM Studio, vLLM). */
-export const DEFAULT_MODEL_CONTEXT_WINDOW = 262_144;
-
-export const MAX_MODEL_CONTEXT_WINDOW = 2_147_483_647;
 export function parseModelMaxImagesPerPrompt(
   value: string,
   supportsImages = true,
