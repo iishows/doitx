@@ -22,6 +22,7 @@ import {
   assertAllowedOpenAiCompatibleRequestUrl,
   assertAllowedOpenAiCompatibleUrl,
   assertHttpsForKeyedOpenAiCompatibleUrl,
+  isPinnedLocalProbeOrigin,
   isPrivateOpenAiCompatibleHostname,
   normalizeOpenAiCompatibleBaseUrl,
   OPENAI_COMPATIBLE_PROVIDER_ID,
@@ -131,11 +132,14 @@ function openAiCompatibleProvider(
 export function createOpenAiCompatibleLookup(
   url: URL,
   resolve: ResolveHostname = resolveHostname,
-  opts?: { allowPrivate?: boolean },
+  opts?: { allowPrivate?: boolean; allowPinnedLocalOrigin?: boolean },
 ): LookupFunction {
   const hostname = url.hostname.replace(/^\[|\]$/g, "");
   const privateHostname = isPrivateOpenAiCompatibleHostname(hostname);
-  if (privateHostname && opts?.allowPrivate !== true) {
+  // The catalog pins one origin for the deployment's own local server. `host.docker.internal`
+  // is a hostname, so it reaches the address check while still naming this machine.
+  const pinnedLocalOrigin = opts?.allowPinnedLocalOrigin === true && isPinnedLocalProbeOrigin(url);
+  if (privateHostname && opts?.allowPrivate !== true && !pinnedLocalOrigin) {
     throw new Error(PRIVATE_MODEL_ENDPOINT_MESSAGE);
   }
   return createAddressCheckedLookup(resolve, (addresses) => {

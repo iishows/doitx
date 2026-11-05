@@ -319,6 +319,20 @@ describe("private model endpoints", () => {
       createOpenAiCompatibleLookup(new URL("http://localhost:8000/v1"), resolve, OWNER),
     ).not.toThrow();
   });
+
+  it("lets the pinned local origin resolve without the owner gate", () => {
+    const resolve = async () => [{ address: "192.168.65.254", family: 4 }];
+    expect(() =>
+      createOpenAiCompatibleLookup(new URL("http://host.docker.internal:3456/v1"), resolve, {
+        allowPinnedLocalOrigin: true,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      createOpenAiCompatibleLookup(new URL("http://host.docker.internal:3456/v1"), resolve, {
+        allowPinnedLocalOrigin: false,
+      }),
+    ).toThrow(PRIVATE_MODEL_ENDPOINT_MESSAGE);
+  });
 });
 
 describe("openai-compatible provider", () => {
