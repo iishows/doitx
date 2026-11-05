@@ -3402,6 +3402,7 @@ describe("computer screen url", () => {
   const callScreenUrl = async (
     connectScreen: () => Promise<unknown>,
     updateMany = vi.fn().mockResolvedValue({ count: 1 }),
+    proxyBot: Record<string, unknown> | null = null,
   ) => {
     const endRun = vi.fn().mockResolvedValue({ count: 1 });
     const prisma = {
@@ -3412,6 +3413,8 @@ describe("computer screen url", () => {
           thread: { id: "thread-1" },
           computer: computerRow,
         }),
+        // The screen context reads the bot's browser proxy separately.
+        findUnique: vi.fn().mockResolvedValue(proxyBot),
       },
       computer: { updateMany },
       computerRun: { updateMany: endRun },
@@ -3419,6 +3422,7 @@ describe("computer screen url", () => {
     } as unknown as PrismaClient;
     const deps = {
       prisma,
+      secrets: { load: vi.fn().mockResolvedValue("user:secret") },
       sandbox: { connectScreen },
       jobs: { enqueue: vi.fn().mockResolvedValue(undefined) },
       env: {
@@ -3516,6 +3520,29 @@ describe("computer screen url", () => {
     });
     expect(updateMany).not.toHaveBeenCalled();
   });
+
+  it("hands the bot's browser proxy to the screen setup", async () => {
+    const connectScreen = vi.fn(async () => ({
+      url: "https://screen.example/vnc.html?token=fake-token",
+    }));
+    await callScreenUrl(connectScreen, vi.fn().mockResolvedValue({ count: 1 }), {
+      id: "bot-1",
+      browserProxyEnabled: true,
+      browserProxyUrl: "socks5://proxy.example:1080",
+      browserProxyCiphertext: "fixture-ciphertext",
+    });
+    expect(connectScreen).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        browserProxy: {
+          url: "socks5://proxy.example:1080",
+          username: "user",
+          password: "secret",
+        },
+      }),
+    );
+  });
 });
 
 describe("computer terminal and file transfer", () => {
@@ -3566,12 +3593,15 @@ describe("computer terminal and file transfer", () => {
             ...computer,
           },
         }),
+        // The screen context reads the bot's browser proxy separately.
+        findUnique: vi.fn().mockResolvedValue(null),
       },
       computer: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
       computerExecutionLease: { findUnique: vi.fn().mockResolvedValue(null) },
     } as unknown as PrismaClient;
     const deps = {
       prisma,
+      secrets: { load: vi.fn() },
       sandbox,
       jobs: { enqueue: vi.fn().mockResolvedValue(undefined) },
       env: {

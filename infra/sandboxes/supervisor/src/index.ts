@@ -64,14 +64,15 @@ import type { ScreenAssignment } from "./supervisor-logic.js";
 import {
   assertRequestIdentity,
   attemptComputerControl,
+  type BrowserProxySpec,
   browserProfilePathForScreen,
+  browserProxyFingerprint,
+  browserProxySchema,
   ComputerControlUnavailableError,
   clearComputerScreenRegistry,
   completeWarmReleasedScreen,
-  browserProxySchema,
   computerActionSchema,
   computerCommandEnv,
-  type BrowserProxySpec,
   computerControlTimeoutMs,
   containerActionSteps,
   controlHandlesActions,
@@ -543,6 +544,7 @@ app.post("/computers/:id/browser", async (c) => {
   // Read eagerly so the Node HTTP adapter observes disconnects during screen setup too.
   const signal = c.req.raw.signal;
   signal.throwIfAborted();
+  const payload = await c.req.json();
   const body = z
     .discriminatedUnion("command", [
       z.object({
@@ -605,7 +607,9 @@ app.post("/computers/:id/browser", async (c) => {
           .max(24),
       }),
     ])
-    .parse(await c.req.json());
+    .parse(payload);
+  // The API knows the bot's proxy; the page helper itself never needs it.
+  const browserProxy = browserProxySchema.nullable().optional().parse(payload?.browserProxy);
   const carriesSavedLogin =
     body.command === "act" && body.actions.some((step) => "origin" in step && step.origin);
   const screen = (reuseRecent: boolean) =>
@@ -617,6 +621,7 @@ app.post("/computers/:id/browser", async (c) => {
       c.req.header("x-rakazo-screen-lease-id"),
       true,
       reuseRecent,
+      browserProxy,
     );
   const runHelper = ({ container, layout }: Awaited<ReturnType<typeof screen>>) =>
     runContainerCommand(
@@ -681,6 +686,10 @@ app.post("/computers/:id/browser", async (c) => {
 });
 
 app.post("/computers/:id/observe", async (c) => {
+  // Older callers send no body; the setup then keeps the launcher it already has.
+  const body = z
+    .object({ browserProxy: browserProxySchema.nullable().optional() })
+    .parse(await c.req.json().catch(() => ({})));
   try {
     const { container, info, layout, browserProfile } = await managedScreen(
       c.req.param("id"),
@@ -688,6 +697,9 @@ app.post("/computers/:id/observe", async (c) => {
       c.req.header("x-rakazo-space-id"),
       c.req.header("x-rakazo-screen-id"),
       c.req.header("x-rakazo-screen-lease-id"),
+      true,
+      false,
+      body.browserProxy,
     );
     const control = computerControlEndpoint(info);
     const observation = await preferComputerControl(
@@ -720,7 +732,7 @@ app.post("/computers/:id/actions", async (c) => {
       actions: z.array(computerActionSchema).max(24),
       observe: z.boolean().optional(),
       settleMs: z.number().min(0).max(5_000).optional(),
-      browserProxy: browserProxySchema.optional(),
+      browserProxy: browserProxySchema.nullable().optional(),
     })
     .parse(await c.req.json());
   try {
@@ -730,6 +742,9 @@ app.post("/computers/:id/actions", async (c) => {
       c.req.header("x-rakazo-space-id"),
       c.req.header("x-rakazo-screen-id"),
       c.req.header("x-rakazo-screen-lease-id"),
+      true,
+      false,
+      body.browserProxy,
     );
     const endpoint = computerControlEndpoint(info);
     const control =
@@ -744,7 +759,7 @@ app.post("/computers/:id/actions", async (c) => {
               browserProfile,
               body.observe !== false,
               body.settleMs ?? 0,
-              body.browserProxy,
+              body.browserProxy ?? undefined,
             )
         : undefined,
     );
@@ -756,7 +771,7 @@ app.post("/computers/:id/actions", async (c) => {
         body.actions,
         layout.display,
         browserProfile,
-        body.browserProxy,
+        body.browserProxy ?? undefined,
       );
     if (shouldReplayComputerActions(attempt) && body.settleMs)
       await new Promise((resolve) => setTimeout(resolve, body.settleMs));
@@ -886,6 +901,7 @@ app.post("/computers/:id/screen-mode", async (c) => {
         .regex(/^[A-Za-z0-9_-]{1,128}$/)
         .optional(),
       revokeControl: z.boolean().optional(),
+      browserProxy: browserProxySchema.nullable().optional(),
     })
     .refine((value) => !value.interactive || value.controlToken, {
       message: "interactive screen requires a control token",
@@ -906,6 +922,7 @@ app.post("/computers/:id/screen-mode", async (c) => {
         screenId,
         screenLeaseId,
         !body.interactive && body.revokeControl === false,
+        body.browserProxy,
       );
       if (body.interactive || body.revokeControl !== false) {
         const changed = await setInteractiveScreen(
@@ -946,6 +963,7 @@ app.post("/computers/:id/terminal", async (c) => {
     .object({
       controlToken: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
       cwd: z.string().max(4096).default(""),
+      browserProxy: browserProxySchema.nullable().optional(),
     })
     .parse(await c.req.json());
   try {
@@ -966,6 +984,7 @@ app.post("/computers/:id/terminal", async (c) => {
         c.req.header("x-rakazo-screen-id"),
         c.req.header("x-rakazo-screen-lease-id"),
         false,
+        body.browserProxy,
       );
       const result = await runContainerCommand(
         container,
@@ -1008,6 +1027,7 @@ app.post("/computers/:id/input", async (c) => {
         text: z.string().optional(),
       }),
       leaseId: z.string().optional(),
+      browserProxy: browserProxySchema.nullable().optional(),
     })
     .parse(await c.req.json());
   const input = toSandboxInput(body.input);
@@ -1018,6 +1038,9 @@ app.post("/computers/:id/input", async (c) => {
       c.req.header("x-rakazo-space-id"),
       c.req.header("x-rakazo-screen-id"),
       c.req.header("x-rakazo-screen-lease-id"),
+      true,
+      false,
+      body.browserProxy,
     );
     const result = await runContainerCommand(container, [
       "env",
@@ -1388,11 +1411,19 @@ async function managedScreen(
   screenLeaseId: string | undefined,
   restoreControl = true,
   reuseRecent = false,
+  browserProxy?: BrowserProxySpec | null,
 ) {
   const { container } = await managedContainer(id, botId, spaceId);
   return withComputerScreenLock(id, async () => {
     if (reuseRecent) {
-      const recent = await recentManagedScreen(id, container, botId, screenId, screenLeaseId);
+      const recent = await recentManagedScreen(
+        id,
+        container,
+        botId,
+        screenId,
+        screenLeaseId,
+        browserProxy,
+      );
       if (recent) return recent;
     }
     const screen = await ensureManagedScreen(
@@ -1402,6 +1433,7 @@ async function managedScreen(
       screenId,
       screenLeaseId,
       restoreControl,
+      browserProxy,
     );
     return { ...screen, reused: false };
   });
@@ -1414,6 +1446,7 @@ async function recentManagedScreen(
   botId: string | undefined,
   screenId: string | undefined,
   screenLeaseId: string | undefined,
+  browserProxy?: BrowserProxySpec | null,
 ) {
   const info = await container.inspect();
   const startedAt = info.State?.StartedAt;
@@ -1422,6 +1455,9 @@ async function recentManagedScreen(
   const slot = assigned?.get(screenKey);
   if (!assigned || !startedAt || computerScreenBoots.get(id) !== startedAt) return undefined;
   if (!slot?.viewToken || !screenRecentlyEnsured(slot, Date.now())) return undefined;
+  // A changed proxy needs a relaunch, so a screen set up with another one is not reusable.
+  if (browserProxy !== undefined && slot.browserProxy !== browserProxyFingerprint(browserProxy))
+    return undefined;
   // Still fence the lease: an older execution must not drive this screen.
   const index = nextScreenIndex(assigned, screenKey, screenLeaseId, teamScreenLimit);
   return {
@@ -1443,6 +1479,7 @@ async function ensureManagedScreen(
   screenId: string | undefined,
   screenLeaseId: string | undefined,
   restoreControl = true,
+  browserProxy?: BrowserProxySpec | null,
 ) {
   // Docker can restart independently of the supervisor's screen lock.
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -1453,6 +1490,7 @@ async function ensureManagedScreen(
       screenId,
       screenLeaseId,
       restoreControl,
+      browserProxy,
     );
     const info = await container.inspect();
     if (info.State?.StartedAt === screen.info.State?.StartedAt) {
@@ -1460,6 +1498,8 @@ async function ensureManagedScreen(
       if (info.State?.StartedAt) computerScreenBoots.set(id, info.State.StartedAt);
       const slot = computerScreens.get(id)?.get(screen.screenKey);
       if (slot) slot.ensuredAt = Date.now();
+      if (slot && browserProxy !== undefined)
+        slot.browserProxy = browserProxyFingerprint(browserProxy);
       try {
         await rejoinComputerNetwork(info);
       } catch (error) {
@@ -1479,6 +1519,7 @@ async function ensureManagedScreenAttempt(
   screenId: string | undefined,
   screenLeaseId: string | undefined,
   restoreControl = true,
+  browserProxy?: BrowserProxySpec | null,
 ) {
   // Callers hold the screen lock: an inspection before waiting can describe an older boot.
   const info = await container.inspect();
@@ -1531,7 +1572,7 @@ async function ensureManagedScreenAttempt(
   const ensured = await runContainerCommand(container, [
     "bash",
     "-c",
-    ensureScreenCommand(index, screenKey, viewToken),
+    ensureScreenCommand(index, screenKey, viewToken, undefined, browserProxy),
   ]);
   if (ensured.code !== 0) {
     const browserLog = await runContainerCommand(container, [

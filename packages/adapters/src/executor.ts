@@ -563,6 +563,7 @@ export function createRunExecutor(deps: ExecutorDeps) {
           runId,
           screenLeaseId: screenLeaseIdForRun(computerLease, runId, fence),
           signal: runAbortController.signal,
+          browserProxyResolved: true,
           ...(browserProxy ? { browserProxy } : {}),
           ...connectedContext(connectedPlugins),
           connectedProviders: connectedComposio.map((row) => row.provider),

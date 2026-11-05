@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ORPCError } from "@orpc/server";
-import type { AdapterContext, SandboxProvider } from "@rakazo/adapter-kit";
+import type { AdapterContext, SandboxProvider, SecretStore } from "@rakazo/adapter-kit";
 import { computerControlExpireJobKey } from "@rakazo/adapter-kit";
 import type { ComputerExecutionLease } from "@rakazo/adapters";
 import {
@@ -21,6 +21,7 @@ import {
   hasActiveComputerControl,
   isComputerScreenUnavailable,
   isSandboxGoneError,
+  loadBotBrowserProxy,
   provisionComputer,
   queueComputerUpdate,
   releaseComputerExecutionLease,
@@ -731,6 +732,7 @@ export function computerRoutes(ctx: RouterContext) {
             },
             await computerScreenContext(
               deps.prisma,
+              deps.secrets,
               context.actor,
               computer.id,
               bot.id,
@@ -780,7 +782,14 @@ export function computerRoutes(ctx: RouterContext) {
                   ? (computer.controlLeaseId ?? undefined)
                   : undefined,
             },
-            await computerScreenContext(deps.prisma, context.actor, computer.id, bot.id, "screen"),
+            await computerScreenContext(
+              deps.prisma,
+              deps.secrets,
+              context.actor,
+              computer.id,
+              bot.id,
+              "screen",
+            ),
           )
           .catch(async (error: unknown) => {
             if (isComputerScreenUnavailable(error)) {
@@ -1127,12 +1136,29 @@ async function bindWaitingTakeoverToControl(
 
 async function computerScreenContext(
   prisma: PrismaClient,
+  secrets: Pick<SecretStore, "load">,
   actor: Actor,
   computerId: string,
   botId: string,
   operationId: string,
 ): Promise<AdapterContext> {
-  const context = computerContext(actor, botId, operationId);
+  const base = computerContext(actor, botId, operationId);
+  // The screen setup starts the bot's browser, so its proxy has to travel with the
+  // request or the browser would come up on the direct connection.
+  const bot = await prisma.bot.findUnique({
+    where: { id: botId },
+    select: {
+      id: true,
+      browserProxyEnabled: true,
+      browserProxyUrl: true,
+      browserProxyCiphertext: true,
+    },
+  });
+  const browserProxy = bot ? await loadBotBrowserProxy(secrets, bot) : undefined;
+  // Only a row that was actually read can say the bot has no proxy.
+  const context = bot
+    ? { ...base, browserProxyResolved: true, ...(browserProxy ? { browserProxy } : {}) }
+    : base;
   const lease = await prisma.computerExecutionLease.findUnique({
     where: { computerId_botId: { computerId, botId } },
     select: { runId: true, fence: true, expiresAt: true },

@@ -106,7 +106,7 @@ describe("Docker sandbox", () => {
     });
   });
 
-  it("sends the bot's browser proxy with computer actions only when one is set", async () => {
+  it("sends the bot's browser proxy with computer actions, or null when it has none", async () => {
     const fetchMock = vi.fn(
       async (_input: string | URL | Request, _init?: RequestInit) =>
         Response.json({ completed: 1 }),
@@ -128,11 +128,53 @@ describe("Docker sandbox", () => {
       browserProxy: { url: "socks5://proxy.example:1080", username: "u", password: "p" },
     });
 
-    // Without a proxy the field is absent, so a bot with none is unaffected.
+    // A bot that turned its proxy off clears the one the browser was launched with.
+    await provider.act(
+      computer,
+      { actions: [{ kind: "open", path: "https://example.com" }] },
+      { ...context, browserProxyResolved: true },
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({
+      browserProxy: null,
+    });
+
+    // A caller that never looked one up leaves the field off and keeps the current one.
     await provider.act(computer, { actions: [{ kind: "open", path: "https://example.com" }] }, context);
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).not.toHaveProperty(
+    expect(JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body))).not.toHaveProperty(
       "browserProxy",
     );
+  });
+
+  it("carries the bot's proxy on observe and input, which can start the screen", async () => {
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) =>
+      String(url).endsWith("/observe")
+        ? Response.json({ image: "", mimeType: "image/png", width: 1, height: 1 })
+        : Response.json({ ok: true }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new DockerSandboxProvider("http://supervisor.test", "test-token");
+    const computer = {
+      id: "computer",
+      botId: "bot",
+      kind: "docker" as const,
+      providerRef: "computer",
+    };
+    const proxied = {
+      ...context,
+      browserProxy: { url: "socks5://proxy.example:1080", username: "u", password: "p" },
+    };
+    await provider.observe(computer, proxied);
+    await provider.sendInput(
+      computer,
+      { kind: "key", key: "a" },
+      { leaseId: "lease-1", holder: "user", fence: 1 },
+      proxied,
+    );
+    for (const call of fetchMock.mock.calls) {
+      expect(JSON.parse(String(call[1]?.body))).toMatchObject({
+        browserProxy: { url: "socks5://proxy.example:1080", username: "u", password: "p" },
+      });
+    }
   });
 
   it("yields stdout from a streaming exec before the command exits", async () => {
@@ -605,6 +647,7 @@ describe("Docker page browser", () => {
       expect.objectContaining({
         redirect: "error",
         signal: context.signal,
+        // This context never resolved a proxy, so the setup keeps the current one.
         body: JSON.stringify({ command: "snapshot" }),
         headers: expect.objectContaining({
           "x-rakazo-bot-id": "team-home",
@@ -612,6 +655,26 @@ describe("Docker page browser", () => {
         }),
       }),
     );
+  });
+
+  it("carries the bot's proxy into the screen the page browser needs", async () => {
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      Response.json({ ok: true, title: "Fixture", url: "https://example.test" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new DockerSandboxProvider("http://supervisor.test", "test-token");
+    await provider.pageBrowser(
+      { id: "computer", botId: "team-home", kind: "docker", providerRef: "computer" },
+      { command: "snapshot" },
+      {
+        ...context,
+        browserProxy: { url: "socks5://proxy.example:1080", username: "u", password: "p" },
+      },
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      command: "snapshot",
+      browserProxy: { url: "socks5://proxy.example:1080", username: "u", password: "p" },
+    });
   });
 });
 

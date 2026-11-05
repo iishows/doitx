@@ -110,6 +110,34 @@ function browserPidPathForScreen(screenId: string) {
   return `/tmp/rakazo/browser-pid-${browserKeyForScreen(screenId)}`;
 }
 
+/** Upstream proxy for one bot's browser, resolved by the API before it reaches the supervisor. */
+export interface BrowserProxy {
+  url: string;
+  username?: string;
+  password?: string;
+}
+
+/**
+ * The loopback port of a bot's proxy relay. It is derived from the browser profile
+ * so the launch and any later teardown agree without discovery, and two bots that
+ * share one computer never collide.
+ */
+export function browserProxyRelayPort(browserProfile: string): number {
+  const digest = createHash("sha256").update(browserProfile).digest();
+  return 20000 + (digest.readUInt32BE(0) % 10000);
+}
+
+/**
+ * What a running browser was launched with. The credential is hashed, never
+ * written to the computer, so a screen can tell a changed proxy needs a relaunch.
+ */
+export function browserProxyFingerprint(proxy: BrowserProxy | null): string {
+  if (!proxy) return "none";
+  return createHash("sha256")
+    .update(JSON.stringify([proxy.url, proxy.username ?? "", proxy.password ?? ""]))
+    .digest("hex");
+}
+
 function browserRunningFunction(profile: string, pidFile: string) {
   const flag = shellQuote(`--user-data-dir=${profile}`);
   const profileQuoted = shellQuote(profile);
@@ -176,10 +204,32 @@ export function browserLauncherPath(displayNumber: number | string) {
   return `/tmp/rakazo/browser-launch-${displayNumber}`;
 }
 
+/**
+ * Proxy exports for the generated browser launcher. Only the launcher carries
+ * them, so the wrapper starts the relay while the desktop's terminal, fluxbox and
+ * the bot's own shell keep a direct connection. The launcher is 0700 inside the
+ * bot's own container — the same trust boundary as its shell and the relay's
+ * process environment, which already expose the credential to that user.
+ */
+function browserProxyLauncherLines(proxy: BrowserProxy, profile: string) {
+  const port = browserProxyRelayPort(profile);
+  return [
+    `export RAKAZO_BROWSER_PROXY_UPSTREAM=${shellQuote(proxy.url)}`,
+    `export RAKAZO_BROWSER_PROXY_PORT=${shellQuote(String(port))}`,
+    ...(proxy.username
+      ? [`export RAKAZO_BROWSER_PROXY_USERNAME=${shellQuote(proxy.username)}`]
+      : []),
+    ...(proxy.password
+      ? [`export RAKAZO_BROWSER_PROXY_PASSWORD=${shellQuote(proxy.password)}`]
+      : []),
+  ];
+}
+
 function browserLauncherCommand(
   index: number | undefined,
   screenId: string,
   env: DesktopEnvironment,
+  browserProxy?: BrowserProxy,
 ) {
   const layout = commandLayout(index, env);
   return [
@@ -191,6 +241,9 @@ function browserLauncherCommand(
       : []),
     "browser=$(command -v rakazo-browser || command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser)",
     `export DISPLAY=${layout.display} HOME=${shellQuote(env.homeDir)}`,
+    ...(browserProxy
+      ? browserProxyLauncherLines(browserProxy, browserProfilePathForScreen(screenId, env))
+      : []),
     // Docker exec does not inherit the session bus exported by container startup.
     // biome-ignore lint/suspicious/noTemplateCurlyInString: generated shell parameter expansion
     'if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -r /tmp/rakazo/dbus-session ]; then . /tmp/rakazo/dbus-session; fi',
@@ -458,13 +511,19 @@ export function stopExtraScreenCommand(index: number, screenId: string, env = DE
   return renderStopExtraScreenCommand(index, screenId, env);
 }
 
+/**
+ * `browserProxy` is the proxy the caller wants this bot's browser to use. `null`
+ * means explicitly none; `undefined` means the caller does not know, so a running
+ * browser keeps whatever it was launched with.
+ */
 export function ensureScreenCommand(
   index: number,
   screenId: string,
   viewToken: string,
   env = DEFAULT_DESKTOP_ENV,
+  browserProxy?: BrowserProxy | null,
 ) {
-  return renderEnsureScreenCommand(index, screenId, viewToken, env);
+  return renderEnsureScreenCommand(index, screenId, viewToken, env, browserProxy);
 }
 
 function renderStopScreenTransportsCommand(index: number | undefined, env = DEFAULT_DESKTOP_ENV) {
@@ -527,6 +586,7 @@ function renderEnsureScreenCommand(
   screenId: string,
   viewToken: string,
   env = DEFAULT_DESKTOP_ENV,
+  browserProxy?: BrowserProxy | null,
 ) {
   const layout = commandLayout(index, env);
   const fluxHome = `/tmp/fluxbox-home-${layout.displayNumber}`;
@@ -582,12 +642,34 @@ function renderEnsureScreenCommand(
     '[[ "$desktop_view_token" =~ ^[a-zA-Z0-9_-]{1,64}$ ]] || exit 75',
     proxyEnvironmentCommand(),
     `mkdir -p /tmp/rakazo`,
-    `printf %s ${shellQuote(browserLauncherCommand(index, screenId, env))} >${browserLauncherPath(layout.displayNumber)}`,
-    `chmod 700 ${browserLauncherPath(layout.displayNumber)}`,
+    // An unknown proxy (undefined) must not erase the launcher written by the last
+    // caller that knew it: that launcher is what a later relaunch would exec.
+    ...(browserProxy === undefined
+      ? [
+          `if [ ! -f ${browserLauncherPath(layout.displayNumber)} ]; then`,
+          `  printf %s ${shellQuote(browserLauncherCommand(index, screenId, env))} >${browserLauncherPath(layout.displayNumber)}`,
+          `  chmod 700 ${browserLauncherPath(layout.displayNumber)}`,
+          "fi",
+        ]
+      : [
+          `printf %s ${shellQuote(browserLauncherCommand(index, screenId, env, browserProxy ?? undefined))} >${browserLauncherPath(layout.displayNumber)}`,
+          `chmod 700 ${browserLauncherPath(layout.displayNumber)}`,
+        ]),
     ...setupDisplay,
     `xdpyinfo -display ${layout.display} >/dev/null 2>&1 || exit 1`,
     `mkdir -p /tmp/rakazo ${shellQuote(path.posix.dirname(profile))}`,
     ...browserRunningFunction(profile, pidFile),
+    // A changed proxy only takes effect at launch, so close the browser this screen
+    // is running and let the block below start it again through the new relay.
+    ...(browserProxy === undefined
+      ? []
+      : [
+          `proxy_state=/tmp/rakazo/browser-proxy-${layout.displayNumber}`,
+          `if browser_running && [ "$(cat "$proxy_state" 2>/dev/null || true)" != ${shellQuote(browserProxyFingerprint(browserProxy))} ]; then`,
+          stopBrowserProfileCommand(profile, pidFile),
+          "fi",
+          `printf %s ${shellQuote(browserProxyFingerprint(browserProxy))} >"$proxy_state"`,
+        ]),
     `printf %s ${shellQuote(profile)} >/tmp/rakazo/browser-profile-${layout.displayNumber}`,
     "if ! browser_running; then",
     prepareBrowserProfileCommand(screenId, env),

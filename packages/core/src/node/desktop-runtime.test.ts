@@ -17,6 +17,9 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   browserCloseProgram,
+  browserProfilePathForScreen,
+  browserProxyFingerprint,
+  browserProxyRelayPort,
   DEFAULT_DESKTOP_ENV,
   desktopControlCommand,
   desktopTerminalCommand,
@@ -172,6 +175,44 @@ describe("shared Linux desktop lifecycle", () => {
     expect(ensureScreenCommand(0, "bot", "view")).toContain("127.0.0.1:6080 8>&-");
     expect(interactiveScreenCommand(true, "control")).toContain("127.0.0.1:6080 8>&-");
     expect(terminalCommand("control", "terminal", "/work")).toContain("127.0.0.1:6080 8>&-");
+  });
+
+  it("launches the bot browser through its relay only when a proxy is set", () => {
+    const proxy = {
+      url: "socks5://proxy.example:1080",
+      username: "user",
+      password: "secret",
+    };
+    const port = browserProxyRelayPort(browserProfilePathForScreen("bot"));
+    const proxied = ensureScreenCommand(0, "bot", "view", undefined, proxy);
+    // The launcher carries the whole proxy, and the outer script keeps it quoted.
+    expect(proxied).toContain("export RAKAZO_BROWSER_PROXY_UPSTREAM");
+    expect(proxied).toContain("socks5://proxy.example:1080");
+    expect(proxied).toContain("export RAKAZO_BROWSER_PROXY_PORT");
+    expect(proxied).toContain(String(port));
+    expect(proxied).toContain("export RAKAZO_BROWSER_PROXY_USERNAME");
+    expect(proxied).toContain("export RAKAZO_BROWSER_PROXY_PASSWORD");
+    expect(proxied).toContain("secret");
+    // A running browser is relaunched when the fingerprint differs.
+    expect(proxied).toContain(browserProxyFingerprint(proxy));
+    expect(browserProxyFingerprint(null)).toBe("none");
+    expect(browserProxyFingerprint(proxy)).not.toBe(
+      browserProxyFingerprint({ ...proxy, password: "other" }),
+    );
+    const syntax = spawnSync("bash", ["-n"], { input: proxied, encoding: "utf8" });
+    expect(syntax.status, syntax.stderr).toBe(0);
+
+    // A caller that does not know the proxy leaves the launcher it already has.
+    const unknown = ensureScreenCommand(0, "bot", "view");
+    expect(unknown).not.toContain("RAKAZO_BROWSER_PROXY_");
+    expect(unknown).toContain("if [ ! -f /tmp/rakazo/browser-launch-1 ]; then");
+    const withoutProxy = ensureScreenCommand(0, "bot", "view", undefined, null);
+    expect(withoutProxy).not.toContain("RAKAZO_BROWSER_PROXY_");
+    expect(withoutProxy).toContain(browserProxyFingerprint(null));
+    // A known proxy always rewrites the launcher, so an explicit change takes effect.
+    expect(proxied).not.toContain("if [ ! -f /tmp/rakazo/browser-launch-1 ]; then");
+    const withoutSyntax = spawnSync("bash", ["-n"], { input: withoutProxy, encoding: "utf8" });
+    expect(withoutSyntax.status, withoutSyntax.stderr).toBe(0);
   });
 
   it.each([undefined, "127.0.0.1", "localhost", "192.0.2.10", "0.0.0.0"])(

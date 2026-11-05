@@ -28,6 +28,12 @@ export interface AdapterContext {
    * storage; adapters stay storage-agnostic and just forward it to the sandbox.
    */
   browserProxy?: BrowserProxySpec;
+  /**
+   * True when the caller looked up this bot's proxy, including when it found none.
+   * Only then can an absent `browserProxy` mean "this bot has no proxy"; without it
+   * the sandbox keeps whatever the browser was launched with.
+   */
+  browserProxyResolved?: boolean;
 }
 
 /**

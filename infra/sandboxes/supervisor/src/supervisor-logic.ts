@@ -1,5 +1,6 @@
-import type { DesktopEnvironment } from "@rakazo/core/node/desktop-runtime";
+import type { BrowserProxy, DesktopEnvironment } from "@rakazo/core/node/desktop-runtime";
 import {
+  browserProxyRelayPort,
   ensureScreenCommand as coreEnsureScreenCommand,
   interactiveScreenCommand as coreInteractiveScreenCommand,
   terminalCommand as coreTerminalCommand,
@@ -16,13 +17,16 @@ import {
 
 export {
   browserProfilePathForScreen,
+  browserProxyFingerprint,
+  browserProxyRelayPort,
   prepareBrowserProfileCommand,
   quiesceBrowserProfilesCommand,
   stopBrowserCommand,
   stopExtraScreenCommand,
 } from "@rakazo/core/node/desktop-runtime";
+export type { BrowserProxy };
 
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import { pathToFileURL } from "node:url";
@@ -39,8 +43,9 @@ export function ensureScreenCommand(
   screenId: string,
   viewToken: string,
   env = DOCKER_DESKTOP_ENV,
+  browserProxy?: BrowserProxy | null,
 ) {
-  return coreEnsureScreenCommand(index, screenId, viewToken, env);
+  return coreEnsureScreenCommand(index, screenId, viewToken, env, browserProxy);
 }
 
 export function interactiveScreenCommand(
@@ -378,6 +383,8 @@ export interface ScreenAssignment {
   controlToken?: string;
   /** When the setup script last finished for this screen on the current boot. */
   ensuredAt?: number;
+  /** Fingerprint of the proxy the running browser was launched with. */
+  browserProxy?: string;
 }
 
 /** The page helper reached no browser, before dispatching anything. */
@@ -522,12 +529,6 @@ export function browserProxyEnv(
     ...(proxy.username ? [`RAKAZO_BROWSER_PROXY_USERNAME=${proxy.username}`] : []),
     ...(proxy.password ? [`RAKAZO_BROWSER_PROXY_PASSWORD=${proxy.password}`] : []),
   ];
-}
-
-/** Stable loopback port for a bot's relay, kept in the ephemeral range. */
-export function browserProxyRelayPort(browserProfile: string): number {
-  const digest = createHash("sha256").update(browserProfile).digest();
-  return 20000 + (digest.readUInt32BE(0) % 10000);
 }
 
 export function containerActionStep(

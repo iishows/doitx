@@ -424,11 +424,17 @@ export function BotSettings({
       if (nextName) setName(nextName);
       setDescription(nextDescription);
       const savedProxy = savedProxyRef.current;
+      // The server stores the credential as one sealed pair, so a username typed
+      // before its password is not a change on its own; sending it alone would be
+      // rejected and leave the fields uncleared.
+      const newProxyCredential =
+        proxyUsername.trim() && proxyPassword.trim()
+          ? { username: proxyUsername.trim(), password: proxyPassword }
+          : null;
       const proxyChanged =
         proxyEnabled !== savedProxy.enabled ||
         proxyUrl.trim() !== savedProxy.url ||
-        Boolean(proxyUsername.trim()) ||
-        Boolean(proxyPassword);
+        newProxyCredential !== null;
       const patch = {
         ...(nextName && nextName !== savedNameRef.current.trim() ? { name: nextName } : {}),
         // Keep untouched profile fields off the wire.
@@ -454,9 +460,9 @@ export function BotSettings({
                 ? {
                     enabled: proxyEnabled,
                     url: proxyUrl.trim(),
-                    // Blank means "keep the stored credential".
-                    ...(proxyUsername.trim() ? { username: proxyUsername.trim() } : {}),
-                    ...(proxyPassword ? { password: proxyPassword } : {}),
+                    // Blank both means "keep the stored credential"; a half-typed
+                    // pair is not a credential yet and stays off the wire.
+                    ...(newProxyCredential ?? {}),
                   }
                 : null,
             }
@@ -530,12 +536,14 @@ export function BotSettings({
         savedProxyRef.current = {
           enabled: proxyEnabled,
           url: proxyUrl.trim(),
-          hasCredentials:
-            savedProxy.hasCredentials || Boolean(proxyUsername.trim()) || Boolean(proxyPassword),
+          hasCredentials: savedProxy.hasCredentials || newProxyCredential !== null,
         };
       }
-      setProxyUsername("");
-      setProxyPassword("");
+      // A half-typed pair is still waiting for its other half; keep it visible.
+      if (newProxyCredential) {
+        setProxyUsername("");
+        setProxyPassword("");
+      }
       setSavedAdvanced(
         JSON.stringify([
           modelKey,
@@ -933,7 +941,10 @@ export function BotSettings({
                   <Switch
                     id={`${ids}-browser-proxy-enabled`}
                     checked={proxyEnabled}
-                    disabled={saving || !proxyUrl.trim()}
+                    // A save started by leaving the URL field must not disable the
+                    // switch under the pointer and swallow the click that follows.
+                    // Saves are queued, so the latest checked state still wins.
+                    disabled={!proxyUrl.trim()}
                     onCheckedChange={(checked) => {
                       setProxyEnabled(checked);
                       void enqueueSave();

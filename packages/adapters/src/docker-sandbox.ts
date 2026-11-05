@@ -1,6 +1,7 @@
 import path from "node:path";
 import type {
   AdapterContext,
+  BrowserProxySpec,
   CommandRequest,
   ComputerActionRequest,
   ComputerFileEntry,
@@ -95,6 +96,16 @@ function sandboxGoneError(computer: ComputerRef): Error {
   return Object.assign(new Error(`sandbox ${computer.id} is not running`), {
     name: "SandboxNotFoundError",
   });
+}
+
+/**
+ * The proxy field for a supervisor request. An explicit `null` clears a proxy the
+ * bot has turned off, but only a caller that actually looked one up can say that;
+ * a context that never resolved it leaves the field out and keeps the current one.
+ */
+function proxyField(context: AdapterContext): { browserProxy?: BrowserProxySpec | null } {
+  if (context.browserProxy) return { browserProxy: context.browserProxy };
+  return context.browserProxyResolved ? { browserProxy: null } : {};
 }
 
 export class DockerSandboxProvider implements SandboxProvider {
@@ -270,7 +281,9 @@ export class DockerSandboxProvider implements SandboxProvider {
     const res = await fetch(this.url(`/computers/${computer.id}/browser`), {
       method: "POST",
       headers: { ...this.headers(context, computer.botId), "content-type": "application/json" },
-      body: JSON.stringify(request),
+      // The screen setup that runs before the page helper launches the browser, so
+      // the proxy has to be here too.
+      body: JSON.stringify({ ...request, ...proxyField(context) }),
       redirect: "error",
       signal: context.signal,
     });
@@ -293,6 +306,8 @@ export class DockerSandboxProvider implements SandboxProvider {
         interactive: request.interactive === true,
         controlToken: request.controlToken,
         revokeControl: false,
+        // The screen setup starts the bot's browser; null means it has no proxy.
+        ...proxyField(context),
       }),
       signal: context.signal,
     });
@@ -326,7 +341,12 @@ export class DockerSandboxProvider implements SandboxProvider {
     const res = await fetch(this.url(`/computers/${computer.id}/terminal`), {
       method: "POST",
       headers: { ...this.headers(context, computer.botId), "content-type": "application/json" },
-      body: JSON.stringify({ controlToken: request.controlToken, cwd: request.cwd ?? "" }),
+      body: JSON.stringify({
+        controlToken: request.controlToken,
+        cwd: request.cwd ?? "",
+        // A terminal can ensure the screen before the page tools ever do.
+        ...proxyField(context),
+      }),
       signal: context.signal,
     });
     if (!res.ok) {
@@ -401,7 +421,12 @@ export class DockerSandboxProvider implements SandboxProvider {
     const res = await fetch(this.url(`/computers/${computer.id}/input`), {
       method: "POST",
       headers: { ...this.headers(context, computer.botId), "content-type": "application/json" },
-      body: JSON.stringify({ input, leaseId: lease.leaseId }),
+      // The screen setup behind this call can launch the browser.
+      body: JSON.stringify({
+        input,
+        leaseId: lease.leaseId,
+        ...proxyField(context),
+      }),
       signal: context.signal,
     });
     if (!res.ok) {
@@ -413,7 +438,9 @@ export class DockerSandboxProvider implements SandboxProvider {
   async observe(computer: ComputerRef, context: AdapterContext): Promise<ComputerObservation> {
     const res = await fetch(this.url(`/computers/${computer.id}/observe`), {
       method: "POST",
-      headers: this.headers(context, computer.botId),
+      headers: { ...this.headers(context, computer.botId), "content-type": "application/json" },
+      // The screen setup behind this call can launch the browser.
+      body: JSON.stringify(proxyField(context)),
       signal: context.signal,
     });
     if (!res.ok)
@@ -446,7 +473,8 @@ export class DockerSandboxProvider implements SandboxProvider {
         actions,
         observe: request.observe,
         settleMs: clampRounded(request.settleMs ?? 0, 0, 5_000),
-        ...(context.browserProxy ? { browserProxy: context.browserProxy } : {}),
+        // Null clears a proxy the bot has since turned off; absent would keep it.
+        ...proxyField(context),
       }),
       signal: context.signal,
     });

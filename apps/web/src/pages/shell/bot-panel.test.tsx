@@ -727,6 +727,74 @@ it("saves per-bot model limits and clears them when emptied", async () => {
   expect(onSave.mock.lastCall?.[0]).not.toHaveProperty("modelMaxTokens");
 });
 
+it("saves proxy credentials only once both halves are filled", async () => {
+  await render("Billing", {
+    browserProxy: { enabled: true, url: "socks5://proxy.example:1080", hasCredentials: false },
+  });
+  await expandAdvanced();
+  const proxyInput = (suffix: string) =>
+    container.querySelector<HTMLInputElement>(`input[id$="-browser-proxy-${suffix}"]`)!;
+  const setValue = async (input: HTMLInputElement, value: string) => {
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+  const blur = async (input: HTMLInputElement) => {
+    await act(async () => input.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+  };
+  await setValue(proxyInput("username"), "user");
+  await blur(proxyInput("username"));
+  // A lone username is not a credential; the server would reject the pair.
+  expect(onSave.mock.lastCall?.[0]).not.toHaveProperty("browserProxy");
+  // It stays typed, waiting for its password.
+  expect(proxyInput("username").value).toBe("user");
+  // Whitespace is not a password; the server would reject it with the username.
+  await setValue(proxyInput("password"), "   ");
+  await blur(proxyInput("password"));
+  expect(onSave.mock.lastCall?.[0]).not.toHaveProperty("browserProxy");
+  await setValue(proxyInput("password"), "secret");
+  await blur(proxyInput("password"));
+  expect(onSave.mock.lastCall?.[0]).toMatchObject({
+    browserProxy: {
+      enabled: true,
+      url: "socks5://proxy.example:1080",
+      username: "user",
+      password: "secret",
+    },
+  });
+});
+
+it("turns the proxy on while the URL save is still in flight", async () => {
+  let release: () => void = () => undefined;
+  onSave.mockImplementationOnce(
+    () =>
+      new Promise<undefined>((resolve) => {
+        release = () => resolve(undefined);
+      }),
+  );
+  await render();
+  await expandAdvanced();
+  const url = container.querySelector<HTMLInputElement>('input[id$="-browser-proxy-url"]')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(
+      url,
+      "socks5://proxy.example:1080",
+    );
+    url.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => url.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+  // The switch would be disabled for the whole round trip, so the click that
+  // follows the URL blur would never reach it.
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('button[id$="-browser-proxy-enabled"]')!.click(),
+  );
+  await act(async () => release());
+  expect(onSave.mock.lastCall?.[0]).toMatchObject({
+    browserProxy: { enabled: true, url: "socks5://proxy.example:1080" },
+  });
+});
+
 it("saves a color change back to the initial value after a successful automatic save", async () => {
   await render();
   const control = () => container.querySelector<HTMLButtonElement>('[aria-label="Avatar color"]')!;
