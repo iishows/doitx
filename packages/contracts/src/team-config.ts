@@ -8,7 +8,7 @@ import { BOT_DESCRIPTION_MAX_LENGTH, BOT_NAME_MAX_LENGTH } from "./domain.js";
  * an older importer cannot read. The importer refuses anything newer than the version it knows and
  * migrates anything older.
  */
-export const TEAM_CONFIG_VERSION = 3;
+export const TEAM_CONFIG_VERSION = 4;
 
 /** Identifies the archive as ours, so an unrelated zip is rejected before anything is read. */
 export const TEAM_CONFIG_FORMAT = "rakazo-team-config";
@@ -233,6 +233,17 @@ export const TeamConfigManifestV2Schema = z.object({
   skills: z.array(TeamConfigSkillSchema).default([]),
 });
 export type TeamConfigManifestV2 = z.infer<typeof TeamConfigManifestV2Schema>;
+
+/**
+ * The version 3 manifest. Its shape matches the current one; only the bot files differ, gaining
+ * optional per-bot model limits in version 4. Kept so archives exported before that still import.
+ */
+export const TeamConfigManifestV3Schema = z.object({
+  ...manifestBase,
+  version: z.literal(3),
+  skills: z.array(TeamConfigSkillSummarySchema).max(TEAM_CONFIG_MAX_SKILLS).default([]),
+});
+export type TeamConfigManifestV3 = z.infer<typeof TeamConfigManifestV3Schema>;
 
 /**
  * Which bots the user ticked in the preview, by archive key. The importer only ever writes the keys

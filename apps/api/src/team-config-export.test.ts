@@ -1,3 +1,4 @@
+import { TEAM_CONFIG_VERSION } from "@rakazo/contracts";
 import { parseTeamConfig } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
 import { unzipSync } from "fflate";
@@ -104,7 +105,7 @@ describe("team-config export route", () => {
 
     const manifest = JSON.parse(new TextDecoder().decode(files["manifest.json"]!));
     expect(manifest.format).toBe("rakazo-team-config");
-    expect(manifest.version).toBe(3);
+    expect(manifest.version).toBe(TEAM_CONFIG_VERSION);
     expect(manifest.sourceWorkspace).toBe("My Workspace");
     expect(manifest.bots[0]?.key).toBe("bot:writer");
     // The manifest points at the skill but does not carry its body.

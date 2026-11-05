@@ -50,7 +50,7 @@ interface SkillFixture {
 
 /** An archive with the given bots and skills, so the test reads only what it needs. */
 function archive(
-  bots: Array<{ key: string; name: string; mcpServers?: unknown[] }>,
+  bots: Array<{ key: string; name: string; mcpServers?: unknown[] } & Record<string, unknown>>,
   skills: SkillFixture[] = [],
 ) {
   const manifest = {
@@ -71,6 +71,7 @@ function archive(
       path: teamConfigBotPath(bot.key),
       content: JSON.stringify({
         ...botBody(bot.key, bot.name),
+        ...bot,
         ...(bot.mcpServers ? { mcpServers: bot.mcpServers } : {}),
       }),
     })),
@@ -223,6 +224,33 @@ describe("createTeamConfig", () => {
     });
     expect(createBot).toHaveBeenCalledTimes(1);
     expect(result.created).toEqual([{ key: "bot:1", name: "Writer" }]);
+  });
+
+  it("gives the created bot the archive's model limits", async () => {
+    const createBot = vi.fn(async () => ({ id: "bot-1", name: "Writer" }) as never);
+    const { services: svc } = services({
+      createBot,
+      validateBotModel: async () => null,
+      hasModelConnection: async () => true,
+    });
+    await createTeamConfig(svc, actor, {
+      files: archive([
+        {
+          key: "bot:1",
+          name: "Writer",
+          modelProvider: "anthropic",
+          modelId: "claude-sonnet-5-5",
+          modelMaxTokens: 16_384,
+          modelContextWindow: 131_072,
+        },
+      ]),
+      selection: { keys: ["bot:1"] },
+    });
+
+    expect(createBot).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({ modelMaxTokens: 16_384, modelContextWindow: 131_072 }),
+    );
   });
 
   it("creates no bot when nothing is selected", async () => {

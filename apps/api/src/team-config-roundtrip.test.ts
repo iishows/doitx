@@ -154,6 +154,26 @@ describe("team-config round trip", () => {
     expect(built.plan.model).toMatchObject({ maxTokens: 16_384, contextWindow: 131_072 });
   });
 
+  it("does not carry limits for a bot that names no model", () => {
+    const noModel = {
+      ...source,
+      bots: [
+        {
+          ...source.bots[0]!,
+          modelProvider: null,
+          modelId: null,
+          modelMaxTokens: 16_384,
+          modelContextWindow: 131_072,
+        },
+      ],
+    };
+
+    const { bots } = buildTeamConfig(noModel);
+
+    expect(bots[0]).not.toHaveProperty("modelMaxTokens");
+    expect(bots[0]).not.toHaveProperty("modelContextWindow");
+  });
+
   it("keeps a routine's schedule and prompt across the round trip", async () => {
     const parsed = parseTeamConfig(roundTrip());
     const entry = parsed.manifest.bots[0]!;

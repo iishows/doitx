@@ -6,6 +6,7 @@ import {
   TeamConfigBotSchema,
   TeamConfigManifestSchema,
   TeamConfigManifestV2Schema,
+  TeamConfigManifestV3Schema,
   TeamConfigSelectionSchema,
 } from "./team-config.js";
 
@@ -67,6 +68,13 @@ describe("team config manifest", () => {
       TeamConfigManifestSchema.safeParse({ ...manifest, version: String(TEAM_CONFIG_VERSION) })
         .success,
     ).toBe(false);
+  });
+
+  it("keeps a version 3 manifest readable", () => {
+    const v3 = { ...manifest, version: 3 };
+    expect(TeamConfigManifestV3Schema.safeParse(v3).success).toBe(true);
+    // The current schema only accepts the version it writes.
+    expect(TeamConfigManifestSchema.safeParse(v3).success).toBe(false);
   });
 
   it("keeps a version 2 manifest readable, with its inlined skill bodies", () => {

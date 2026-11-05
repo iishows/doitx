@@ -88,6 +88,25 @@ describe("parseTeamConfig", () => {
     );
   });
 
+  it("imports a version 3 archive and upgrades it to the current version", () => {
+    const files = archive(
+      {
+        ...manifest([{ key: "bot:writer", name: "Writer" }]),
+        version: 3,
+        skills: [{ key: "skill:style", name: "Style", description: "" }],
+      },
+      { "bot:writer": botBody("bot:writer", "Writer") },
+      { "skill:style": "# Style" },
+    );
+
+    const parsed = parseTeamConfig(files);
+
+    expect(parsed.manifest.version).toBe(TEAM_CONFIG_VERSION);
+    expect(parsed.bots.get("bot:writer")?.instructions).toBe("Do the thing.");
+    // Skill bodies still come from their own files in a version 3 archive.
+    expect(parsed.skills.get("skill:style")?.content).toBe("# Style");
+  });
+
   it("refuses an archive from a newer app instead of half-reading it", () => {
     const newer = archive({ ...manifest([]), version: TEAM_CONFIG_VERSION + 1 });
 

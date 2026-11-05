@@ -9,6 +9,7 @@ import {
   type TeamConfigManifest,
   TeamConfigManifestSchema,
   TeamConfigManifestV2Schema,
+  TeamConfigManifestV3Schema,
   type TeamConfigSkill,
   teamConfigSkillPath,
 } from "@rakazo/contracts";
@@ -105,12 +106,23 @@ export function parseTeamConfig(files: TeamConfigFile[]): ParsedTeamConfig {
         description,
       })),
     };
+  } else if (version === 3) {
+    const parsed = TeamConfigManifestV3Schema.safeParse(raw);
+    if (!parsed.success) {
+      throw new TeamConfigParseError("malformed", "The manifest is incomplete.");
+    }
+    // Only the bot files changed since version 3; the manifest shape is the current one.
+    manifest = { ...parsed.data, version: TEAM_CONFIG_VERSION };
   } else {
     const parsed = TeamConfigManifestSchema.safeParse(raw);
     if (!parsed.success) {
       throw new TeamConfigParseError("malformed", "The manifest is incomplete.");
     }
     manifest = parsed.data;
+  }
+
+  // Version 2 inlined skill bodies; later versions keep each body in its own file.
+  if (version !== 2) {
     for (const entry of manifest.skills) {
       const content = textOf(files, teamConfigSkillPath(entry.key));
       if (content === null) {
