@@ -795,14 +795,15 @@ hostname works here too. Unlike a connection saved in the UI, this environment s
 subject to `RAKAZO_OPENAI_COMPAT_ALLOW_PUBLIC` or `MCP_ALLOW_PRIVATE_ENDPOINT`; treat the value as
 trusted operator configuration.
 
-The loopback default is suitable when running Doitx from a source checkout. From containers,
-prefer a stable LAN RFC1918 address (not Compose service DNS alone). On Docker Desktop,
-`host.docker.internal` also works. Inside a container `localhost` is the container itself, so a
-server on the host is reachable only through `host.docker.internal` or the host's LAN address.
-On Docker Desktop, a bot computer shell can often reach services bound to host `127.0.0.1`
-through that same hostname. Do not run sensitive unauthenticated services on loopback while
-bots run, or firewall / block that path. Linux does not get `host.docker.internal` the same
-way by default.
+The loopback default is suitable when running Doitx from a source checkout. From the Docker
+api/worker services, `127.0.0.1` and `localhost` resolve to the container itself, so a model
+server on the host is only reachable through `host.docker.internal` (mapped to `host-gateway` via
+`extra_hosts` in the compose files) or the host's LAN RFC1918 address. Prefer the LAN address on
+bare Linux, since it does not depend on the extra_hosts entry; `host.docker.internal` works on
+Docker Desktop out of the box and on Linux once the compose `extra_hosts` is present. Inside a
+container a bot computer shell can often reach services bound to host `127.0.0.1` through that
+same hostname. Do not run sensitive unauthenticated services on loopback while bots run, or
+firewall / block that path.
 Only configure an endpoint you control: prompts, attachments, and tool results sent to that model
 leave Doitx through this URL. Leave `RAKAZO_LOCAL_MODELS` blank to disable the provider.
 

@@ -1,5 +1,7 @@
 import { builtinModels } from "@earendil-works/pi-ai/providers/all";
-import { afterEach, describe, expect, it } from "vitest";
+import type * as NodeFs from "node:fs";
+import { existsSync } from "node:fs";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   LOCAL_PROVIDER_ID,
   LOCAL_SEED_MODEL_ID,
@@ -7,6 +9,13 @@ import {
   localProvider,
   registerLocalProvider,
 } from "./pi-local-provider.js";
+
+// The docker loopback rewrite only fires when /.dockerenv or /run/.containerenv
+// exists, so mock its detector and control it per-test.
+vi.mock("node:fs", async (importOriginal) => ({
+  ...(await importOriginal<typeof NodeFs>()),
+  existsSync: vi.fn(() => false),
+}));
 
 const ENV_KEYS = [
   "RAKAZO_LOCAL_MODELS",
@@ -25,6 +34,7 @@ afterEach(() => {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
+  vi.mocked(existsSync).mockReset();
 });
 
 function setModels(value: string | undefined) {
@@ -120,6 +130,41 @@ describe("local model provider", () => {
     delete process.env.RAKAZO_LOCAL_MODELS_API_KEY;
     const auth = await resolveAuth(localProvider());
     expect(auth.apiKey).toBe("local");
+  });
+
+  it("rewrites a 127.0.0.1 loopback URL to host.docker.internal inside a container", () => {
+    vi.mocked(existsSync).mockImplementation((path) =>
+      ["/.dockerenv", "/run/.containerenv"].includes(path as string),
+    );
+    process.env.RAKAZO_LOCAL_MODELS_URL = "http://127.0.0.1:3456/v1";
+    expect(localBaseUrl()).toBe("http://host.docker.internal:3456/v1");
+  });
+
+  it("rewrites a localhost URL to host.docker.internal inside a container", () => {
+    vi.mocked(existsSync).mockImplementation((path) =>
+      ["/.dockerenv", "/run/.containerenv"].includes(path as string),
+    );
+    process.env.RAKAZO_LOCAL_MODELS_URL = "http://localhost:11434/v1";
+    expect(localBaseUrl()).toBe("http://host.docker.internal:11434/v1");
+  });
+
+  it("leaves a host-gateway or LAN URL untouched inside a container", () => {
+    vi.mocked(existsSync).mockImplementation((path) =>
+      ["/.dockerenv", "/run/.containerenv"].includes(path as string),
+    );
+    for (const value of [
+      "http://host.docker.internal:3456/v1",
+      "http://192.168.1.10:3456/v1",
+    ]) {
+      process.env.RAKAZO_LOCAL_MODELS_URL = value;
+      expect(localBaseUrl()).toBe(value);
+    }
+  });
+
+  it("keeps the loopback URL unchanged outside Docker", () => {
+    // existsSync stays mocked to false (not a container).
+    process.env.RAKAZO_LOCAL_MODELS_URL = "http://127.0.0.1:3456/v1";
+    expect(localBaseUrl()).toBe("http://127.0.0.1:3456/v1");
   });
 
   it("sends the configured key when the endpoint authenticates", async () => {

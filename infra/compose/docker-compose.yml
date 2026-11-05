@@ -403,6 +403,10 @@ services:
       RAKAZO_NAV_LINKS:
       RAKAZO_ADMIN_EMAILS:
       VOICE_SUMMARY_MIN_CHARS:
+    # Reach the host's model endpoint (RAKAZO_LOCAL_MODELS_URL); inside Docker,
+    # 127.0.0.1 is the container itself, so the host is reached via host-gateway.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test:
         - CMD
@@ -440,6 +444,9 @@ services:
     environment:
       <<: *app-environment
       GRAPHILE_WORKER_CONCURRENCY:
+    # Reach the host's model endpoint; see the api service.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ../../data:/data
     depends_on:

@@ -458,6 +458,11 @@ services:
       VOICE_SUMMARY_MIN_CHARS:
     expose:
       - "3100"
+    # Reaches the host's own model endpoint (RAKAZO_LOCAL_MODELS_URL) from inside the
+    # container. Inside Docker, 127.0.0.1/localhost is the container itself, so a
+    # server bound on the host is only reachable through host-gateway.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - appdata:/data
     networks:
@@ -512,6 +517,9 @@ services:
     environment:
       <<: *app-environment
       GRAPHILE_WORKER_CONCURRENCY:
+    # Reach the host's model endpoint (RAKAZO_LOCAL_MODELS_URL); see the api service.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - appdata:/data
     networks:

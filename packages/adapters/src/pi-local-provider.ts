@@ -2,6 +2,7 @@ import type { Model, MutableModels, Provider } from "@earendil-works/pi-ai";
 import { createProvider } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { LOCAL_PROVIDER_ID } from "@rakazo/contracts";
+import { existsSync } from "node:fs";
 
 import { declaredVisionModelIds, inputModalities } from "./model-modalities.js";
 
@@ -42,8 +43,47 @@ const DEFAULT_BASE_URL = "http://127.0.0.1:3456/v1";
 const DEFAULT_CONTEXT_WINDOW = 32_768;
 const DEFAULT_MAX_TOKENS = 4_096;
 
+/**
+ * Hostname used to reach the host machine from inside a container.
+ *
+ * Mapped to `host-gateway` via `extra_hosts` in the compose files. Inside a
+ * container `127.0.0.1`/`localhost` is the container's own loopback, so a
+ * model server bound on the host is only reachable through this name.
+ */
+const HOST_GATEWAY_HOSTNAME = "host.docker.internal";
+
+/** True when running inside a Linux/Docker container (the app's api/worker). */
+function isDocker(): boolean {
+  return existsSync("/.dockerenv") || existsSync("/run/.containerenv");
+}
+
+/**
+ * Rewrites a loopback base URL to the host-gateway hostname when running inside
+ * a container, so the fetch reaches the host's model server instead of the
+ * container's own loopback interface (which has nothing on that port).
+ *
+ * Only the configured value is rewritten: a URL that already points at the host
+ * gateway or a LAN address is left untouched. When not in Docker the value is
+ * returned unchanged, preserving normal desktop behavior.
+ */
+function resolveLocalBaseUrl(rawValue: string): string {
+  if (!isDocker()) return rawValue;
+  try {
+    const url = new URL(rawValue);
+    if (url.hostname === "127.0.0.1" || url.hostname === "localhost") {
+      url.hostname = HOST_GATEWAY_HOSTNAME;
+      return url.toString();
+    }
+    return rawValue;
+  } catch {
+    // Malformed values are validated by the caller; do not mask that error.
+    return rawValue;
+  }
+}
+
 export function localBaseUrl(): string {
-  const value = process.env.RAKAZO_LOCAL_MODELS_URL?.trim() || DEFAULT_BASE_URL;
+  const rawValue = process.env.RAKAZO_LOCAL_MODELS_URL?.trim() || DEFAULT_BASE_URL;
+  const value = resolveLocalBaseUrl(rawValue);
   let url: URL;
   try {
     url = new URL(value);
