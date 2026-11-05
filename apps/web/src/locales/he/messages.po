@@ -795,6 +795,7 @@ msgid "API key"
 msgstr "מפתח API"
 
 #: src/pages/model-settings/connection-controls.tsx
+#: src/pages/Onboarding.tsx
 msgid "API key (optional)"
 msgstr "מפתח API (אופציונלי)"
 
@@ -878,6 +879,10 @@ msgstr "תוצרים"
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Ask"
 msgstr "לשאול"
+
+#: src/components/ApprovalRulesSettings.tsx
+msgid "Ask before destructive commands"
+msgstr ""
 
 #: src/components/ApprovalRulePreview.tsx
 msgid "Ask rule"
@@ -2448,6 +2453,7 @@ msgstr "היקף ברירת מחדל"
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
+#: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/archived-chats.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2466,12 +2472,15 @@ msgstr "למחוק את \"{0}\"?"
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.name
 #: src/pages/Artifacts.tsx
+#: src/pages/model-settings/providers-section.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Delete {0}"
 msgstr "מחיקת {0}"
 
 #. placeholder {0}: bot.name
+#. placeholder {0}: deleteTarget.name
 #. placeholder {0}: item.name
+#: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Delete {0}?"
 msgstr "למחוק את {0}?"
@@ -2583,8 +2592,8 @@ msgid "Disconnect Self-hosted"
 msgstr ""
 
 #: src/pages/model-settings/use-model-settings.ts
-msgid "Disconnected {disconnectName}."
-msgstr "{disconnectName} נותק."
+msgid "Disconnected {name}."
+msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -2787,6 +2796,10 @@ msgstr "שגיאה"
 #: src/components/McpServerHealthLine.tsx
 msgid "Error details"
 msgstr "פרטי השגיאה"
+
+#: src/components/ApprovalRulesSettings.tsx
+msgid "Even when set to Never ask, a command that could erase files stays gated."
+msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -4124,6 +4137,7 @@ msgid "Not in the plugin catalog"
 msgstr "לא נמצא בקטלוג התוספים"
 
 #: src/pages/model-settings/connection-controls.tsx
+#: src/pages/Onboarding.tsx
 msgid "Not needed for a keyless server"
 msgstr "לא נדרש לשרת ללא מפתח"
 

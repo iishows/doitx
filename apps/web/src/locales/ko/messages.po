@@ -795,6 +795,7 @@ msgid "API key"
 msgstr "API 키"
 
 #: src/pages/model-settings/connection-controls.tsx
+#: src/pages/Onboarding.tsx
 msgid "API key (optional)"
 msgstr "API 키(선택 사항)"
 
@@ -878,6 +879,10 @@ msgstr ""
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Ask"
 msgstr "묻기"
+
+#: src/components/ApprovalRulesSettings.tsx
+msgid "Ask before destructive commands"
+msgstr ""
 
 #: src/components/ApprovalRulePreview.tsx
 msgid "Ask rule"
@@ -2448,6 +2453,7 @@ msgstr "기본 기억 범위"
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
+#: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/archived-chats.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2466,12 +2472,15 @@ msgstr "\"{0}\"을(를) 삭제할까요?"
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.name
 #: src/pages/Artifacts.tsx
+#: src/pages/model-settings/providers-section.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Delete {0}"
 msgstr "{0} 삭제"
 
 #. placeholder {0}: bot.name
+#. placeholder {0}: deleteTarget.name
 #. placeholder {0}: item.name
+#: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Delete {0}?"
 msgstr "{0}을 삭제할까요?"
@@ -2583,8 +2592,8 @@ msgid "Disconnect Self-hosted"
 msgstr ""
 
 #: src/pages/model-settings/use-model-settings.ts
-msgid "Disconnected {disconnectName}."
-msgstr "{disconnectName} 연결을 해제했습니다."
+msgid "Disconnected {name}."
+msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -2787,6 +2796,10 @@ msgstr ""
 #: src/components/McpServerHealthLine.tsx
 msgid "Error details"
 msgstr "오류 세부정보"
+
+#: src/components/ApprovalRulesSettings.tsx
+msgid "Even when set to Never ask, a command that could erase files stays gated."
+msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -4124,6 +4137,7 @@ msgid "Not in the plugin catalog"
 msgstr "플러그인 카탈로그에 없음"
 
 #: src/pages/model-settings/connection-controls.tsx
+#: src/pages/Onboarding.tsx
 msgid "Not needed for a keyless server"
 msgstr "키가 없는 서버에는 필요하지 않습니다"
 

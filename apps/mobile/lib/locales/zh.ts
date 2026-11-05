@@ -14,6 +14,9 @@ export const ZH_MESSAGES: Record<string, string> = {
   "The screen connection closed.": "屏幕连接已关闭。",
   Approvals: "审批",
   Rules: "规则",
+  "Ask before destructive commands": "执行破坏性命令前先确认",
+  "Even when set to Never ask, a command that could erase files stays gated.":
+    "即使设为「从不询问」，可能删除文件的命令仍会请求确认。",
   "Never ask": "从不询问",
   Auto: "自动",
   Ask: "询问",

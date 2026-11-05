@@ -795,6 +795,7 @@ msgid "API key"
 msgstr "API key"
 
 #: src/pages/model-settings/connection-controls.tsx
+#: src/pages/Onboarding.tsx
 msgid "API key (optional)"
 msgstr "API key (optional)"
 
@@ -878,6 +879,10 @@ msgstr "Artifacts"
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Ask"
 msgstr "Ask"
+
+#: src/components/ApprovalRulesSettings.tsx
+msgid "Ask before destructive commands"
+msgstr "Ask before destructive commands"
 
 #: src/components/ApprovalRulePreview.tsx
 msgid "Ask rule"
@@ -2448,6 +2453,7 @@ msgstr "Default scope"
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
+#: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/archived-chats.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2466,12 +2472,15 @@ msgstr "Delete \"{0}\"?"
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.name
 #: src/pages/Artifacts.tsx
+#: src/pages/model-settings/providers-section.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Delete {0}"
 msgstr "Delete {0}"
 
 #. placeholder {0}: bot.name
+#. placeholder {0}: deleteTarget.name
 #. placeholder {0}: item.name
+#: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Delete {0}?"
 msgstr "Delete {0}?"
@@ -2583,8 +2592,8 @@ msgid "Disconnect Self-hosted"
 msgstr "Disconnect Self-hosted"
 
 #: src/pages/model-settings/use-model-settings.ts
-msgid "Disconnected {disconnectName}."
-msgstr "Disconnected {disconnectName}."
+msgid "Disconnected {name}."
+msgstr "Disconnected {name}."
 
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -2787,6 +2796,10 @@ msgstr "Error"
 #: src/components/McpServerHealthLine.tsx
 msgid "Error details"
 msgstr "Error details"
+
+#: src/components/ApprovalRulesSettings.tsx
+msgid "Even when set to Never ask, a command that could erase files stays gated."
+msgstr "Even when set to Never ask, a command that could erase files stays gated."
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -4124,6 +4137,7 @@ msgid "Not in the plugin catalog"
 msgstr "Not in the plugin catalog"
 
 #: src/pages/model-settings/connection-controls.tsx
+#: src/pages/Onboarding.tsx
 msgid "Not needed for a keyless server"
 msgstr "Not needed for a keyless server"
 

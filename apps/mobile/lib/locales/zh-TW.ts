@@ -1067,6 +1067,9 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   Listening: "聆聽中",
   "Mentions only": "僅限提及",
   Messaging: "訊息",
+  "Ask before destructive commands": "執行破壞性命令前先確認",
+  "Even when set to Never ask, a command that could erase files stays gated.":
+    "即使設為「從不詢問」，可能刪除檔案的命令仍會要求確認。",
   "Never ask": "永不詢問",
   "New group chat": "新增群組聊天",
   "New private space": "新增私人空間",

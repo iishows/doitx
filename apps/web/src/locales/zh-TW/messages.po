@@ -796,6 +796,7 @@ msgid "API key"
 msgstr "API 金鑰"
 
 #: src/pages/model-settings/connection-controls.tsx
+#: src/pages/Onboarding.tsx
 msgid "API key (optional)"
 msgstr "API 金鑰（選填）"
 
@@ -879,6 +880,10 @@ msgstr "成品"
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Ask"
 msgstr "詢問"
+
+#: src/components/ApprovalRulesSettings.tsx
+msgid "Ask before destructive commands"
+msgstr "執行破壞性命令前先確認"
 
 #: src/components/ApprovalRulePreview.tsx
 msgid "Ask rule"
@@ -2449,6 +2454,7 @@ msgstr "預設範圍"
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
+#: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/archived-chats.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2467,12 +2473,15 @@ msgstr "刪除「{0}」？"
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.name
 #: src/pages/Artifacts.tsx
+#: src/pages/model-settings/providers-section.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Delete {0}"
 msgstr "刪除 {0}"
 
 #. placeholder {0}: bot.name
+#. placeholder {0}: deleteTarget.name
 #. placeholder {0}: item.name
+#: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Delete {0}?"
 msgstr "刪除 {0}？"
@@ -2584,8 +2593,8 @@ msgid "Disconnect Self-hosted"
 msgstr "中斷自架服務的連線"
 
 #: src/pages/model-settings/use-model-settings.ts
-msgid "Disconnected {disconnectName}."
-msgstr "已中斷連結 {disconnectName}。"
+msgid "Disconnected {name}."
+msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -2788,6 +2797,10 @@ msgstr "錯誤"
 #: src/components/McpServerHealthLine.tsx
 msgid "Error details"
 msgstr "錯誤詳細資訊"
+
+#: src/components/ApprovalRulesSettings.tsx
+msgid "Even when set to Never ask, a command that could erase files stays gated."
+msgstr "即使設為「從不詢問」，可能刪除檔案的命令仍會要求確認。"
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -4125,6 +4138,7 @@ msgid "Not in the plugin catalog"
 msgstr "不在外掛程式目錄中"
 
 #: src/pages/model-settings/connection-controls.tsx
+#: src/pages/Onboarding.tsx
 msgid "Not needed for a keyless server"
 msgstr "無金鑰伺服器無需填寫"
 
