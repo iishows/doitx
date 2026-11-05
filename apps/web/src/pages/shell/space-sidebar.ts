@@ -6,6 +6,7 @@ type SidebarChat = {
   preview?: string | null;
   pinned: boolean;
   sectionId: string | null;
+  unread?: boolean;
 };
 
 type SidebarSpace<TBot extends SidebarChat, TGroup extends SidebarChat> = {
@@ -51,6 +52,10 @@ export function sidebarGroupsForSpaces<TBot extends SidebarChat, TGroup extends 
     const visibleGroups = space.groups.filter((group) =>
       `${group.name} ${group.preview ?? ""}`.toLowerCase().includes(needle),
     );
+    // A folded space hides its unread dots, so its header counts every chat in
+    // the space. Like the Dock badge, this ignores the search box: a filter
+    // must not make a workspace look read.
+    const spaceUnread = [...space.bots, ...space.groups].filter((chat) => chat.unread).length;
     const grouped = groupBotsForSidebar(
       [
         ...visibleBots.map((chat) => ({ kind: "bot" as const, chat })),
@@ -94,6 +99,9 @@ export function sidebarGroupsForSpaces<TBot extends SidebarChat, TGroup extends 
       emptySpaceId: undefined as string | undefined,
       spaceId: space.id,
       spaceName: space.name,
+      // Only the header that names the space carries its unread count, and only
+      // when folding can hide the dots underneath it.
+      spaceUnread: showSpaceNames && index === 0 ? spaceUnread : 0,
       ...spaceHeaderMenu(space, index === 0),
     }));
     if (sections.length > 0) return sections;
@@ -113,6 +121,7 @@ export function sidebarGroupsForSpaces<TBot extends SidebarChat, TGroup extends 
           emptySpaceId: undefined as string | undefined,
           spaceId: space.id,
           spaceName: space.name,
+          spaceUnread: 0,
           ...spaceHeaderMenu(space, false),
         }));
     // A lone space is the selected one, so its settings stay in the account menu too.
@@ -131,6 +140,7 @@ export function sidebarGroupsForSpaces<TBot extends SidebarChat, TGroup extends 
         emptySpaceId: showSpaceNames ? space.id : undefined,
         spaceId: space.id,
         spaceName: space.name,
+        spaceUnread: 0,
         ...spaceHeaderMenu(space, true),
       },
       ...emptySections,

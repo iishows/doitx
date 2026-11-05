@@ -206,6 +206,62 @@ it("counts unread bots and groups from the sidebar across spaces", () => {
   expect(countUnreadChats([])).toBe(0);
 });
 
+it("counts a space's unread chats on the header that names it", () => {
+  const reading = {
+    ...space("first", "First"),
+    bots: [
+      { ...chat("read", "Read"), unread: false },
+      { ...chat("bot", "Unread bot"), unread: true },
+    ],
+    groups: [{ ...chat("group", "Unread group"), unread: true }],
+    botSections: [{ id: "s1", name: "Projects" }],
+  };
+  const quiet = {
+    ...space("second", "Second"),
+    bots: [{ ...chat("other", "Other"), unread: true }],
+  };
+
+  const headers = sidebarGroupsForSpaces([reading, quiet], "").filter(
+    (group) => group.spaceUnread > 0,
+  );
+  expect(headers.map((group) => [group.spaceId, group.spaceUnread])).toEqual([
+    ["first", 2],
+    ["second", 1],
+  ]);
+  // Only a space's first header shows the count, so the section headers under
+  // it never repeat it.
+  expect(
+    sidebarGroupsForSpaces([reading, quiet], "")
+      .filter((group) => group.spaceId === "first")
+      .map((group) => group.spaceUnread),
+  ).toEqual([2, 0]);
+});
+
+it("keeps counting every unread chat in a space while a search narrows it", () => {
+  const input = {
+    ...space("first", "First"),
+    bots: [
+      { ...chat("a", "Alpha"), unread: true },
+      { ...chat("b", "Beta"), unread: true },
+    ],
+  };
+  const other = space("second", "Second");
+
+  // A filter must not make a workspace look read, just as it must not hide
+  // unread chats from the Dock badge.
+  expect(sidebarGroupsForSpaces([input, other], "Alpha")[0]?.spaceUnread).toBe(2);
+  expect(sidebarGroupsForSpaces([input, other], "")[0]?.spaceUnread).toBe(2);
+});
+
+it("omits the header count when only one space is listed", () => {
+  const input = {
+    ...space("only", "Personal"),
+    bots: [{ ...chat("a", "Alpha"), unread: true }],
+  };
+
+  expect(sidebarGroupsForSpaces([input], "").every((group) => group.spaceUnread === 0)).toBe(true);
+});
+
 describe("isSidebarSectionCollapsed", () => {
   const group = (spaceId: string, extra: { title?: string | null; key?: string } = {}) => ({
     key: extra.key ?? `space:${spaceId}:section:a`,

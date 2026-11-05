@@ -210,6 +210,9 @@ export function SidebarRoster({
                             ? t`Expand ${headerName(group)}`
                             : t`Collapse ${headerName(group)}`
                       }
+                      aria-describedby={
+                        group.spaceUnread > 0 ? `roster-space-unread-${group.spaceId}` : undefined
+                      }
                     >
                       <span
                         className={`flex min-w-0 items-center gap-1.5 truncate ${hasSpaceActions ? "pe-7" : ""}`}
@@ -223,17 +226,37 @@ export function SidebarRoster({
                             {group.subtitle}
                           </span>
                         ) : null}
+                        {group.spaceUnread > 0 ? (
+                          // A folded space hides its per-chat dots, so the header
+                          // carries the count that would otherwise be out of sight.
+                          // It sits in the title row, clear of the space actions
+                          // button that overlays the header's right edge.
+                          <span
+                            data-roster-space-unread={group.spaceUnread}
+                            className="shrink-0 rounded-full bg-unread px-1 text-center text-[10px] leading-4 font-semibold text-sidebar tabular-nums"
+                          >
+                            <span aria-hidden="true">
+                              {group.spaceUnread > 99 ? "99+" : group.spaceUnread}
+                            </span>
+                            <span id={`roster-space-unread-${group.spaceId}`} className="sr-only">
+                              {group.spaceUnread > 99 ? "99+" : group.spaceUnread}
+                              <Trans> (unread)</Trans>
+                            </span>
+                          </span>
+                        ) : null}
                       </span>
-                      {group.emptySpaceId ? null : (
-                        <ChevronDown
-                          size={14}
-                          strokeWidth={1.8}
-                          className={
-                            collapsed ? "-rotate-90 transition-transform" : "transition-transform"
-                          }
-                          aria-hidden="true"
-                        />
-                      )}
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        {group.emptySpaceId ? null : (
+                          <ChevronDown
+                            size={14}
+                            strokeWidth={1.8}
+                            className={
+                              collapsed ? "-rotate-90 transition-transform" : "transition-transform"
+                            }
+                            aria-hidden="true"
+                          />
+                        )}
+                      </span>
                     </ContextMenuTrigger>
                     {section ? (
                       <ContextMenuContent
