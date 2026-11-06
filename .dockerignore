@@ -45,6 +45,8 @@ verify-report
 .claude
 .deepsec
 .tmp
+# Windows path escapes from a local test run land in the tree as "C:<pua>Users...".
+C*Users*
 .playwright-cli
 .deploy.lock
 .last-deployed-revision
