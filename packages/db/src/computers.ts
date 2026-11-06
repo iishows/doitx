@@ -81,15 +81,20 @@ export function resolveMaxComputersPerUser(
  *
  * One computer is one container, so this is what keeps a shared team computer from
  * being oversubscribed when several of its bots start a run at the same time. A
- * per-computer override wins over the instance default, which is 1 when unset, so
- * the safe behaviour needs no configuration.
+ * per-computer override wins over the instance default, which is 2 when unset: a
+ * team computer usually hosts every bot of that team, and with a default of 1 a
+ * single long run (or a run waiting on a browser or sandbox resource) blocks the
+ * whole team's queue behind it. 2 lets the queue advance while still leaving head
+ * room in the container; `pressuredRunLimit` drops the effective limit to 0 once
+ * memory pressure crosses its threshold, so this default cannot oversubscribe a
+ * container on its own.
  */
 export function resolveMaxRunsPerComputer(
   override: number | null | undefined,
   envValue = process.env.SANDBOX_MAX_RUNS_PER_COMPUTER,
 ): number {
   if (override !== null && override !== undefined && override >= 1) return override;
-  if (envValue === undefined || envValue.trim() === "") return 1;
+  if (envValue === undefined || envValue.trim() === "") return 2;
   const limit = Number(envValue);
   if (!Number.isSafeInteger(limit) || limit < 1) {
     throw new Error("SANDBOX_MAX_RUNS_PER_COMPUTER must be a positive integer");

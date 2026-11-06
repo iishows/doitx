@@ -303,11 +303,11 @@ describe("resolveMaxComputersPerUser", () => {
 });
 
 describe("resolveMaxRunsPerComputer", () => {
-  it("defaults to one run per computer so a shared computer is never oversubscribed", () => {
-    expect(resolveMaxRunsPerComputer(null)).toBe(1);
-    expect(resolveMaxRunsPerComputer(undefined)).toBe(1);
-    expect(resolveMaxRunsPerComputer(null, "")).toBe(1);
-    expect(resolveMaxRunsPerComputer(null, "  ")).toBe(1);
+  it("defaults to two runs per computer so one long run cannot block a team's whole queue", () => {
+    expect(resolveMaxRunsPerComputer(null)).toBe(2);
+    expect(resolveMaxRunsPerComputer(undefined)).toBe(2);
+    expect(resolveMaxRunsPerComputer(null, "")).toBe(2);
+    expect(resolveMaxRunsPerComputer(null, "  ")).toBe(2);
   });
 
   it("prefers a per-computer override over the instance default", () => {
@@ -346,7 +346,7 @@ describe("setMaxRunsPerComputer", () => {
   it("clears the override with null and reports the effective default", async () => {
     const update = vi.fn(async () => ({}));
     const prisma = { computer: { update } };
-    await expect(setMaxRunsPerComputer(prisma as never, "computer-1", null)).resolves.toBe(1);
+    await expect(setMaxRunsPerComputer(prisma as never, "computer-1", null)).resolves.toBe(2);
     expect(update).toHaveBeenCalledWith({
       where: { id: "computer-1" },
       data: { maxRunsPerComputer: null },

@@ -76,7 +76,7 @@ describe("toComputerStatus max runs", () => {
   it("reports the instance default with no override when the column is unset", () => {
     for (const computer of [{ ...base }, { ...base, maxRunsPerComputer: null }]) {
       expect(toComputerStatus("bot-1", computer)).toMatchObject({
-        maxRunsPerComputer: 1,
+        maxRunsPerComputer: 2,
         maxRunsPerComputerOverride: false,
       });
     }
