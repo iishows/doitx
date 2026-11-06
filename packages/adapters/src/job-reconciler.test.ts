@@ -383,6 +383,54 @@ describe("createJobReconciler", () => {
     });
   });
 
+  it("enqueues a callback delivery for runs the bot has not been told about", async () => {
+    const runFindMany = vi.fn(async (args: { where?: Record<string, unknown> } = {}) => {
+      // The webhook-reply scan is the only run query keyed on the delivery stamp.
+      if ("webhookReplyDeliveredAt" in (args.where ?? {})) {
+        return [{ id: "run-hook-1" }, { id: "run-hook-2" }];
+      }
+      return [];
+    });
+    const prisma = {
+      message: { findMany: vi.fn(async () => []) },
+      run: { findMany: runFindMany },
+      routine: { findMany: vi.fn(async () => []) },
+      computer: { findMany: vi.fn(async () => []) },
+      messagingOutbound: { findFirst: vi.fn(async () => null) },
+    } as unknown as PrismaClient;
+    const { jobs, enqueue } = publisher();
+
+    await createJobReconciler({ prisma, jobs }).reconcileOnce();
+
+    expect(runFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          trigger: "webhook",
+          status: { in: ["completed", "failed"] },
+          webhookReplyDeliveredAt: null,
+          bot: { webhookCallbackUrl: { not: null } },
+        },
+      }),
+    );
+    const hookJobs = enqueue.mock.calls
+      .map(([job]) => job)
+      .filter((job) => job.name === "webhook.reply");
+    expect(hookJobs).toEqual([
+      {
+        name: "webhook.reply",
+        payload: { runId: "run-hook-1" },
+        replaceKey: "webhook.reply:run-hook-1",
+        maxAttempts: 5,
+      },
+      {
+        name: "webhook.reply",
+        payload: { runId: "run-hook-2" },
+        replaceKey: "webhook.reply:run-hook-2",
+        maxAttempts: 5,
+      },
+    ]);
+  });
+
   it("publishes a thousand due routines in one bounded pass", async () => {
     const at = new Date("2026-01-01T00:00:00Z");
     const rows = Array.from({ length: 1_000 }, (_, index) => ({

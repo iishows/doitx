@@ -233,6 +233,58 @@ describe("createBackgroundJobHandlers", () => {
   });
 });
 
+it("delivers a webhook reply for the run's own tenant and lets a receiver failure retry", async () => {
+  const seen: unknown[] = [];
+  const findUnique = vi.fn(async (args: { where: { id: string }; select?: unknown }) => {
+    seen.push(currentDbContext());
+    if (args.select && !("bot" in (args.select as object))) {
+      return { spaceId: "space-hook", userId: "user-hook" };
+    }
+    return {
+      id: args.where.id,
+      status: "completed",
+      error: null,
+      trigger: "webhook",
+      webhookReplyDeliveredAt: null,
+      bot: {
+        id: "bot-hook",
+        spaceId: "space-hook",
+        webhookCallbackUrl: "https://receiver.example.test/hooks/run",
+        webhookSecretId: null,
+      },
+    };
+  });
+  const updateMany = vi.fn(async () => ({ count: 1 }));
+  const handlers = createBackgroundJobHandlers({
+    prisma: {
+      run: { findUnique, updateMany },
+      message: { findMany: vi.fn(async () => []) },
+    },
+    secretStore: { load: vi.fn(async () => "callback-secret") },
+    executor: {} as unknown as ReturnType<typeof createRunExecutor>,
+    sandbox: {} as unknown as SandboxProvider,
+    home: {} as unknown as AgentHomeStore,
+    artifacts: {} as unknown as ArtifactStore,
+    jobs: {} as unknown as JobPublisher,
+    events: {} as unknown as ThreadEvents,
+    workerId: "worker-1",
+    runtime: {} as unknown as AgentRuntime,
+    memoryProviders: { resolve: vi.fn(async () => null) },
+  } as unknown as Parameters<typeof createBackgroundJobHandlers>[0]);
+
+  // A run without a signing secret must surface as a retryable failure rather
+  // than reaching the receiver unsigned.
+  await expect(handlers["webhook.reply"]({ runId: "run-hook" })).rejects.toThrow(
+    "webhook reply for run run-hook has no signing secret",
+  );
+  expect(findUnique).toHaveBeenCalledWith({
+    where: { id: "run-hook" },
+    select: { spaceId: true, userId: true },
+  });
+  expect(seen).toContainEqual({ kind: "tenant", spaceId: "space-hook", userId: "user-hook" });
+  expect(updateMany).not.toHaveBeenCalled();
+});
+
 it("retries retired messaging credentials without deleting a currently referenced credential", async () => {
   const remove = vi.fn(async () => undefined);
   const findUnique = vi.fn(async () => ({ ciphertext: "active-ref" }));
