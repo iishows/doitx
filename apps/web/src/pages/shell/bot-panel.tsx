@@ -277,10 +277,27 @@ export function BotSettings({
     modelMaxTokens,
     modelContextWindow,
   ]);
+  // Proxy and webhook follow the same rule as the advanced fields: an edit stays
+  // local until Save, so the button has to see it here. The proxy credential is
+  // only a change once both halves are filled (see executeSave).
+  const proxySnapshot = JSON.stringify([
+    proxyEnabled,
+    proxyUrl.trim(),
+    proxyUsername.trim() && proxyPassword.trim() ? proxyUsername.trim() : "",
+    proxyUsername.trim() && proxyPassword.trim() ? proxyPassword : "",
+  ]);
+  const savedProxySnapshot = JSON.stringify([
+    savedProxyRef.current.enabled,
+    savedProxyRef.current.url,
+    "",
+    "",
+  ]);
   const dirty =
     name.trim() !== savedNameRef.current.trim() ||
     advancedSnapshot !== savedAdvanced ||
-    description.trim() !== savedDescriptionRef.current;
+    description.trim() !== savedDescriptionRef.current ||
+    webhookCallbackUrl.trim() !== savedWebhookCallbackUrlRef.current ||
+    proxySnapshot !== savedProxySnapshot;
   const [error, setError] = useState<string | null>(null);
   const saveQueueRef = useRef(Promise.resolve());
   const executeSaveRef = useRef<
@@ -337,6 +354,16 @@ export function BotSettings({
       setWebhookCallbackUrl(nextCallbackUrl);
     }
     savedWebhookCallbackUrlRef.current = nextCallbackUrl;
+    // Same rule for the proxy: an edit that has not been saved yet survives the refresh.
+    if (proxySnapshot === savedProxySnapshot) {
+      setProxyEnabled(bot.browserProxy?.enabled ?? false);
+      setProxyUrl(bot.browserProxy?.url ?? "");
+    }
+    savedProxyRef.current = {
+      enabled: bot.browserProxy?.enabled ?? false,
+      url: bot.browserProxy?.url ?? "",
+      hasCredentials: bot.browserProxy?.hasCredentials ?? false,
+    };
   }, [bot]);
 
   const connectedOptions = connectedModelChoices(credentials, catalog);
@@ -930,7 +957,6 @@ export function BotSettings({
                   value={webhookCallbackUrl}
                   maxLength={BOT_WEBHOOK_CALLBACK_URL_MAX_LENGTH}
                   onChange={(e) => setWebhookCallbackUrl(e.target.value)}
-                  onBlur={() => void enqueueSave()}
                   placeholder="https://example.com/rakazo/replies"
                   readOnly={saving}
                 />
@@ -951,14 +977,8 @@ export function BotSettings({
                   <Switch
                     id={`${ids}-browser-proxy-enabled`}
                     checked={proxyEnabled}
-                    // A save started by leaving the URL field must not disable the
-                    // switch under the pointer and swallow the click that follows.
-                    // Saves are queued, so the latest checked state still wins.
                     disabled={!proxyUrl.trim()}
-                    onCheckedChange={(checked) => {
-                      setProxyEnabled(checked);
-                      void enqueueSave();
-                    }}
+                    onCheckedChange={setProxyEnabled}
                   />
                 </div>
                 <div className="space-y-2">
@@ -972,7 +992,6 @@ export function BotSettings({
                     value={proxyUrl}
                     maxLength={BOT_BROWSER_PROXY_URL_MAX_LENGTH}
                     onChange={(e) => setProxyUrl(e.target.value)}
-                    onBlur={() => void enqueueSave()}
                     placeholder="socks5://proxy.example.com:1080"
                     readOnly={saving}
                   />
@@ -994,7 +1013,6 @@ export function BotSettings({
                       autoComplete="off"
                       value={proxyUsername}
                       onChange={(e) => setProxyUsername(e.target.value)}
-                      onBlur={() => void enqueueSave()}
                       readOnly={saving}
                     />
                   </div>
@@ -1009,7 +1027,6 @@ export function BotSettings({
                       autoComplete="new-password"
                       value={proxyPassword}
                       onChange={(e) => setProxyPassword(e.target.value)}
-                      onBlur={() => void enqueueSave()}
                       placeholder={
                         savedProxyRef.current.hasCredentials ? t`Leave blank to keep it` : ""
                       }

@@ -779,7 +779,7 @@ it("saves per-bot model limits and clears them when emptied", async () => {
   expect(onSave.mock.lastCall?.[0]).not.toHaveProperty("modelMaxTokens");
 });
 
-it("saves proxy credentials only once both halves are filled", async () => {
+it("waits for Save before sending a proxy edit", async () => {
   await render("Billing", {
     browserProxy: { enabled: true, url: "socks5://proxy.example:1080", hasCredentials: false },
   });
@@ -792,21 +792,19 @@ it("saves proxy credentials only once both halves are filled", async () => {
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
   };
-  const blur = async (input: HTMLInputElement) => {
-    await act(async () => input.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
-  };
   await setValue(proxyInput("username"), "user");
-  await blur(proxyInput("username"));
-  // A lone username is not a credential; the server would reject the pair.
-  expect(onSave.mock.lastCall?.[0]).not.toHaveProperty("browserProxy");
+  // A lone username is not a credential; the server would reject the pair, and
+  // nothing goes out until Save is pressed.
+  expect(onSave).not.toHaveBeenCalled();
   // It stays typed, waiting for its password.
   expect(proxyInput("username").value).toBe("user");
   // Whitespace is not a password; the server would reject it with the username.
   await setValue(proxyInput("password"), "   ");
-  await blur(proxyInput("password"));
+  await clickSave();
   expect(onSave.mock.lastCall?.[0]).not.toHaveProperty("browserProxy");
+  expect(proxyInput("username").value).toBe("user");
   await setValue(proxyInput("password"), "secret");
-  await blur(proxyInput("password"));
+  await clickSave();
   expect(onSave.mock.lastCall?.[0]).toMatchObject({
     browserProxy: {
       enabled: true,
@@ -817,14 +815,7 @@ it("saves proxy credentials only once both halves are filled", async () => {
   });
 });
 
-it("turns the proxy on while the URL save is still in flight", async () => {
-  let release: () => void = () => undefined;
-  onSave.mockImplementationOnce(
-    () =>
-      new Promise<undefined>((resolve) => {
-        release = () => resolve(undefined);
-      }),
-  );
+it("shows Save after a proxy edit and sends it on submit", async () => {
   await render();
   await expandAdvanced();
   const url = container.querySelector<HTMLInputElement>('input[id$="-browser-proxy-url"]')!;
@@ -835,15 +826,38 @@ it("turns the proxy on while the URL save is still in flight", async () => {
     );
     url.dispatchEvent(new Event("input", { bubbles: true }));
   });
-  await act(async () => url.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
-  // The switch would be disabled for the whole round trip, so the click that
-  // follows the URL blur would never reach it.
+  // The URL alone makes the edit dirty, so Save appears like it does for a model limit.
+  const save = [...container.querySelectorAll("button")].find(
+    (node) => node.textContent === "Save",
+  );
+  expect(save).not.toBeUndefined();
   await act(async () =>
     container.querySelector<HTMLButtonElement>('button[id$="-browser-proxy-enabled"]')!.click(),
   );
-  await act(async () => release());
+  await clickSave();
   expect(onSave.mock.lastCall?.[0]).toMatchObject({
     browserProxy: { enabled: true, url: "socks5://proxy.example:1080" },
+  });
+});
+
+it("shows Save after a webhook reply edit and sends it on submit", async () => {
+  await render();
+  await expandAdvanced();
+  const input = container.querySelector<HTMLInputElement>('input[id$="-webhook-callback-url"]')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(
+      input,
+      "https://example.com/rakazo/replies",
+    );
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(
+    [...container.querySelectorAll("button")].some((node) => node.textContent === "Save"),
+  ).toBe(true);
+  expect(onSave).not.toHaveBeenCalled();
+  await clickSave();
+  expect(onSave.mock.lastCall?.[0]).toMatchObject({
+    webhookCallbackUrl: "https://example.com/rakazo/replies",
   });
 });
 
