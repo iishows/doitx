@@ -14,7 +14,15 @@ export type SkillFiles = Readonly<Record<string, readonly string[]>>;
 
 export type AgentImportParse = Omit<
   AgentImportPlan,
-  "source" | "model" | "mcpServers" | "routines" | "apiKeys"
+  | "source"
+  | "model"
+  | "mcpServers"
+  | "routines"
+  | "apiKeys"
+  // Only team-config archives carry these; the vendor parsers never see them.
+  | "botTools"
+  | "teamChatAmbientEnabled"
+  | "teamChatRules"
 >;
 
 const SKILL_CONTENT_MAX_LENGTH = 100_000;

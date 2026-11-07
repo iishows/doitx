@@ -154,6 +154,29 @@ describe("team-config round trip", () => {
     expect(built.plan.model).toMatchObject({ maxTokens: 16_384, contextWindow: 131_072 });
   });
 
+  it("carries the tool allow-list and team-chat intent across the round trip", async () => {
+    const tuned = {
+      ...source,
+      bots: [
+        {
+          ...source.bots[0]!,
+          disabledBuiltinTools: ["browser", "web_search"],
+          teamChatAmbientEnabled: true,
+          teamChatRules: "Keep it short.",
+        },
+      ],
+    };
+    const parsed = parseTeamConfig(roundTrip(tuned));
+    const entry = parsed.manifest.bots[0]!;
+    const built = await buildTeamConfigBot(services(), actor, parsed.bots.get(entry.key)!);
+
+    expect(built.plan.botTools).toEqual(["browser", "web_search"]);
+    expect(built.plan.teamChatAmbientEnabled).toBe(true);
+    expect(built.plan.teamChatRules).toBe("Keep it short.");
+    // Only the not-yet-writable section placement is reported; the restored fields are not.
+    expect(built.plan.skipped.map((item) => item.path)).toEqual(["Writer.sectionKey"]);
+  });
+
   it("does not carry limits for a bot that names no model", () => {
     const noModel = {
       ...source,

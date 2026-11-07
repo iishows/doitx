@@ -71,6 +71,10 @@ export type AgentImportServices<PreparedKey = unknown> = {
       /** Per-bot limits a team archive carried with the model choice. */
       modelMaxTokens?: number | null;
       modelContextWindow?: number | null;
+      /** Builtin tools the source bot disabled; team-config archives carry them back. */
+      disabledBuiltinTools?: string[];
+      teamChatAmbientEnabled?: boolean;
+      teamChatRules?: string;
       seed: (tx: Prisma.TransactionClient, botId: string) => Promise<void>;
     },
   ) => Promise<Bot>;
@@ -689,6 +693,9 @@ export async function materializeImportedBot<PreparedKey>(
       modelId: model?.modelId ?? null,
       modelMaxTokens: model?.maxTokens ?? null,
       modelContextWindow: model?.contextWindow ?? null,
+      disabledBuiltinTools: plan.botTools,
+      teamChatAmbientEnabled: plan.teamChatAmbientEnabled,
+      teamChatRules: plan.teamChatRules,
       seed: write,
     });
   } catch (error) {

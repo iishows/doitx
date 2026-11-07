@@ -26,8 +26,6 @@ import type { AgentImportServices, Built } from "./agent-import.js";
  * skipped rather than dropped silently, so the checklist says what did not travel.
  */
 const UNSUPPORTED_BOT_FIELDS = [
-  "teamChatAmbientEnabled",
-  "teamChatRules",
   "crossSpaceCommunication",
   "browserProxyEnabled",
   "memoryScope",
@@ -35,7 +33,6 @@ const UNSUPPORTED_BOT_FIELDS = [
   "position",
   "sectionKey",
   "thinkingLevel",
-  "disabledBuiltinTools",
 ] as const;
 
 function skippedBotFields(bot: TeamConfigBot): AgentImportPlan["skipped"] {
@@ -273,6 +270,10 @@ export async function buildTeamConfigBot<PreparedKey>(
       routines,
       // A team archive carries no API keys by design; a connection is re-authorised on import.
       apiKeys: [],
+      // The builtin-tool allow-list and team-chat intent travel back to the new bot row.
+      botTools: bot.disabledBuiltinTools,
+      teamChatAmbientEnabled: bot.teamChatAmbientEnabled,
+      teamChatRules: bot.teamChatRules,
       skipped: [...skippedBotFields(bot), ...skipped],
     },
     // No credential values travel in a team archive, so there is nothing to encrypt.

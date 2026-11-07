@@ -185,6 +185,10 @@ export const AgentImportPlanSchema = z.object({
   routines: z.array(AgentImportRoutineSchema),
   apiKeys: z.array(AgentImportApiKeySchema),
   skipped: z.array(z.object({ path: z.string(), reason: AgentImportSkipReasonSchema })),
+  /** Builtin tools the source bot disabled; written back by the team-config import. */
+  botTools: z.array(z.string()).default([]),
+  teamChatAmbientEnabled: z.boolean().default(false),
+  teamChatRules: z.string().default(""),
 });
 export type AgentImportPlan = z.infer<typeof AgentImportPlanSchema>;
 

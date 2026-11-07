@@ -554,6 +554,9 @@ export function createRepos(
         modelMaxTokens?: number | null;
         modelContextWindow?: number | null;
         disabledBuiltinTools?: string[];
+        /** Team-chat intent; only written when set, so a plain create keeps its defaults. */
+        teamChatAmbientEnabled?: boolean;
+        teamChatRules?: string;
         initialMessage?: {
           role: "user" | "bot" | "system";
           blocks: MessageBlock[];
@@ -650,6 +653,10 @@ export function createRepos(
               modelMaxTokens,
               modelContextWindow,
               disabledBuiltinTools,
+              ...(input.teamChatAmbientEnabled !== undefined
+                ? { teamChatAmbientEnabled: input.teamChatAmbientEnabled }
+                : {}),
+              ...(input.teamChatRules !== undefined ? { teamChatRules: input.teamChatRules } : {}),
             },
           });
           const thread = await tx.thread.create({

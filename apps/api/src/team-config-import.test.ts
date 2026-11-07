@@ -90,12 +90,28 @@ describe("buildTeamConfigBot", () => {
     const built = await buildTeamConfigBot(
       services(),
       actor,
-      bot({ pinned: true, thinkingLevel: "high", teamChatRules: "Be nice." }),
+      bot({ pinned: true, thinkingLevel: "high" }),
     );
     const paths = built.plan.skipped.map((item) => item.path);
     expect(paths).toContain("Chief of Staff.pinned");
     expect(paths).toContain("Chief of Staff.thinkingLevel");
-    expect(paths).toContain("Chief of Staff.teamChatRules");
+  });
+
+  it("restores the builtin-tool allow-list and team-chat intent", async () => {
+    const built = await buildTeamConfigBot(
+      services(),
+      actor,
+      bot({
+        disabledBuiltinTools: ["browser", "web_search"],
+        teamChatAmbientEnabled: true,
+        teamChatRules: "Keep it short.",
+      }),
+    );
+    expect(built.plan.botTools).toEqual(["browser", "web_search"]);
+    expect(built.plan.teamChatAmbientEnabled).toBe(true);
+    expect(built.plan.teamChatRules).toBe("Keep it short.");
+    // Set-and-restored fields are not reported as skipped.
+    expect(built.plan.skipped.map((item) => item.path)).toEqual([]);
   });
 
   it("does not report a field left at its default", async () => {

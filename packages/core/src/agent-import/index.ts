@@ -330,6 +330,10 @@ function plan(source: AgentImportSource, parsed: AgentImportParse): AgentImportP
       mcpServers: [],
       routines: [],
       apiKeys: [],
+      // Vendor archives carry no tool allow-list or team-chat intent; the schema defaults fill them.
+      botTools: [],
+      teamChatAmbientEnabled: false,
+      teamChatRules: "",
     },
     { spaceMemoryPaths: [], skillNames: [] },
   );
