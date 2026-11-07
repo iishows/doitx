@@ -12,7 +12,7 @@ export default defineConfig({
   site: "https://doitx.ai",
   output: "static",
   i18n: {
-    defaultLocale: "en",
+    defaultLocale: "zh",
     locales: [...LOCALES],
     routing: {
       prefixDefaultLocale: false,
@@ -23,7 +23,7 @@ export default defineConfig({
     sitemap({
       filter: (page) => isIndexedPath(new URL(page).pathname),
       i18n: {
-        defaultLocale: "en",
+        defaultLocale: "zh",
         locales: LOCALE_HREFLANG,
       },
     }),

@@ -17,7 +17,7 @@ export const LOCALES = [
 
 export type Locale = (typeof LOCALES)[number];
 
-export const DEFAULT_LOCALE: Locale = "en";
+export const DEFAULT_LOCALE: Locale = "zh";
 
 export const RTL_LOCALES: ReadonlySet<Locale> = new Set(["he"]);
 

@@ -69,7 +69,7 @@ export const GROK_SOURCES = [
   { label: "OpenMuse source", href: "https://github.com/CopilotKit/openmuse" },
 ] as const;
 
-export const INSTALL_COMMAND = `mkdir -p rakazo && cd rakazo &&
+export const INSTALL_COMMAND = `mkdir -p doitx && cd doitx &&
 curl -fsSLO https://raw.githubusercontent.com/iishows/doitx/main/infra/compose/install-images.sh &&
 bash install-images.sh`;
 
