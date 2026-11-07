@@ -861,6 +861,43 @@ it("shows Save after a webhook reply edit and sends it on submit", async () => {
   });
 });
 
+it("keeps a saved proxy when a roster read from before the save arrives after it", async () => {
+  await render();
+  await expandAdvanced();
+  const proxyUrl = () =>
+    container.querySelector<HTMLInputElement>('input[id$="-browser-proxy-url"]')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(
+      proxyUrl(),
+      "socks5://proxy.example:1080",
+    );
+    proxyUrl().dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('button[id$="-browser-proxy-enabled"]')!.click(),
+  );
+  await clickSave();
+  expect(onSave.mock.lastCall?.[0]).toMatchObject({
+    browserProxy: { enabled: true, url: "socks5://proxy.example:1080" },
+  });
+
+  // A spaces/list read started before that save lands afterwards. It is newer by
+  // timestamp but still reports no proxy, the way a roster snapshot does.
+  await render("Billing", { updatedAt: "2026-09-02T00:00:00.000Z", browserProxy: null });
+  expect(proxyUrl().value).toBe("socks5://proxy.example:1080");
+  expect(
+    container.querySelector('[id$="-browser-proxy-enabled"]')?.getAttribute("aria-checked"),
+  ).toBe("true");
+  // The saved values are the baseline again, so no Save is offered and a later
+  // unrelated save cannot resend the stale "no proxy".
+  expect(
+    [...container.querySelectorAll("button")].some((node) => node.textContent === "Save"),
+  ).toBe(false);
+  await setDescription("Invoices");
+  await clickSave();
+  expect(onSave.mock.lastCall?.[0]).not.toHaveProperty("browserProxy");
+});
+
 it("saves a color change back to the initial value after a successful automatic save", async () => {
   await render();
   const control = () => container.querySelector<HTMLButtonElement>('[aria-label="Avatar color"]')!;

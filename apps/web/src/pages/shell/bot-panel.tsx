@@ -354,16 +354,25 @@ export function BotSettings({
       setWebhookCallbackUrl(nextCallbackUrl);
     }
     savedWebhookCallbackUrlRef.current = nextCallbackUrl;
-    // Same rule for the proxy: an edit that has not been saved yet survives the refresh.
-    if (proxySnapshot === savedProxySnapshot) {
-      setProxyEnabled(bot.browserProxy?.enabled ?? false);
-      setProxyUrl(bot.browserProxy?.url ?? "");
-    }
-    savedProxyRef.current = {
+    // A roster read issued before our proxy save can arrive after it. It is newer by
+    // timestamp but still carries the old proxy, so adopting it would silently drop the
+    // save, clear the fields, and let the next unrelated save wipe the row. Keep the
+    // accepted proxy until the server copy agrees with it.
+    const nextProxy = {
       enabled: bot.browserProxy?.enabled ?? false,
       url: bot.browserProxy?.url ?? "",
       hasCredentials: bot.browserProxy?.hasCredentials ?? false,
     };
+    const acceptedProxy = savedProxyRef.current;
+    const staleAcceptedProxy =
+      (acceptedProxy.enabled !== nextProxy.enabled || acceptedProxy.url !== nextProxy.url) &&
+      bot.browserProxy === null;
+    // Same rule for the proxy: an edit that has not been saved yet survives the refresh.
+    if (proxySnapshot === savedProxySnapshot && !staleAcceptedProxy) {
+      setProxyEnabled(nextProxy.enabled);
+      setProxyUrl(nextProxy.url);
+    }
+    if (!staleAcceptedProxy) savedProxyRef.current = nextProxy;
   }, [bot]);
 
   const connectedOptions = connectedModelChoices(credentials, catalog);
