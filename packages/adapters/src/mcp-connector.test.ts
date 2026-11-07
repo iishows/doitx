@@ -1498,6 +1498,41 @@ describe("MCP connector session cache", () => {
     await connector.close();
   });
 
+  it("converts a user:password secret to Basic auth for a localhost HTTP server", async () => {
+    const state = { failNext: false, initializations: 0, headers: [] as Record<string, string>[] };
+    const assignment = {
+      ...ASSIGNMENT,
+      server: { ...SERVER, endpoint: "http://localhost:8123/api/mcp", secretId: "secret-1" },
+    };
+    vi.stubGlobal("fetch", mcpFetch(state, "http://localhost:8123/api/mcp"));
+    const prisma = {
+      botMcpServer: { findMany: vi.fn().mockResolvedValue([assignment]) },
+      secret: { findFirst: vi.fn().mockResolvedValue({ id: "secret-1", ciphertext: "encrypted" }) },
+      deploymentSettings: { findUnique: vi.fn(async () => ({ ownerUserId: "u1" })) },
+    };
+    const connector = new McpConnector(
+      prisma as never,
+      {
+        load: vi.fn().mockReturnValue(
+          JSON.stringify({ secret: "wpuser:xxxx_xxxx_xxxx_xxxx" }),
+        ),
+      } as never,
+      { allowPrivateEndpoint: true },
+    );
+
+    await connector.discoverTools({
+      spaceId: "w1",
+      userId: "u1",
+      botId: "bot-1",
+      signal: new AbortController().signal,
+    } as never);
+
+    // "wpuser:xxxx_xxxx_xxxx_xxxx" → base64
+    const expected = Buffer.from("wpuser:xxxx_xxxx_xxxx_xxxx").toString("base64");
+    expect(state.headers[0]?.authorization).toBe(`Basic ${expected}`);
+    await connector.close();
+  });
+
   it("evicts a session after a failed call so the next call reconnects instead of reusing a dead session", async () => {
     const state = { failNext: false, initializations: 0 };
     vi.stubGlobal("fetch", mcpFetch(state));

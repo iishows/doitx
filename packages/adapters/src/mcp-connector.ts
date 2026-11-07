@@ -1158,12 +1158,16 @@ export class McpConnector implements ConnectorProvider {
           !localHttp && this.oauth
             ? await this.oauth.providerFor(server, context, loaded, onPersisted)
             : undefined;
-        const staticToken =
-          material.secret
-            ? material.secret.startsWith("Bearer ") || material.secret.startsWith("Basic ")
-              ? material.secret
+        // A secret containing a colon is treated as user:password and
+        // converted to Basic auth (base64). Secrets without a colon
+        // are treated as opaque tokens and wrapped as Bearer.
+        const staticToken = material.secret
+          ? material.secret.startsWith("Bearer ") || material.secret.startsWith("Basic ")
+            ? material.secret
+            : /^\w[\w.-]*:[\w.-]+$/i.test(material.secret)
+              ? `Basic ${Buffer.from(material.secret).toString("base64")}`
               : `Bearer ${material.secret}`
-            : undefined;
+          : undefined;
         const headers = {
           ...(material.headers ?? {}),
           ...(staticToken ? { Authorization: staticToken } : {}),

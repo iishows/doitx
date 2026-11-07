@@ -595,8 +595,13 @@ export function McpServersOverlay({
                         autoComplete="new-password"
                         value={secret}
                         onChange={(e) => setSecret(e.target.value)}
-                        placeholder={t`Stored encrypted`}
+                        placeholder={t`user:pass or Bearer token`}
                       />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        <Trans>
+                          user:password becomes Basic auth; a bare token becomes Bearer.
+                        </Trans>
+                      </p>
                     </Field>
                     {transport === "stdio" ? (
                       <Field>
