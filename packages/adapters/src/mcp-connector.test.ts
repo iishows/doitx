@@ -1461,6 +1461,43 @@ describe("MCP connector session cache", () => {
     await connector.close();
   });
 
+  it("sends a stored Basic-credential to a localhost HTTP server without re-wrapping it", async () => {
+    const state = { failNext: false, initializations: 0, headers: [] as Record<string, string>[] };
+    const basicAssignment = {
+      ...ASSIGNMENT,
+      server: { ...SERVER, endpoint: "http://localhost:8123/api/mcp", secretId: "secret-1" },
+    };
+    vi.stubGlobal("fetch", mcpFetch(state, "http://localhost:8123/api/mcp"));
+    const prisma = {
+      botMcpServer: { findMany: vi.fn().mockResolvedValue([basicAssignment]) },
+      secret: { findFirst: vi.fn().mockResolvedValue({ id: "secret-1", ciphertext: "encrypted" }) },
+      deploymentSettings: { findUnique: vi.fn(async () => ({ ownerUserId: "u1" })) },
+    };
+    const connector = new McpConnector(
+      prisma as never,
+      {
+        load: vi
+          .fn()
+          .mockReturnValue(
+            JSON.stringify({
+              secret: "Basic am9objoxMjM0IGhvdWUgZmFrZSBwYXNz",
+            }),
+          ),
+      } as never,
+      { allowPrivateEndpoint: true },
+    );
+
+    await connector.discoverTools({
+      spaceId: "w1",
+      userId: "u1",
+      botId: "bot-1",
+      signal: new AbortController().signal,
+    } as never);
+
+    expect(state.headers[0]?.authorization).toBe("Basic am9objoxMjM0IGhvdWUgZmFrZSBwYXNz");
+    await connector.close();
+  });
+
   it("evicts a session after a failed call so the next call reconnects instead of reusing a dead session", async () => {
     const state = { failNext: false, initializations: 0 };
     vi.stubGlobal("fetch", mcpFetch(state));
